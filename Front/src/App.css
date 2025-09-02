@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+.black-ops-one-regular {
+  font-family: "Black Ops One", system-ui;
+  font-weight: 400;
+  font-style: normalM
+};
+
+.inter-a {
+  font-family: "Inter", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 500;
+}
