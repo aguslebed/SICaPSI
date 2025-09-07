@@ -8,9 +8,10 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+//Existe el usuario ? Si exite, traeme todos sus datos menos la contrañse
 export async function login(email, password) {
   try {
-    const { data } = await api.post("/api/v1/auth/login", { email, password });
+    const { data } = await api.post("/auth/login", { email, password });
 
     // El back puede devolver { user, token } o solo el user
     // Normalizamos para que el resto del front no explote

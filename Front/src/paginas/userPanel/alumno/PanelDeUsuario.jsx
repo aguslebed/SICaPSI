@@ -12,15 +12,16 @@ const PanelDeUsuario = () => {
       subtitulo: "Edificio de departamentos",
       porcentaje: 59,
       estado: "activo",
-      link: "/capacitacion/1",
+      link: "/panel/capacitacion/1",
       imagen: "src/assets/capacitacion/departamentos.jpg",
+      
     },
     {
       titulo: "Capacitación 2",
       subtitulo: "Barrio privado pequeño",
       porcentaje: 0,
       estado: "activo",
-      link: "/capacitacion/2",
+      link: "/panel/capacitacion/2",
       imagen: "src/assets/capacitacion/barrioPrivadoChico.jpg",
     },
     {
@@ -28,7 +29,7 @@ const PanelDeUsuario = () => {
       subtitulo: "Barrio privado grande",
       porcentaje: 0,
       estado: "desactivado",
-      link: "/capacitacion/3",
+      link: "/panel/capacitacion/3",
       imagen: "src/assets/capacitacion/barrioPrivadoGrande.jpg",
     },
     {
@@ -36,7 +37,7 @@ const PanelDeUsuario = () => {
       subtitulo: "Garita de seguridad",
       porcentaje: 0,
       estado: "desactivado",
-      link: "/capacitacion/4",
+      link: "/panel/capacitacion/4",
       imagen: "src/assets/capacitacion/garitaDeSeguridad.jpg",
     },
     {
@@ -44,7 +45,7 @@ const PanelDeUsuario = () => {
       subtitulo: "Pubs y discotecas",
       porcentaje: 0,
       estado: "desactivado",
-      link: "/capacitacion/5",
+      link: "/panel/capacitacion/5",
       imagen: "src/assets/capacitacion/pubsYDisco.jpg",
     },
   ];
