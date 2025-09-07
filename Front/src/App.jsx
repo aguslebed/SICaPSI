@@ -18,6 +18,7 @@ function App() {
         {/* Ruta para páginas no encontradas */}
         <Route path="*" element={<NotFound />} />
       </Routes>
+ 
     </>
   );
 }

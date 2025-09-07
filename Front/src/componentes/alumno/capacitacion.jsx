@@ -1,9 +1,12 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
-const CapacitacionCard = ({ titulo, subtitulo, porcentaje, estado, link, imagen }) => {
+const CapacitacionCard = ({ id, titulo, subtitulo, porcentaje, estado, imagen }) => {
+  const navigate = useNavigate();
+
   const handleClick = () => {
     if (estado === "activo") {
-      window.location.href = link;
+      navigate(`/capacitacion/${id}`); // redirige a la ruta dinámica
     }
   };
 
@@ -33,16 +36,13 @@ const CapacitacionCard = ({ titulo, subtitulo, porcentaje, estado, link, imagen 
         <p className="text-sm">{subtitulo}</p>
       </div>
 
-      {/* Barra de progreso (siempre que esté activo) */}
+      {/* Barra de progreso */}
       {estado === "activo" && (
         <div className="absolute bottom-0 left-0 w-full h-6 bg-black/40 flex items-center">
-          {/* Parte verde proporcional */}
           <div
             className="absolute left-0 top-0 h-full bg-green-500"
             style={{ width: `${porcentaje}%` }}
           ></div>
-
-          {/* Texto centrado siempre */}
           <span className="relative z-10 w-full text-center text-xs font-bold text-white">
             {porcentaje}%
           </span>
@@ -53,3 +53,4 @@ const CapacitacionCard = ({ titulo, subtitulo, porcentaje, estado, link, imagen 
 };
 
 export default CapacitacionCard;
+
