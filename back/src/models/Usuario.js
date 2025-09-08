@@ -8,16 +8,24 @@
 import mongoose from "mongoose";
 
 const UsuarioSchema = new mongoose.Schema({
-  nombreCompleto: { type: String, required: true, trim: true },
+  nombre: { type: String, required: true, trim: true },
+  apellidos: { type: String, required: true, trim: true },
+  tipoDocumento: { type: String, enum: ["DNI", "CUIL/CUIT", "Pasaporte"], required: true },
+  numeroDocumento: { type: String, required: true, unique: true, sparse: true },
+  fechaNacimiento: { type: Date, required: true },
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  codigoPostal: { type: String, required: true },
+  direccion: { type: String, required: true },
+  numeroDireccion: { type: String, required: true },
+  departamento: { type: String, required: false },
+  provincia: { type: String, required: true },
+  localidad: { type: String, required: true },
+  codArea: { type: String, required: true },
+  telefono: { type: String, required: true },
+  password: { type: String, required: true },
+  tipo: { type: String, enum: ["admin", "alumno", "capacitador", "directivo", "guardia"], default: "alumno", required: true },
   ultimoIngreso: { type: Date },
-  legajo: { type: String, index: true, unique: true, sparse: true },
-  tipo: { type: String, enum: ["admin", "alumno", "capacitador", "directivo", "guardia"], required: true },
-  mail: { type: String, required: true, unique: true, lowercase: true, trim: true },
-  contrasena: { type: String, required: true },
-  fechaNacimiento: { type: Date },
-  direccion: { type: String },
-  telefono: { type: String },
-  dni: { type: String, unique: true, sparse: true }
+  legajo: { type: String, index: true, unique: true, sparse: true }
 }, {
   collection: "usuarios",
   timestamps: true

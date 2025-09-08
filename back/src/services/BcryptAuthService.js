@@ -15,7 +15,7 @@ import bcrypt from "bcryptjs";
 export class AuthServiceBcrypt extends IAuthService {
   async authenticate(email, password) {
     // 1) Buscar usuario por mail (tu campo en BD es 'mail')
-    const usuario = await Usuario.findOne({ mail: email });
+    const usuario = await Usuario.findOne({ email: email });
     if (!usuario) return null;
 
     // 2) Comparar hash

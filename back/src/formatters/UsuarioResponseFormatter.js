@@ -6,7 +6,7 @@
 import { UsuarioAdapter } from "../adapters/usuarioAdapter.js";
 
 const SENSITIVE_FIELDS = new Set([
-  "contrasena",
+  "password",
   "__v",
   "resetToken",
   "resetTokenExp",

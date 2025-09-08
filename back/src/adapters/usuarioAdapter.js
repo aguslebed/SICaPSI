@@ -8,15 +8,23 @@ export const UsuarioAdapter = {
     if (!doc) return null;
     return {
       id: doc._id?.toString(),
-      nombreCompleto: doc.nombreCompleto,
-      ultimoIngreso: doc.ultimoIngreso,
-      legajo: doc.legajo,
-      tipo: doc.tipo,
-      mail: doc.mail,
+      nombre: doc.nombre,
+      apellidos: doc.apellidos,
+      tipoDocumento: doc.tipoDocumento,
+      numeroDocumento: doc.numeroDocumento,
       fechaNacimiento: doc.fechaNacimiento,
+      email: doc.email,
+      codigoPostal: doc.codigoPostal,
       direccion: doc.direccion,
+      numeroDireccion: doc.numeroDireccion,
+      departamento: doc.departamento,
+      provincia: doc.provincia,
+      localidad: doc.localidad,
+      codArea: doc.codArea,
       telefono: doc.telefono,
-      dni: doc.dni,
+      tipo: doc.tipo,
+      legajo: doc.legajo,
+      ultimoIngreso: doc.ultimoIngreso,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt
     };
@@ -26,12 +34,42 @@ export const UsuarioAdapter = {
   toDb(payload) {
     if (!payload) return null;
     const {
-      nombreCompleto, ultimoIngreso, legajo, tipo, mail,
-      contrasena, fechaNacimiento, direccion, telefono, dni
+      nombre,
+      apellidos,
+      tipoDocumento,
+      numeroDocumento,
+      fechaNacimiento,
+      email,
+      codigoPostal,
+      direccion,
+      numeroDireccion,
+      departamento,
+      provincia,
+      localidad,
+      codArea,
+      telefono,
+      password,
+      tipo,
+      legajo
     } = payload;
     return {
-      nombreCompleto, ultimoIngreso, legajo, tipo, mail,
-      contrasena, fechaNacimiento, direccion, telefono, dni
+      nombre,
+      apellidos,
+      tipoDocumento,
+      numeroDocumento,
+      fechaNacimiento,
+      email,
+      codigoPostal,
+      direccion,
+      numeroDireccion,
+      departamento,
+      provincia,
+      localidad,
+      codArea,
+      telefono,
+      password,
+      tipo,
+      legajo
     };
   }
 };

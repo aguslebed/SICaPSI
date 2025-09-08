@@ -8,9 +8,6 @@ import mongoose from "mongoose";
  * 1. Validar que el usuario no exista
  * 2. Crear hash seguro de contraseña
  * 3. Guardar nuevo usuario en BD
- * 
- * Cumple SRP: Solo maneja registro de usuarios
- * Cumple OCP: Extensible para diferentes tipos de usuarios
  */
 export class UserRegistrationService {
   /**
@@ -20,11 +17,11 @@ export class UserRegistrationService {
    */
   async createUser(userData) {
     try {
-      // Responsabilidad 1: Verificar que no exista
-      const existingUser = await Usuario.findOne({ 
+      // Verificar que no exista por email, numeroDocumento o legajo
+      const existingUser = await Usuario.findOne({
         $or: [
-          { mail: userData.email },
-          { dni: userData.dni },
+          { email: userData.email },
+          { numeroDocumento: userData.numeroDocumento },
           { legajo: userData.legajo }
         ]
       });
@@ -33,18 +30,30 @@ export class UserRegistrationService {
         return null; // Usuario ya existe
       }
 
-      // Responsabilidad 2: Hash seguro de contraseña
+      // Hash seguro de contraseña
       const hashedPassword = await bcrypt.hash(userData.password, 10);
 
-      // Responsabilidad 3: Crear y guardar usuario
+      // Crear y guardar usuario con todos los campos requeridos
       const usuario = new Usuario({
         _id: new mongoose.Types.ObjectId(),
-        mail: userData.email,
-        contrasena: hashedPassword,
-        nombre_completo: userData.nombre_completo,
-        tipo: userData.tipo || 'empleado',
-        legajo: userData.legajo,
-        ultimo_ingreso: new Date()
+        nombre: userData.nombre,
+        apellidos: userData.apellidos,
+        tipoDocumento: userData.tipoDocumento,
+        numeroDocumento: userData.numeroDocumento,
+        fechaNacimiento: userData.fechaNacimiento,
+        email: userData.email,
+        codigoPostal: userData.codigoPostal,
+        direccion: userData.direccion,
+        numeroDireccion: userData.numeroDireccion,
+        departamento: userData.departamento,
+        provincia: userData.provincia,
+        localidad: userData.localidad,
+        codArea: userData.codArea,
+        telefono: userData.telefono,
+        password: hashedPassword,
+        tipo: userData.tipo || "alumno",
+        legajo: userData.legajo || "",
+        ultimoIngreso: new Date()
       });
 
       const usuarioGuardado = await usuario.save();

@@ -1,11 +1,35 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { APIRegistro } from "../../api/auth";
+import ModalMensajeRegistro from "../../componentes/modales/registro";
 
 function Registrarse() {
+
+  //Estados MODAL
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalCodigo, setModalCodigo] = useState(null);
+  const [modalMensaje, setModalMensaje] = useState("");
+
+  //Estado de los errores
   const [error, setError] = useState("");
   const [tipoDocumento, setTipoDocumento] = useState("");
+  const [nombre, setNombre] = useState("");
+  const [apellidos, setApellidos] = useState("");
+  const [numeroDocumento, setNumeroDocumento] = useState("");
+  const [fechaNacimiento, setFechaNacimiento] = useState("");
+  const [email, setEmail] = useState("");
+  const [codigoPostal, setCodigoPostal] = useState("");
+  const [direccion, setDireccion] = useState("");
+  const [numeroDireccion, setNumeroDireccion] = useState("");
+  const [departamento, setDepartamento] = useState("");
+  const [codArea, setCodArea] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [password, setPassword] = useState("");
+  const [repetirPassword, setRepetirPassword] = useState("");
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
+
   
-  // Estados
+  // Estados de las provincias y ciudades
   const [provincia, setProvincia] = useState("");
   const [ciudad, setCiudad] = useState("");
   const [ciudades, setCiudades] = useState([]);
@@ -65,23 +89,23 @@ function Registrarse() {
     setError("");
 
     const form = e.target;
-  const nombre = form[0].value;
-  const apellidos = form[1].value;
-  const tipoDocumentoValue = form[2].value;
-  const numeroDocumento = form[3].value;
-  const fechaNacimiento = form[4].value;
-  const email = form[5].value;
-  const codigoPostal = form[6].value;
-  const direccion = form[7].value;
-  const numeroDireccion = form[8].value;
-  const departamento = form[9].value;
-  const provincia = form[10].value;
-  const localidad = form[11].value;
-  const codArea = form[12].value;
-  const telefono = form[13].value;
-  const password = form[14].value;
-  const repetirPassword = form[15].value;
-  const aceptaTerminos = form[16].checked;
+    const nombre = form[0].value;
+    const apellidos = form[1].value;
+    const tipoDocumentoValue = form[2].value;
+    const numeroDocumento = form[3].value;
+    const fechaNacimiento = form[4].value;
+    const email = form[5].value;
+    const codigoPostal = form[6].value;
+    const direccion = form[7].value;
+    const numeroDireccion = form[8].value;
+    const departamento = form[9].value;
+    const provincia = form[10].value;
+    const localidad = form[11].value;
+    const codArea = form[12].value;
+    const telefono = form[13].value;
+    const password = form[14].value;
+    const repetirPassword = form[15].value;
+    const aceptaTerminos = form[16].checked;
 
     if (!nombre || !apellidos || !tipoDocumentoValue || !numeroDocumento || !fechaNacimiento 
      || !email || !codigoPostal || !direccion || !numeroDireccion || !provincia || !localidad || !codArea || !telefono || !password 
@@ -99,34 +123,73 @@ function Registrarse() {
     }
 
     try {
-      // Aquí iría la lógica para enviar los datos al backend
-      // Ejemplo:
-      // await registrarse({
-      //   nombre,
-      //   apellidos,
-      //   tipoDocumento: tipoDocumentoValue,
-      //   dni,
-      //   fechaNacimiento,
-      //   email,
-      //   codigoPostal,
-      //   direccion,
-      //   numero,
-      //   departamento,
-      //   provincia,
-      //   localidad,
-      //   codArea,
-      //   telefono,
-      //   password
-      // });
-      setError(""); // Limpiar error si todo sale bien
+      const usuario = {
+        nombre,
+        apellidos,
+        tipoDocumento: tipoDocumentoValue,
+        numeroDocumento,
+        fechaNacimiento,
+        email,
+        codigoPostal,
+        direccion,
+        numeroDireccion,
+        departamento,
+        provincia,
+        localidad,
+        codArea,
+        telefono,
+        password
+      };
+      const data = await APIRegistro(usuario);
+
+      // Mostrar modal de éxito
+      setModalCodigo(200);
+      setModalMensaje("¡Usuario registrado correctamente!");
+      setModalOpen(true);
+
+      // Restablecer todos los campos
+      setNombre("");
+      setApellidos("");
+      setTipoDocumento("");
+      setNumeroDocumento("");
+      setFechaNacimiento("");
+      setEmail("");
+      setCodigoPostal("");
+      setDireccion("");
+      setNumeroDireccion("");
+      setDepartamento("");
+      setProvincia("");
+      setCiudad("");
+      setCodArea("");
+      setTelefono("");
+      setPassword("");
+      setRepetirPassword("");
+      setAceptaTerminos(false);
+      setCiudades([]);
+
       // Redirigir o mostrar mensaje de éxito
     } catch (err) {
-      setError(err.message || "Error al registrar.");
-    }
+      setModalCodigo(err.code || 400);
+      // Si hay detalles, los mostramos juntos
+      let mensaje = err.message || "Error al registrar.";
+      if (err.details && Array.isArray(err.details)) {
+        mensaje += "\n" + err.details.map(d => `${d.field}: ${d.message}`).join("\n");
+      }
+      setModalMensaje(mensaje);
+      setModalOpen(true);
+        }
   };
 
   return (
     <>
+    {/* MODAL */}
+      {modalOpen && (
+                      <ModalMensajeRegistro
+                        codigo={modalCodigo}
+                        mensaje={modalMensaje}
+                        onClose={() => setModalOpen(false)}
+                      />
+                    )}
       {/* Fondo */}
       <div
         className="fixed inset-0 bg-[url('./assets/fondo.jpg')] bg-cover bg-center 
@@ -172,7 +235,7 @@ function Registrarse() {
               <select className="border rounded-lg px-3 py-2 w-full cursor-pointer" value={tipoDocumento} onChange={e => setTipoDocumento(e.target.value)} required>
                 <option value="">Tipo de documento</option>
                 <option value="DNI">DNI</option>
-                <option value="CUIL">CUIL/CUIT</option>
+                <option value="CUIL/CUIT">CUIL/CUIT</option>
                 <option value="Pasaporte">Pasaporte</option>
               </select>
               <input type="text" placeholder="Número" className="border rounded-lg px-3 py-2 w-full" required />

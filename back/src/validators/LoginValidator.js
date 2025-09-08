@@ -1,4 +1,5 @@
 import { IValidator } from "../interfaces/IValidator.js";
+import AppError from "../middlewares/AppError.js";
 
 // CONST: regex de email (fuera de la clase para claridad y test)
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -30,7 +31,9 @@ export class LoginValidator extends IValidator {
       errors.push({ field: "password", message: "Password requerido" });
     }
 
-    // 3) Resultado
+    if (errors.length) {
+      throw new AppError("Datos inválidos", 400, "AUTH_400", errors);
+    }
     return { isValid: errors.length === 0, errors };
   }
 }

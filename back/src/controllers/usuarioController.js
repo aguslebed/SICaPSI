@@ -19,8 +19,8 @@ export const C_Usuario_Alta = async (req, res, next) => {
     // Nota: Validaciones de formato van en validators; acá solo orquestamos.
     const saved = await S_Usuario_Alta(req.body);
     return res.status(201).json(UsuarioResponseFormatter.toPublic(saved));
-  } catch (err) {
-    next(err);
+  } catch (error) {
+    next(error);
   }
 };
 

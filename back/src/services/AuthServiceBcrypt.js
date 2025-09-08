@@ -10,10 +10,10 @@ export class AuthServiceBcrypt extends IAuthService {
    * @returns {Promise<Object|null>} Usuario autenticado o null
    */
   async authenticate(email, password) {
-    const usuario = await Usuario.findOne({ mail: email });
+    const usuario = await Usuario.findOne({ email: email });
     console.log("Usuario encontrado:", usuario);
     if (!usuario) return null;
-    const match = await bcrypt.compare(password, usuario.contrasena);
+    const match = await bcrypt.compare(password, usuario.password);
     return match ? usuario : null;
   }
 }

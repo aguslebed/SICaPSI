@@ -1,6 +1,5 @@
 import axios from "axios";
-
-// Usa VITE_API_URL o por defecto http://localhost:4000
+ 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
 
 const api = axios.create({
@@ -31,6 +30,23 @@ export async function login(email, password) {
       throw new Error("Error de conexión con el servidor");
     } else {
       throw new Error("Error en la configuración de la petición");
+    }
+  }
+}
+
+// Registro de usuario
+export async function APIRegistro(usuario) {
+  try {
+    const { data } = await api.post("/login/registro", usuario);
+    return data;
+  } catch (error) {
+    if (error.response) {
+      // Devuelve el objeto de error completo
+      throw error.response.data;
+    } else if (error.request) {
+      throw { message: "Error de conexión con el servidor" };
+    } else {
+      throw { message: "Error en la configuración de la petición" };
     }
   }
 }

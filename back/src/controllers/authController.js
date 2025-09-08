@@ -22,17 +22,13 @@ export const makeAuthController = ({ authService, loginValidator, responseFormat
       // 2) Valida formato (no toca BD)
       const { isValid, errors } = loginValidator.validate(body);
       if (!isValid) {
-        return res
-          .status(400)
-          .json({ code: "AUTH_400", message: "Datos inválidos", details: errors });
+        throw new AppError("Datos inválidos", 400, "AUTH_400", errors);
       }
 
       // 3) Autentica contra BD (bcryptjs/bcrypt según tu service)
       const user = await authService.authenticate(body.email, body.password);
       if (!user) {
-        return res
-          .status(401)
-          .json({ code: "AUTH_401", message: "Credenciales inválidas" });
+        throw new AppError("Credenciales inválidas", 401, "AUTH_401");
       }
 
       // 4) Formatea salida (oculta sensibles si el formatter lo hace)

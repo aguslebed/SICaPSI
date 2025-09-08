@@ -17,28 +17,16 @@
  * @param {Function} next - Función next de Express
  */
 export const errorHandler = (err, req, res, next) => {
-  // Responsabilidad 1: Logging para debugging
   console.error(`Error en ${req.method} ${req.path}:`, err?.stack || err);
 
-  // Responsabilidad 2: Determinar tipo de error
-  let statusCode = 500;
-  let message = "Error interno del servidor";
+  const statusCode = err.statusCode || 500;
+  const message = err.message || "Error interno del servidor";
+  const details = err.details || null;
 
-  if (err.name === 'ValidationError') {
-    statusCode = 400;
-    message = "Error de validación";
-  } else if (err.name === 'UnauthorizedError') {
-    statusCode = 401;
-    message = "No autorizado";
-  } else if (err.name === 'CastError') {
-    statusCode = 400;
-    message = "ID inválido";
-  }
-
-  // Responsabilidad 3: Formatear y enviar respuesta
   res.status(statusCode).json({
     success: false,
-    error: message,
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    code: statusCode,
+    message,
+    details
   });
 };
