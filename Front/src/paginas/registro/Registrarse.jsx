@@ -3,11 +3,126 @@ import { Link } from "react-router-dom";
 
 function Registrarse() {
   const [error, setError] = useState("");
+  const [tipoDocumento, setTipoDocumento] = useState("");
+  
+  // Estados
+  const [provincia, setProvincia] = useState("");
+  const [ciudad, setCiudad] = useState("");
+  const [ciudades, setCiudades] = useState([]);
 
-  const handleSubmit = (e) => {
+  // Array de archivos de provincias
+  const provinciasArchivos = [
+    "buenos_aires", "catamarca", "chaco", "chubut", "ciudad_autónoma_de_buenos_aires", "corrientes", "córdoba", "entre_ríos", "formosa", "jujuy", "la_pampa", "la_rioja", "mendoza", "misiones", "neuquén", "río_negro", "salta", "san_juan", "san_luis", "santa_cruz", "santa_fe", "santiago_del_estero", "tierra_del_fuego,_antártida_e_islas_del_atlántico_sur", "tucumán"
+  ];
+
+  // Mapeo para mostrar el nombre legible
+  const provinciaNombres = {
+    "buenos_aires": "Buenos Aires",
+    "catamarca": "Catamarca",
+    "chaco": "Chaco",
+    "chubut": "Chubut",
+    "ciudad_autónoma_de_buenos_aires": "Ciudad Autónoma de Buenos Aires",
+    "corrientes": "Corrientes",
+    "córdoba": "Córdoba",
+    "entre_ríos": "Entre Ríos",
+    "formosa": "Formosa",
+    "jujuy": "Jujuy",
+    "la_pampa": "La Pampa",
+    "la_rioja": "La Rioja",
+    "mendoza": "Mendoza",
+    "misiones": "Misiones",
+    "neuquén": "Neuquén",
+    "río_negro": "Río Negro",
+    "salta": "Salta",
+    "san_juan": "San Juan",
+    "san_luis": "San Luis",
+    "santa_cruz": "Santa Cruz",
+    "santa_fe": "Santa Fe",
+    "santiago_del_estero": "Santiago del Estero",
+    "tierra_del_fuego,_antártida_e_islas_del_atlántico_sur": "Tierra del Fuego, Antártida e Islas del Atlántico Sur",
+    "tucumán": "Tucumán"
+  };
+
+  // Handler para cargar ciudades
+  const handleProvinciaChange = async (e) => {
+    const prov = e.target.value;
+    setProvincia(prov);
+    setCiudad("");
+    if (prov) {
+      try {
+        const data = await import(`../../componentes/Localidades/${prov}.json`);
+        setCiudades(data.default.localidades || []);
+      } catch (err) {
+        setCiudades([]);
+      }
+    } else {
+      setCiudades([]);
+    }
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("Funcionalidad de registro pendiente.");
-    // Aquí irá la lógica de registro
+    setError("");
+
+    const form = e.target;
+  const nombre = form[0].value;
+  const apellidos = form[1].value;
+  const tipoDocumentoValue = form[2].value;
+  const numeroDocumento = form[3].value;
+  const fechaNacimiento = form[4].value;
+  const email = form[5].value;
+  const codigoPostal = form[6].value;
+  const direccion = form[7].value;
+  const numeroDireccion = form[8].value;
+  const departamento = form[9].value;
+  const provincia = form[10].value;
+  const localidad = form[11].value;
+  const codArea = form[12].value;
+  const telefono = form[13].value;
+  const password = form[14].value;
+  const repetirPassword = form[15].value;
+  const aceptaTerminos = form[16].checked;
+
+    if (!nombre || !apellidos || !tipoDocumentoValue || !numeroDocumento || !fechaNacimiento 
+     || !email || !codigoPostal || !direccion || !numeroDireccion || !provincia || !localidad || !codArea || !telefono || !password 
+     || !repetirPassword) {
+      setError("Todos los campos son obligatorios.");
+      return;
+    }
+    if (password !== repetirPassword) {
+      setError("Las contraseñas no coinciden.");
+      return;
+    }
+    if (!aceptaTerminos) {
+      setError("Debes aceptar los términos y condiciones.");
+      return;
+    }
+
+    try {
+      // Aquí iría la lógica para enviar los datos al backend
+      // Ejemplo:
+      // await registrarse({
+      //   nombre,
+      //   apellidos,
+      //   tipoDocumento: tipoDocumentoValue,
+      //   dni,
+      //   fechaNacimiento,
+      //   email,
+      //   codigoPostal,
+      //   direccion,
+      //   numero,
+      //   departamento,
+      //   provincia,
+      //   localidad,
+      //   codArea,
+      //   telefono,
+      //   password
+      // });
+      setError(""); // Limpiar error si todo sale bien
+      // Redirigir o mostrar mensaje de éxito
+    } catch (err) {
+      setError(err.message || "Error al registrar.");
+    }
   };
 
   return (
@@ -53,16 +168,15 @@ function Registrarse() {
             </div>
 
             {/* DNI y Fecha de Nacimiento */}
-            <div className="grid grid-cols-2 gap-4">
-              <input
-                type="text"
-                placeholder="DNI"
-                className="border rounded-lg px-3 py-2 w-full"
-              />
-              <input
-                type="date"
-                className="border rounded-lg px-3 py-2 w-full"
-              />
+            <div className="grid grid-cols-3 gap-4 ">
+              <select className="border rounded-lg px-3 py-2 w-full cursor-pointer" value={tipoDocumento} onChange={e => setTipoDocumento(e.target.value)} required>
+                <option value="">Tipo de documento</option>
+                <option value="DNI">DNI</option>
+                <option value="CUIL">CUIL/CUIT</option>
+                <option value="Pasaporte">Pasaporte</option>
+              </select>
+              <input type="text" placeholder="Número" className="border rounded-lg px-3 py-2 w-full" required />
+              <input type="date" className="border rounded-lg px-3 py-2 w-full" required />
             </div>
 
             {/* Email y Código Postal */}
@@ -98,18 +212,31 @@ function Registrarse() {
               />
             </div>
 
-            {/* Provincia y Localidad */}
+            {/* Provincia y Ciudad */}
             <div className="grid grid-cols-2 gap-4">
-              <input
-                type="text"
-                placeholder="Provincia"
-                className="border rounded-lg px-3 py-2 w-full"
-              />
-              <input
-                type="text"
-                placeholder="Localidad"
-                className="border rounded-lg px-3 py-2 w-full"
-              />
+              <select
+                className="border rounded-lg px-3 py-2 w-full max-h-48 overflow-y-auto cursor-pointer"
+                value={provincia}
+                onChange={handleProvinciaChange}
+                required
+              >
+                <option value="">Provincia</option>
+                {provinciasArchivos.map(p => (
+                  <option key={p} value={p}>{provinciaNombres[p]}</option>
+                ))}
+              </select>
+              <select
+                className="border rounded-lg px-3 py-2 w-full max-h-48 overflow-y-auto cursor-pointer"
+                value={ciudad}
+                onChange={e => setCiudad(e.target.value)}
+                required
+                disabled={!provincia}
+              >
+                <option value="">Ciudad</option>
+                {ciudades.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
             </div>
 
             {/* Teléfono */}
@@ -144,7 +271,7 @@ function Registrarse() {
             <div className="flex items-center">
               <input
                 type="checkbox"
-                className="h-5 w-5 text-sky-500 border-gray-300 rounded focus:ring-sky-500"
+                className="h-5 w-5 text-sky-500 border-gray-300 rounded focus:ring-sky-500 cursor-pointer"
               />
               <label className="ml-2 text-gray-700">
                 Acepto los{" "}
