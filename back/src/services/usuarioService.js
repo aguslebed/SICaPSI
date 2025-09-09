@@ -19,7 +19,9 @@ export const S_Usuario_Alta = async (data) => {
   const entity = new Usuario({
     ...data,
     password: hashed,
-    ultimoIngreso: data.ultimoIngreso ?? null
+    ultimoIngreso: data.ultimoIngreso ?? null,
+    legajo: data.legajo ?? null,
+    imagenPerfil: data.imagenPerfil ?? null
   });
   const saved = await entity.save();
   return saved;

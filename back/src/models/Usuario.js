@@ -25,7 +25,8 @@ const UsuarioSchema = new mongoose.Schema({
   password: { type: String, required: true },
   tipo: { type: String, enum: ["admin", "alumno", "capacitador", "directivo", "guardia"], default: "alumno", required: true },
   ultimoIngreso: { type: Date },
-  legajo: { type: String, index: true, unique: true, sparse: true }
+  legajo: { type: String, index: true, unique: true, sparse: true, default: null},
+  imagenPerfil: { type: String, required: false, default: null }
 }, {
   collection: "usuarios",
   timestamps: true
