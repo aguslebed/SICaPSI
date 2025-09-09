@@ -5,7 +5,7 @@ import authRoutes from "./routes/authRoutes.js";
 import { connectDB } from "./config/db.js";
 import usuarioRoutes from "./routes/usuarioRoutes.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
-
+import cookieParser from "cookie-parser";
 /**
  * Configurador principal de la aplicación
  * Responsabilidades:
@@ -30,19 +30,21 @@ class AppConfig {
    * Responsabilidad 1: Configurar middlewares base
    */
   configureMiddlewares() {
-    this.app.use(cors());
+    this.app.use(cors({
+      origin: 'http://localhost:5173',
+      credentials: true
+    }));
     this.app.use(express.json());
+    this.app.use(cookieParser());
   }
 
   /**
    * Responsabilidad 2: Configurar rutas
    */
-configureRoutes() {
-  this.app.use("/login", usuarioRoutes);
-  this.app.use("/auth", authRoutes); 
-  // Ejemplo futuro:
-  // this.app.use("/api/v1/turnos", turnoRoutes);
-}
+  configureRoutes() {
+    this.app.use("/login", usuarioRoutes);
+    this.app.use("/auth", authRoutes); 
+  }
 
 
   /**

@@ -3,6 +3,7 @@ import './App.css'
 import Home from './paginas/home/home'; 
 import InicioDeSesion from './paginas/home/inicioDeSesion';
 import PanelDeUsuario from './paginas/userPanel/alumno/PanelDeUsuario'; 
+import PrivateRoute from './api/PrivateRoute';
 import Registrarse from './paginas/registro/Registrarse';
 import NotFound from './paginas/NotFound';
 import DetalleCapacitacion from './paginas/userPanel/alumno/DetalleCapacitacion';
@@ -21,13 +22,13 @@ function App() {
         <Route path="/registrarse" element={<Registrarse />} />
 
 
-        <Route path="/panel" element={<PanelDeUsuario />} /> 
-        <Route path="/panel/capacitacion/1" element={<DetalleCapacitacion/>} />
-        <Route path='/panel/capacitacion/1/niveles' element={<Niveles/>} />
-        <Route path='/panel/capacitacion/1/mensajeria' element={<ConsultaCapacitador/>} />
-        <Route path='/panel/capacitacion/1/reportes' element={<MisReportes/>} />
-        <Route path='/panel/capacitacion/1/niveles/bibliografia' element={<NivelBibliografia/>} />
-        <Route path='/panel/capacitacion/1/niveles/capacitacion' element={<NivelCapacitacion/>} />
+        <Route path="/panel" element={<PrivateRoute><PanelDeUsuario /></PrivateRoute>} /> 
+        <Route path="/panel/capacitacion/1" element={<PrivateRoute><DetalleCapacitacion/></PrivateRoute>} />
+        <Route path='/panel/capacitacion/1/niveles' element={<PrivateRoute><Niveles/></PrivateRoute>} />
+        <Route path='/panel/capacitacion/1/mensajeria' element={<PrivateRoute><ConsultaCapacitador/></PrivateRoute>} />
+        <Route path='/panel/capacitacion/1/reportes' element={<PrivateRoute><MisReportes/></PrivateRoute>} />
+        <Route path='/panel/capacitacion/1/niveles/bibliografia' element={<PrivateRoute><NivelBibliografia/></PrivateRoute>} />
+        <Route path='/panel/capacitacion/1/niveles/capacitacion' element={<PrivateRoute><NivelCapacitacion/></PrivateRoute>} />
        
 
 

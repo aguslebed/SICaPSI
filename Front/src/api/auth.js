@@ -10,7 +10,7 @@ const api = axios.create({
 //Existe el usuario ? Si exite, traeme todos sus datos menos la contrañse
 export async function login(email, password) {
   try {
-    const { data } = await api.post("/auth/login", { email, password });
+    const { data } = await api.post("/auth/login", { email, password }, { withCredentials: true });
 
     // El back puede devolver { user, token } o solo el user
     // Normalizamos para que el resto del front no explote
@@ -37,7 +37,7 @@ export async function login(email, password) {
 // Registro de usuario
 export async function APIRegistro(usuario) {
   try {
-    const { data } = await api.post("/login/registro", usuario);
+    const { data } = await api.post("/login/registro", usuario, { withCredentials: true });
     return data;
   } catch (error) {
     if (error.response) {
@@ -48,5 +48,32 @@ export async function APIRegistro(usuario) {
     } else {
       throw { message: "Error en la configuración de la petición" };
     }
+  }
+}
+
+// Logout de usuario
+export async function logout() {
+  try {
+    await api.post('/auth/logout', {}, { withCredentials: true });
+    return true;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al cerrar sesión');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+
+// Verifica si el usuario está autenticado
+export async function checkAuth() {
+  try {
+    await api.get('/auth/check-auth', { withCredentials: true });
+    return true;
+  } catch (error) {
+    throw new Error('No autenticado');
   }
 }

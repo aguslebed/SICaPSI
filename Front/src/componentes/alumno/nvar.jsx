@@ -1,8 +1,21 @@
 import React from "react";
+import { logout } from '../../api/auth';
+import { useNavigate } from 'react-router-dom';
 import { Bell } from "lucide-react"; // íconos
 import { Menu } from "@headlessui/react"; // dropdown accesible
 
 const Navbar = () => {
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/');
+    } catch (err) {
+      alert('Error al cerrar sesión');
+    }
+  };
+
   return (
     <header className="w-full">
       {/* Div superior azul oscuro con logo */}
@@ -64,6 +77,7 @@ const Navbar = () => {
                     className={`w-full text-left px-4 py-2 text-sm text-red-400 hover:cursor-pointer ${
                       active ? "bg-blue-600" : ""
                     }`}
+                    onClick={handleLogout}
                   >
                     Cerrar sesión
                   </button>

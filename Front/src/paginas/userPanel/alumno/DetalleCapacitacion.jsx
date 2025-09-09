@@ -8,43 +8,41 @@ const capacitaciones = [
     titulo: "Capacitación 1",
     subtitulo: "Edificio de departamentos",
     porcentaje: 50,
-    imagen: "/assets/capacitacion/departamentos.jpg",
+    imagen: "/src/assets/capacitacion/departamentos.jpg",
   },
   {
     id: 2,
     titulo: "Capacitación 2",
     subtitulo: "Barrio privado pequeño",
     porcentaje: 0,
-    imagen: "/assets/capacitacion/barrioPrivadoChico.jpg",
+    imagen: "/src/assets/capacitacion/barrioPrivadoChico.jpg",
   },
   {
     id: 3,
     titulo: "Capacitación 3",
     subtitulo: "Barrio privado grande",
     porcentaje: 0,
-    imagen: "/assets/capacitacion/barrioPrivadoGrande.jpg",
+    imagen: "/src/assets/capacitacion/barrioPrivadoGrande.jpg",
   },
   {
     id: 4,
     titulo: "Capacitación 4",
     subtitulo: "Garita de seguridad",
     porcentaje: 0,
-    imagen: "/assets/capacitacion/garitaDeSeguridad.jpg",
+    imagen: "/src/assets/capacitacion/garitaDeSeguridad.jpg",
   },
   {
     id: 5,
     titulo: "Capacitación 5",
     subtitulo: "Pubs y discotecas",
     porcentaje: 0,
-    imagen: "/assets/capacitacion/pubsYDisco.jpg",
+    imagen: "/src/assets/capacitacion/pubsYDisco.jpg",
   },
 ];
 
 const DetalleCapacitacion = () => {
-  const { id } = "useParams()";
-  
-  const cap = capacitaciones.find((c) => c.id === 1);
-
+  const { id=1 } = useParams();
+  const cap = capacitaciones.find((c) => c.id === Number(id));
   if (!cap) {
     return <p className="text-center mt-20">Capacitación no encontrada</p>;
   }
@@ -60,7 +58,7 @@ const DetalleCapacitacion = () => {
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           {/* Imagen y título */}
           <div
-            className="h-48 bg-cover bg-center flex flex-col justify-center text-white px-8"
+            className="h-48 bg-black bg-center bg-cover flex flex-col justify-center text-white px-8"
             style={{ backgroundImage: `url(${cap.imagen})` }}
           >
             <h1 className="text-3xl font-bold">{cap.titulo}</h1>

@@ -11,13 +11,16 @@ import {
   C_Usuario_Actualizar
 } from "../controllers/usuarioController.js";
 import { RegistrationValidator } from "../validators/RegistrationValidator.js";
+import authMiddleware from "../middlewares/authMiddleware.js"
 
 const router = Router();
 
-// NADA de auth acá. Solo usuario.
-router.get("/", C_Usuario_Listar);
-router.get("/:usuarioId", C_Usuario_ObtenerPorId);
+//Rutas publicas
 router.post("/registro", RegistrationValidator, C_Usuario_Alta);
-router.patch("/:usuarioId", C_Usuario_Actualizar);
+
+// Rutas privadas
+router.get("/", authMiddleware, C_Usuario_Listar);
+router.get("/:usuarioId", authMiddleware, C_Usuario_ObtenerPorId);
+router.patch("/:usuarioId", authMiddleware, C_Usuario_Actualizar);
 
 export default router;
