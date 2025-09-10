@@ -26,7 +26,11 @@ const UsuarioSchema = new mongoose.Schema({
   tipo: { type: String, enum: ["admin", "alumno", "capacitador", "directivo", "guardia"], default: "alumno", required: true },
   ultimoIngreso: { type: Date },
   legajo: { type: String, index: true, unique: true, sparse: true, default: null},
-  imagenPerfil: { type: String, required: false, default: null }
+  imagenPerfil: { type: String, required: false, default: null },
+  cursosAsignados: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Course'
+  }],
 }, {
   collection: "usuarios",
   timestamps: true
