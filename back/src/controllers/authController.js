@@ -1,8 +1,10 @@
+// authController.js
 /**
  * C.Auth.Login — Controlador de autenticación
  */
 import jwt from 'jsonwebtoken';
 import AppError from '../middlewares/AppError.js';
+import { getUserCompleteData } from '../services/userDataService.js';
 
 export const makeAuthController = ({ authService, loginValidator, responseFormatter }) => ({
   /**
@@ -43,15 +45,22 @@ export const makeAuthController = ({ authService, loginValidator, responseFormat
       // 5) Cookie segura con configuración adaptable
       res.cookie('token', token, { 
         httpOnly: true, 
-        secure: true, // debe ser true para sameSite: 'none'
+        secure: true,
         sameSite: 'none',
         maxAge: 12 * 60 * 60 * 1000
       });
 
-      // 6) DELEGA el formateo al responseFormatter (ya elimina contraseña)
-      const payload = responseFormatter.formatSuccess(user); 
-      console.log("Usuario encontrado:", payload);
-      return res.json({ user: payload, message: 'Login exitoso' });
+      // 6) OBTENER DATOS COMPLETOS DEL USUARIO
+      const userCompleteData = await getUserCompleteData(user._id);
+
+      // 7) Formatear respuesta EXACTAMENTE como espera el frontend
+      console.log("📦 Datos completos que se enviarán al frontend:", JSON.stringify(userCompleteData, null, 2));
+
+      // 8) Devolver en el formato que espera el frontend: { user: data, token: null }
+      return res.json({
+        user: userCompleteData, // ← Todos los datos completos aquí
+        token: null // ← Tu frontend espera este campo aunque no lo use
+      });
 
     } catch (err) {
       next(err);
@@ -67,18 +76,20 @@ export const makeAuthController = ({ authService, loginValidator, responseFormat
     res.json({ message: 'Logout exitoso' });
   },
 
-  checkAuth: (req, res) => {
-    // También usa el formatter para consistencia
-    const userData = responseFormatter.formatSuccess({
-      userId: req.user.userId,
-      email: req.user.email,
-      role: req.user.role,
-      tipo: req.user.role // por compatibilidad
-    });
-    
-    res.json({ 
-      authenticated: true,
-      user: userData
-    });
+  checkAuth: async (req, res, next) => {
+    try {
+      // Obtener datos completos al verificar autenticación también
+      const userCompleteData = await getUserCompleteData(req.user.userId);
+      
+      console.log("🔐 Datos de checkAuth:", JSON.stringify(userCompleteData, null, 2));
+      
+      // Devolver en el formato que espera el frontend
+      res.json({ 
+        user: userCompleteData,
+        token: null
+      });
+    } catch (error) {
+      next(error);
+    }
   }
 });
