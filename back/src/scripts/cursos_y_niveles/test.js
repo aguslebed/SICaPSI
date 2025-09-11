@@ -2,12 +2,14 @@ export const sampleTest = [
   // Niveles para Desarrollo Web Full Stack
   {
 test: [
-      {
-        idScene: 0,
-        videoUrl: "https://1drv.ms/v/c/dadae24ff38d0d09/IQRMYk3zhUFkQ4Kc9JT_k68gAQlWceOg3u1GfL8epo5C25M",
-        description: "Una persona vestida de oficial de policia toca la puerta.",
-        createdAt: new Date(),
-        options: [
+            {
+                idScene: 0,
+                videoUrl: "/src/Assets/videos/v1.mp4",
+                description: "Una persona vestida de oficial de policia toca la puerta.",
+                createdAt: new Date(),
+                lastOne: false,
+                bonus: 0,
+                options: [
                 {
                     description: "Acercarse y abrir la puerta",
                     points: 5,
@@ -20,12 +22,14 @@ test: [
                 }
                 ]
       },
-      {
-        idScene: 1,
-        videoUrl: "https://1drv.ms/v/c/dadae24ff38d0d09/IQQIhZZR5ru8TLK8CgmlnPOhAeGbDa3IVQ9lpmp32X2J9HU",
-        description: "Establecen comunicacion",
-        createdAt: new Date(),
-        options: [
+            {
+                idScene: 1,
+                videoUrl: "/src/Assets/videos/v2.mp4",
+                description: "Establecen comunicacion",
+                createdAt: new Date(),
+                lastOne: false,
+                bonus: 0,
+                options: [
                 {
                     description: "Pedir identificacion",
                     points: 5,
@@ -34,244 +38,270 @@ test: [
                 {
                     description: "Dejar pasar",
                     points: -5,
-                    next: 2
-                }
-                ]
-        },
-        {
-        idScene: 2,
-        videoUrl: "https://1drv.ms/v/c/dadae24ff38d0d09/IQQ_zJYjlZU_Qb6GxaOz9r6-AekmilTuzXeH-V--suI93hg",
-        description: "Escena 3: Pregunta sobre JavaScript",
-        createdAt: new Date(),
-        options: [
-                {
-                    description: "Respuesta A",
-                    points: 10,
-                    next: 3
-                },
-                {
-                    description: "Respuesta B",
-                    points: 5,
-                    next: 3
-                }
-                ]
-        },
-        {
-        idScene: 3,
-        videoUrl: "https://1drv.ms/v/c/dadae24ff38d0d09/IQQTbGen6aiPQ6TWc7BHvEvkAeQiJHK02RKS1ZZ4XJQdpqE",
-        description: "Escena 4: Pregunta sobre funciones",
-        createdAt: new Date(),
-        options: [
-                {
-                    description: "Respuesta A",
-                    points: 10,
-                    next: 4
-                },
-                {
-                    description: "Respuesta B",
-                    points: 5,
                     next: 4
                 }
                 ]
-      },
-      {
-        idScene: 4,
-        videoUrl: "https://1drv.ms/v/c/dadae24ff38d0d09/IQRrlSgcM2J-SLseyYzTnLYiAfCf2d7sW7aAZE8PsuDaf-o",
-        description: "Escena 5: Pregunta sobre DOM",
-        createdAt: new Date(),
-        options: [
+        },
+    {
+    idScene: 2,
+    videoUrl: "/src/Assets/videos/v6.mp4",
+    description: "Escena 3: ",
+    createdAt: new Date(),
+    lastOne: false,
+    bonus: 0,
+    options: [
                 {
-                    description: "Respuesta A",
-                    points: 10,
+                    description: "Informar por radio la situacion",
+                    points: 5,
                     next: 5
                 },
                 {
-                    description: "Respuesta B",
-                    points: 5,
-                    next: 5
-                }
-                ]
-      },
-      {
-        idScene: 5,
-        videoUrl: "https://1drv.ms/v/c/dadae24ff38d0d09/IQTD-h3webWJTaveo0gF7_ZVATam8oRzeeKxoL3xfStIWSw",
-        description: "Escena 6: Pregunta sobre eventos",
-        createdAt: new Date(),
-        options: [
-                {
-                    description: "Respuesta A",
-                    points: 10,
-                    next: 6
-                },
-                {
-                    description: "Respuesta B",
-                    points: 5,
+                    description: "Pedirle que se retire",
+                    points: -5,
                     next: 6
                 }
                 ]
-      },
-      {
-        idScene: 6,
-        videoUrl: "https://1drv.ms/v/c/dadae24ff38d0d09/IQRDM2sy8Yh8RKI_jtyRTP8vAVH4fzCIMXedTXZsUlj_Po8",
-        description: "Escena 7: Pregunta sobre JSON",
-        createdAt: new Date(),
-        options: [
+        },
+    {
+    idScene: 3,
+    videoUrl: "/src/Assets/videos/v3.mp4",
+    description: "Notas que la identificacion es falsa.",
+    createdAt: new Date(),
+    lastOne: false,
+    bonus: 0,
+    options: [
                 {
-                    description: "Respuesta A",
-                    points: 10,
+                    description: "Dejar entrar igualmente",
+                    points: 0,
                     next: 7
                 },
                 {
-                    description: "Respuesta B",
-                    points: 5,
-                    next: 7
-                }
-                ]
-      },
-      {
-        idScene: 7,
-        videoUrl: "https://1drv.ms/v/c/dadae24ff38d0d09/IQQkkrkjiTOuS5nXOCRsu2clAaSpuEXSOv43AwdYArAnWv4",
-        description: "Escena 8: Pregunta sobre API",
-        createdAt: new Date(),
-        options: [
-                {
-                    description: "Respuesta A",
+                    description: "Denegar acceso",
                     points: 10,
-                    next: 8
-                },
-                {
-                    description: "Respuesta B",
-                    points: 5,
                     next: 8
                 }
                 ]
       },
-      {
-        idScene: 8,
-        videoUrl: "https://1drv.ms/v/c/dadae24ff38d0d09/IQRBCFIOAlTCQ6Xgqxvs8VT0AfFZOOL6rEouPNU5qTh2wN8",
-        description: "Escena 9: Pregunta sobre promesas",
-        createdAt: new Date(),
-        options: [
+            {
+                idScene: 4,
+                videoUrl: "/src/Assets/videos/v7.mp4",
+                description: "Escena 5: Pregunta sobre DOM",
+                createdAt: new Date(),
+                lastOne: false,
+                bonus: 0,
+                options: [
                 {
-                    description: "Respuesta A",
-                    points: 10,
+                    description: "Anotar ingreso",
+                    points: 5,
                     next: 9
                 },
                 {
-                    description: "Respuesta B",
-                    points: 5,
-                    next: 9
-                }
-                ]
-      },
-      {
-        idScene: 9,
-        videoUrl: "https://1drv.ms/v/c/dadae24ff38d0d09/IQTKkqM9gl2CSqRxdm5QmEwzAViYPyMCzk3EpoLnJ_uxJEo",
-        description: "Escena 10: Pregunta sobre async/await",
-        createdAt: new Date(),
-        options: [
-                {
-                    description: "Respuesta A",
-                    points: 10,
-                    next: 10
-                },
-                {
-                    description: "Respuesta B",
-                    points: 5,
+                    description: "No anotar y volver al puesto",
+                    points: -5,
                     next: 10
                 }
                 ]
       },
-      {
-        idScene: 10,
-        videoUrl: "https://1drv.ms/v/c/dadae24ff38d0d09/IQRYKcE5xdUfQIG4KEJ16fVTAaKvpnUdkXW2N3JamtPja6w",
-        description: "Escena 11: Pregunta sobre Node.js",
-        createdAt: new Date(),
-        options: [
+            {
+                idScene: 5,
+                videoUrl: "/src/Assets/videos/v10.mp4",
+                description: "Informan que nadie espera a un oficial de policia",
+                createdAt: new Date(),
+                lastOne: false,
+                bonus: 0,
+                options: [
                 {
-                    description: "Respuesta A",
-                    points: 10,
+                    description: "Denegar acceso",
+                    points: 5,
                     next: 11
                 },
                 {
-                    description: "Respuesta B",
-                    points: 5,
-                    next: 11
-                }
-                ]
-      },
-      {
-        idScene: 11,
-        videoUrl: "https://1drv.ms/v/c/dadae24ff38d0d09/IQR_qSQDU_vfQ7w3-wh_H7a7AZdNbfCWYoh2VAt05wS8gMU",
-        description: "Escena 12: Pregunta sobre Express.js",
-        createdAt: new Date(),
-        options: [
-                {
-                    description: "Respuesta A",
-                    points: 10,
-                    next: 12
-                },
-                {
-                    description: "Respuesta B",
-                    points: 5,
+                    description: "Permitir acceso igualmente",
+                    points: 0,
                     next: 12
                 }
                 ]
       },
-      {
-        idScene: 12,
-        videoUrl: "https://1drv.ms/v/c/dadae24ff38d0d09/IQR3-zq80k3HQ4PQQGY2eQTXAUHdTyjhLlE_fe9ARi9ChEY",
-        description: "Escena 13: Pregunta sobre bases de datos",
-        createdAt: new Date(),
-        options: [
+            {
+                idScene: 6,
+                videoUrl: "/src/Assets/videos/v13.mp4",
+                description: "La persona se pone erratica e insiste en su ingreso",
+                createdAt: new Date(),
+                lastOne: false,
+                bonus: 0,
+                options: [
                 {
-                    description: "Respuesta A",
-                    points: 10,
+                    description: "Llamar a la policia",
+                    points: 5,
                     next: 13
                 },
                 {
-                    description: "Respuesta B",
-                    points: 5,
-                    next: 13
-                }
-                ]
-      },
-      {
-        idScene: 13,
-        videoUrl: "https://1drv.ms/v/c/dadae24ff38d0d09/IQTBmjWTGWOoTaXbYQ6lPcUxAUbBajKhBkr-wRlqxQLi4Do",
-        description: "Escena 14: Pregunta sobre seguridad",
-        createdAt: new Date(),
-        options: [
-                {
-                    description: "Respuesta A",
-                    points: 10,
-                    next: 14
-                },
-                {
-                    description: "Respuesta B",
-                    points: 5,
+                    description: "Ignorarlo",
+                    points: -10,
                     next: 14
                 }
                 ]
       },
-      {
-        idScene: 14,
-        videoUrl: "https://1drv.ms/v/c/dadae24ff38d0d09/IQRk0EbUzYNEQp1AFVe9zAwoAS2b0Tf1taghcp2Yo5NQGT0",
-        description: "Escena 15: Pregunta final y cierre",
-        createdAt: new Date(),
-        options: [
+            {
+                idScene: 7,
+                videoUrl: "/src/Assets/videos/v4.mp4",
+                description: "Final XXX",
+                createdAt: new Date(),
+                lastOne: true,
+                bonus: 10,
+                options: [
                 {
-                    description: "Respuesta A",
-                    points: 10,
+                    description: "Final",
+                    points: 0,
                     next: 0
                 },
                 {
-                    description: "Respuesta B",
-                    points: 5,
+                    description: "Final",
+                    points: 0,
                     next: 0
                 }
                 ]
-      }
+      },
+            {
+                idScene: 8,
+                videoUrl: "/src/Assets/videos/v5.mp4",
+                description: "Final XXX",
+                createdAt: new Date(),
+                lastOne: true,
+                bonus: 0,
+                options: [
+                {
+                    description: "Final",
+                    points: 0,
+                    next: 0
+                },
+                {
+                    description: "Final",
+                    points: 0,
+                    next: 0
+                }
+                ]
+      },
+            {
+                idScene: 9,
+                videoUrl: "/src/Assets/videos/v8.mp4",
+                description: "Final XXX",
+                createdAt: new Date(),
+                lastOne: true,
+                bonus: 5,
+                options: [
+                {
+                    description: "Final",
+                    points: 0,
+                    next: 0
+                },
+                {
+                    description: "Final",
+                    points: 0,
+                    next: 0
+                }
+                ]
+      },
+            {
+                idScene: 10,
+                videoUrl: "/src/Assets/videos/v9.mp4",
+                description: "Final XXX",
+                createdAt: new Date(),
+                lastOne: true,
+                bonus: -5,
+                options: [
+                {
+                    description: "Final",
+                    points: 0,
+                    next: 0
+                },
+                {
+                    description: "Final",
+                    points: 0,
+                    next: 0
+                }
+                ]
+      },
+            {
+                idScene: 11,
+                videoUrl: "/src/Assets/videos/v11.mp4",
+                description: "Final XXX",
+                createdAt: new Date(),
+                lastOne: true,
+                bonus: 5,
+                options: [
+                {
+                    description: "Final",
+                    points: 0,
+                    next: 0
+                },
+                {
+                    description: "Final",
+                    points: 0,
+                    next: 0
+                }
+                ]
+      },
+            {
+                idScene: 12,
+                videoUrl: "/src/Assets/videos/v12.mp4",
+                description: "Final XXX",
+                createdAt: new Date(),
+                lastOne: true,
+                bonus: 0,
+                options: [
+                {
+                    description: "Final",
+                    points: 0,
+                    next: 0
+                },
+                {
+                    description: "Final",
+                    points: 0,
+                    next: 0
+                }
+                ]
+      },
+            {
+                idScene: 13,
+                videoUrl: "/src/Assets/videos/v14.mp4",
+                description: "Final XXX",
+                createdAt: new Date(),
+                lastOne: true,
+                bonus: 8,
+                options: [
+                {
+                    description: "Final",
+                    points: 0,
+                    next: 0
+                },
+                {
+                    description: "Final",
+                    points: 0,
+                    next: 0
+                }
+                ]
+      },
+            {
+                idScene: 14,
+                videoUrl: "/src/Assets/videos/v15.mp4",
+                description: "Final XXX",
+                createdAt: new Date(),
+                lastOne: true,
+                bonus: 10,
+                options: [
+                {
+                    description: "Final",
+                    points: 0,
+                    next: 0
+                },
+                {
+                    description: "Final",
+                    points: 0,
+                    next: 0
+                }
+                ]
+      },
     ],
     isActive: true
   }

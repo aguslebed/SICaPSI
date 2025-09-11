@@ -38,9 +38,9 @@ const NavBar = () => {
         <div className="flex items-center gap-6">
           {/* Icono de campana */}
           <button className="relative hover:text-gray-200">
-            <Bell className="w-6 h-6" />
+            <Bell className="w-6 h-6 cursor-pointer" />
             {/* Badge de notificaciones */}
-            <span className="absolute -top-1 -right-1 bg-red-500 text-xs text-white rounded-full px-1">
+            <span className="absolute -top-1 -right-1 bg-red-500 text-xs text-white rounded-full px-1 cursor-pointer">
               {userData?.data?.messages?.total || 0}
             </span>
           </button>

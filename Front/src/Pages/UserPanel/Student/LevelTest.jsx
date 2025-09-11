@@ -44,7 +44,7 @@ const LevelTest = () => {
       <div className="flex min-h-screen bg-gray-100">
         <MenuVertical />
         <main className="flex-1 p-8 flex justify-center items-center">
-          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-3xl w-full flex flex-col items-center">
+          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-3xl w-full flex flex-col items-center" style={{ minHeight: 500 }}>
             {sceneIndex === null ? (
               <>
                 {/* Imagen/video inicial */}
@@ -56,13 +56,13 @@ const LevelTest = () => {
                 />
                 <div className="flex gap-8 justify-center">
                   <button
-                    className="bg-[#009fe3] text-white font-bold px-8 py-4 rounded-lg text-xl hover:bg-[#0077b6] transition"
+                    className="bg-[#009fe3] text-white font-bold px-8 py-4 rounded-lg text-xl hover:bg-[#0077b6] transition cursor-pointer"
                     onClick={handleRestart}
                   >
                     Reiniciar video
                   </button>
                   <button
-                    className="bg-[#009fe3] text-white font-bold px-8 py-4 rounded-lg text-xl hover:bg-[#0077b6] transition"
+                    className="bg-[#009fe3] text-white font-bold px-8 py-4 rounded-lg text-xl hover:bg-[#0077b6] transition cursor-pointer"
                     onClick={handleStart}
                   >
                     Iniciar Simulación
@@ -71,18 +71,21 @@ const LevelTest = () => {
               </>
             ) : (
               <>
+                {/* Debug info: escena y ruta de video */}
+                <div style={{marginBottom: '10px', color: '#888', fontSize: '0.95em'}}>
+                  <strong>Escena:</strong> {tests[sceneIndex]?.idScene} &nbsp;|&nbsp; <strong>Ruta video:</strong> {tests[sceneIndex]?.videoUrl}
+                </div>
                 {/* Video de la escena */}
                 {tests[sceneIndex].videoUrl && (
-                  <iframe
+                  <video
+                    key={tests[sceneIndex].videoUrl}
                     src={tests[sceneIndex].videoUrl}
-                    width="1150"
-                    height="768"
-                    frameBorder="0"
-                    scrolling="no"
-                    allowFullScreen
+                    autoPlay
+                    controls={false}
+                    disablePictureInPicture
+                    controlsList="nodownload nofullscreen noremoteplayback noautoplay"
                     className="rounded-2xl w-full mb-6"
-                    style={{ maxHeight: 350 }}
-                    title="Simulación Video"
+                    style={{ maxHeight: 350, minHeight: 350, background: "#222" }}
                   />
                 )}
                 {/* Descripción */}
@@ -93,7 +96,7 @@ const LevelTest = () => {
                     tests[sceneIndex].options.map((opt, idx) => (
                       <button
                         key={idx}
-                        className="bg-[#009fe3] text-white font-bold px-8 py-4 rounded-lg text-xl hover:bg-[#0077b6] transition w-1/2"
+                        className="bg-[#009fe3] text-white font-bold px-8 py-4 rounded-lg text-xl hover:bg-[#0077b6] transition w-1/2 cursor-pointer"
                         onClick={() => handleOption(opt.next)}
                       >
                         {opt.description}
@@ -102,7 +105,7 @@ const LevelTest = () => {
                 </div>
                 {/* Botón para reiniciar */}
                 <button
-                  className="mt-8 bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition"
+                  className="mt-8 bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition cursor-pointer"
                   onClick={handleRestart}
                 >
                   Reiniciar Simulación

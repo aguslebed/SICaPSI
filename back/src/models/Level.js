@@ -26,6 +26,8 @@ const LevelSchema = new mongoose.Schema(
       videoUrl: { type: String, required: true },
       description: { type: String, required: true },
       createdAt: { type: Date, default: Date.now },
+      lastOne: { type: Boolean, default: false},
+      bonus: {type: Number, default: 0},
       options: [{
         description: { type: String, required: true },
         points: { type: Number, required: true },
