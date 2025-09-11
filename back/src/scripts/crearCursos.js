@@ -1,20 +1,17 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
-import Usuario from '../models/Usuario.js';
-import Course from '../models/Course.js';
+import User from '../models/User.js';
+import Training from '../models/Training.js';
 import Level from '../models/Level.js';
-import PrivateMessage from '../models/PrivateMessage.js';
-import Report from '../models/Report.js';
-import UserProgress from '../models/UserProgress.js';
-import { sampleLevels } from './cursos_y_niveles/niveles.js';
+import PrivateMessage from '../models/PrivateMessage.js'; 
+import { sampleLevels } from './cursos_y_niveles/levels.js';
 import { sampleCourses } from './cursos_y_niveles/cursos.js';
 import { sampleUsers } from './cursos_y_niveles/usuarios.js';
 
 // Configuración de conexión
 const MONGODB_URI = 'mongodb://localhost:27017/SICAPSI';
 const SALT_ROUNDS = 12;
-
-
+ 
 // Función principal
 async function initializeDatabase() {
   try {
@@ -26,12 +23,10 @@ async function initializeDatabase() {
     // Limpiar TODAS las collections para empezar fresco
     console.log('🧹 Limpiando todos los datos...');
     await Promise.all([
-      Usuario.deleteMany({}),
-      Course.deleteMany({}),
+      User.deleteMany({}),
+      Training.deleteMany({}),
       Level.deleteMany({}),
-      PrivateMessage.deleteMany({}),
-      Report.deleteMany({}),
-      UserProgress.deleteMany({})
+      PrivateMessage.deleteMany({})
     ]);
 
     // Crear usuarios de simulación
@@ -43,82 +38,81 @@ async function initializeDatabase() {
       }))
     );
     
-    const createdUsers = await Usuario.insertMany(hashedUsers);
-    console.log(`✅ ${createdUsers.length} usuarios creados`);
-    const users = createdUsers;
+  const createdUsers = await User.insertMany(hashedUsers);
+  console.log(`✅ ${createdUsers.length} users created`);
+  const users = createdUsers;
 
     // Obtener admin y alumnos
-    const adminUser = users.find(user => user.tipo === 'admin');
-    const alumnos = users.filter(user => user.tipo === 'alumno');
+  const adminUser = users.find(user => user.role === 'Administrador');
+  const students = users.filter(user => user.role === 'Alumno');
 
     // Crear cursos
     console.log('📚 Creando cursos...');
-    const coursesWithAdmin = sampleCourses.map(course => ({
-      ...course,
-      createdBy: adminUser._id,
-      asignadoA: alumnos.map(alumno => alumno._id)
+    const trainingsWithAdmin = sampleCourses.map(training => ({
+      ...training,
+      createdBy: adminUser._id
     }));
 
-    const createdCourses = await Course.insertMany(coursesWithAdmin);
-    console.log(`✅ ${createdCourses.length} cursos creados`);
+    const createdTrainings = await Training.insertMany(trainingsWithAdmin);
+    console.log(`✅ ${createdTrainings.length} trainings created`);
 
     // Crear niveles
     console.log('🎯 Creando niveles...');
     const levelsData = [];
     
     // Para cada curso crear niveles
-    createdCourses.forEach((course, index) => {
+    createdTrainings.forEach((training, index) => {
       sampleLevels.forEach(level => {
         levelsData.push({
           ...level,
-          courseId: course._id,
+          trainingId: training._id,
           title: index === 0 ? level.title : `ML - ${level.title}`
         });
       });
     });
 
-    const createdLevels = await Level.insertMany(levelsData);
-    console.log(`✅ ${createdLevels.length} niveles creados`);
+  const createdLevels = await Level.insertMany(levelsData);
+  console.log(`✅ ${createdLevels.length} levels created`);
 
     // Actualizar cursos con referencias a niveles
     console.log('🔗 Actualizando cursos con niveles...');
-    for (const course of createdCourses) {
-      const courseLevels = createdLevels.filter(level => 
-        level.courseId.toString() === course._id.toString()
+    for (const training of createdTrainings) {
+      const trainingLevels = createdLevels.filter(level => 
+        level.trainingId.toString() === training._id.toString()
       );
-      
-      await Course.findByIdAndUpdate(course._id, {
-        levels: courseLevels.map(level => level._id),
-        totalLevels: courseLevels.length
+      await Training.findByIdAndUpdate(training._id, {
+        levels: trainingLevels.map(level => level._id),
+        totalLevels: trainingLevels.length
       });
     }
 
     // Asignar cursos a los alumnos
     console.log('🎓 Asignando cursos a alumnos...');
-    for (const alumno of alumnos) {
-      await Usuario.findByIdAndUpdate(
-        alumno._id,
+    for (const student of students) {
+      await User.findByIdAndUpdate(
+        student._id,
         { 
           $set: { 
-            cursosAsignados: createdCourses.map(course => course._id) 
+            assignedTraining: createdTrainings.map(training => training._id) 
           } 
         }
       );
     }
+
 
     // Crear algunos mensajes de ejemplo
     console.log('📨 Creando mensajes de ejemplo...');
     const sampleMessages = [
       {
         sender: adminUser._id,
-        recipient: alumnos[0]._id,
+        recipient: students[0]._id,
         subject: "Bienvenido al curso",
         message: "¡Hola! Te damos la bienvenida al curso. Esperamos que tengas una excelente experiencia de aprendizaje.",
         isRead: false,
         folder: 'inbox'
       },
       {
-        sender: alumnos[0]._id,
+        sender: students[0]._id,
         recipient: adminUser._id,
         subject: "Consulta sobre el primer nivel",
         message: "Hola, tengo una duda sobre el primer nivel del curso.",
@@ -128,72 +122,40 @@ async function initializeDatabase() {
     ];
 
     await PrivateMessage.insertMany(sampleMessages);
-    console.log('✅ Mensajes de ejemplo creados');
+    console.log('✅ Sample messages created');
 
-    // Crear progreso de ejemplo
-    console.log('📊 Creando progreso de ejemplo...');
-    const sampleProgress = [
-      {
-        userId: alumnos[0]._id,
-        courseId: createdCourses[0]._id,
-        completedLevels: [
-          {
-            levelId: createdLevels[0]._id,
-            levelNumber: 1,
-            score: 85,
-            attempts: 1
-          }
-        ],
-        currentLevel: {
-          levelId: createdLevels[1]._id,
-          levelNumber: 2
-        },
-        totalProgress: 50,
-        isCompleted: false
-      }
-    ];
-
-    await UserProgress.insertMany(sampleProgress);
-    console.log('✅ Progreso de ejemplo creado');
-
+      
     // VERIFICACIÓN FINAL
     console.log('🔍 Verificando que todo esté correcto...');
     
     // Verificar usuario con cursos
-    const usuarioConCursos = await Usuario.findById(alumnos[0]._id)
-      .populate('cursosAsignados', 'title subtitle')
+    const userWithTrainings = await User.findById(students[0]._id)
+      .populate('assignedTraining', 'title subtitle')
       .exec();
     
-    console.log('📋 Cursos asignados a Juan Pérez:');
-    usuarioConCursos.cursosAsignados.forEach(curso => {
-      console.log(`   - ${curso.title}: ${curso.subtitle}`);
+    console.log('📋 Trainings assigned to Juan Pérez:');
+    userWithTrainings.assignedTraining.forEach(training => {
+      console.log(`   - ${training.title}: ${training.subtitle}`);
     });
 
     // Verificar curso con niveles
-    const cursoConNiveles = await Course.findById(createdCourses[0]._id)
+    const trainingWithLevels = await Training.findById(createdTrainings[0]._id)
       .populate('levels', 'levelNumber title')
-      .populate('asignadoA', 'nombre email')
       .exec();
     
-    console.log('🎯 Niveles del primer curso:');
-    cursoConNiveles.levels.forEach(nivel => {
-      console.log(`   - Nivel ${nivel.levelNumber}: ${nivel.title}`);
-    });
-
-    console.log('👥 Alumnos asignados al curso:');
-    cursoConNiveles.asignadoA.forEach(alumno => {
-      console.log(`   - ${alumno.nombre} (${alumno.email})`);
+    console.log('🎯 Levels of the first training:');
+    trainingWithLevels.levels.forEach(level => {
+      console.log(`   - Level ${level.levelNumber}: ${level.title}`);
     });
 
     console.log('✅ Base de datos inicializada exitosamente!');
     console.log('\n📊 RESUMEN:');
     console.log(`   Usuarios totales: ${users.length}`);
-    console.log(`   - Administradores: ${users.filter(u => u.tipo === 'admin').length}`);
-    console.log(`   - Alumnos: ${users.filter(u => u.tipo === 'alumno').length}`);
-    console.log(`   Cursos: ${createdCourses.length}`);
+    console.log(`   - Administradores: ${users.filter(u => u.role === 'admin').length}`);
+    console.log(`   - Alumnos: ${users.filter(u => u.role === 'student').length}`);
+    console.log(`   Trainings: ${createdTrainings.length}`);
     console.log(`   Niveles: ${createdLevels.length}`);
-    console.log(`   Mensajes: ${sampleMessages.length}`);
-    console.log(`   Progresos: ${sampleProgress.length}`);
+    console.log(`   Mensajes: ${sampleMessages.length}`); 
     
     console.log('\n🔑 Credenciales de acceso:');
     console.log('   Admin: admin@sicapsi.com / password123');

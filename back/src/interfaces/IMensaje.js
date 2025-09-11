@@ -3,7 +3,7 @@ export class IMensaje {
   _id;
   sender;
   recipient;
-  courseId;
+  trainingId;
   subject;
   message;
   attachments;

@@ -25,10 +25,7 @@ export const connectDB = async () => {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
     });
-    
-    // Responsabilidad 2: Confirmar conexión exitosa
-    console.log("✅ Conectado a MongoDB");
-    
+     
   } catch (err) {
     // Responsabilidad 3: Manejar errores de conexión
     console.error("❌ Error al conectar a MongoDB:", err);

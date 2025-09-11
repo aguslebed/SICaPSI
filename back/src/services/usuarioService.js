@@ -3,7 +3,7 @@
  * Nomenclatura aplicada (Glosario): S.Usuario.<Accion> (documentado)
  */
 import bcrypt from "bcryptjs";
-import Usuario from "../models/Usuario.js";
+import User from "../models/User.js";
 import AppError from "../middlewares/AppError.js";
 
 const SALT_ROUNDS = 10; // Usuario.CONST.SALT_ROUNDS

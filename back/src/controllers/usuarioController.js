@@ -10,7 +10,6 @@ import {
   S_Usuario_Listar,
   S_Usuario_Actualizar
 } from "../services/usuarioService.js";
-import { UsuarioResponseFormatter } from "../formatters/UsuarioResponseFormatter.js";
 import { isValidObjectId } from "mongoose";
 
 /** C.Usuario.Alta */

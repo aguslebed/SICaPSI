@@ -2,13 +2,13 @@
 import { IUserService } from '../interfaces/IUserService.js';
 
 export class UserService extends IUserService {
-  constructor({ UsuarioModel }) {
+  constructor({ UserModel }) {
     super();
-    this.Usuario = UsuarioModel;
+    this.User = UserModel;
   }
 
   async getUserById(id) {
-    return await this.Usuario.findById(id).exec();
+  return await this.User.findById(id).exec();
   }
 }
 

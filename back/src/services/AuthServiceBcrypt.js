@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import Usuario from "../models/Usuario.js";
+import User from "../models/User.js";
 import { IAuthService } from "../interfaces/IAuthService.js";
 
 export class AuthServiceBcrypt extends IAuthService {
@@ -10,9 +10,9 @@ export class AuthServiceBcrypt extends IAuthService {
    * @returns {Promise<Object|null>} Usuario autenticado o null
    */
   async authenticate(email, password) {
-    const usuario = await Usuario.findOne({ email: email });
-    if (!usuario) return null;
-    const match = await bcrypt.compare(password, usuario.password);
-    return match ? usuario : null;
+  const user = await User.findOne({ email: email });
+  if (!user) return null;
+  const match = await bcrypt.compare(password, user.password);
+  return match ? user : null;
   }
 }

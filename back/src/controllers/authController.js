@@ -31,7 +31,7 @@ export const makeAuthController = ({ authService, loginValidator }) => ({
         { 
           userId: user._id || user.id,
           email: user.email,
-          role: user.tipo || 'user',
+          role: user.role || 'user',
           sub: user._id
         }, 
         process.env.JWT_SECRET, 

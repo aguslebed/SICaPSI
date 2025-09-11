@@ -8,19 +8,19 @@ export const sampleLevels = [
       {
         title: "Guía Completa de HTML5",
         description: "Documentación oficial y mejores prácticas",
-        downloadLinks: ["https://example.com/html5-guide.pdf"],
+        videoUrl: ["https://example.com/html5-guide.pdf"],
         createdAt: new Date()
       },
       {
         title: "CSS Tricks Handbook",
         description: "Técnicas modernas de diseño web",
-        downloadLinks: ["https://example.com/css-tricks.pdf"],
+        videoUrl: ["https://example.com/css-tricks.pdf"],
         createdAt: new Date()
       },
       {
         title: "HTML & CSS W3Schools",
         description: "Referencias prácticas y ejemplos",
-        downloadLinks: ["https://example.com/html-css-w3.pdf"],
+        videoUrl: ["https://example.com/html-css-w3.pdf"],
         createdAt: new Date()
       }
     ],
@@ -30,75 +30,139 @@ export const sampleLevels = [
       duration: 45,
       createdAt: new Date()
     },
-    evaluation: {
-      videoUrl: "https://www.youtube.com/embed/evaluation1",
-      description: "Evaluación de conceptos básicos",
-      passingScore: 70,
-      maxAttempts: 3,
-      createdAt: new Date()
-    },
-    isActive: true
-  },
-  {
-    levelNumber: 2,
-    title: "JavaScript Básico",
-    description: "Programación fundamental con JavaScript",
-    bibliography: [
+    evaluation: [
       {
-        title: "JavaScript Elocuente",
-        description: "Libro esencial para aprender JavaScript",
-        downloadLinks: ["https://example.com/javascript-book.pdf"],
-        createdAt: new Date()
+        idScene: 0,
+        videoUrl: ["https://example.com/eval1-scene1.pdf"],
+        description: "Escena 1: Pregunta sobre HTML básico",
+        createdAt: new Date(),
+        opcion: [
+          {
+            description: "Respuesta A: Etiqueta <div>",
+            points: 10,
+            next: 1
+          },
+          {
+            description: "Respuesta B: Etiqueta <span>",
+            points: 5,
+            next: 1
+          }
+        ]
       },
       {
-        title: "MDN JavaScript Docs",
-        description: "Referencia oficial de Mozilla",
-        downloadLinks: ["https://example.com/mdn-js.pdf"],
-        createdAt: new Date()
-      },
-      {
-        title: "You Don’t Know JS",
-        description: "Serie avanzada sobre JS",
-        downloadLinks: ["https://example.com/ydkjs.pdf"],
-        createdAt: new Date()
+        idScene: 1,
+        videoUrl: ["https://example.com/eval1-scene2.pdf"],
+        description: "Escena 2: Pregunta sobre CSS",
+        createdAt: new Date(),
+        opcion: [
+          {
+            description: "Respuesta A: color: red;",
+            points: 10,
+            next: null
+          },
+          {
+            description: "Respuesta B: background: blue;",
+            points: 5,
+            next: null
+          }
+        ]
       }
     ],
-    training: {
-      videoUrl: "https://www.youtube.com/embed/placeholder2",
-      description: "Fundamentos de programación con JS",
-      duration: 60,
-      createdAt: new Date()
-    },
-    evaluation: {
-      videoUrl: "https://www.youtube.com/embed/evaluation2",
-      description: "Evaluación de JavaScript básico",
-      passingScore: 75,
-      maxAttempts: 3,
-      createdAt: new Date()
-    },
-    isActive: true
-  },
-  {
-    levelNumber: 3,
-    title: "Back-End con Node.js",
-    description: "Primeros pasos con servidores y APIs",
-    bibliography: [
+    evaluation: [
       {
+        idScene: 0,
+        videoUrl: ["https://example.com/eval2-scene1.pdf"],
+        description: "Escena 1: Pregunta sobre variables JS",
+        createdAt: new Date(),
+        opcion: [
+          {
+            description: "Respuesta A: let x = 5;",
+            points: 10,
+            next: 1
+          },
+          {
+            description: "Respuesta B: var x = 5;",
+            points: 5,
+            next: 1
+          }
+        ]
+      },
+      {
+        idScene: 1,
+        videoUrl: ["https://example.com/eval2-scene2.pdf"],
+        description: "Escena 2: Pregunta sobre funciones JS",
+        createdAt: new Date(),
+        opcion: [
+          {
+            description: "Respuesta A: function test() {}",
+            points: 10,
+            next: null
+          },
+          {
+            description: "Respuesta B: const test = () => {}",
+            points: 5,
+            next: null
+          }
+        ]
+      }
+    ],
+        createdAt: new Date(),
+        opcion: [
+          {
+            description: "Respuesta A: let x = 5;",
+            evaluation: [
+              {
+                idScene: 1,
+                videoUrl: ["https://example.com/eval3-scene1.pdf"],
+                description: "Escena 1: Pregunta sobre Node.js",
+                createdAt: new Date(),
+                opcion: [
+                  {
+                    description: "Respuesta A: require('fs')",
+                    points: 10,
+                    next: 2
+                  },
+                  {
+                    description: "Respuesta B: require('http')",
+                    points: 5,
+                    next: 2
+                  }
+                ]
+              },
+              {
+                idScene: 2,
+                videoUrl: ["https://example.com/eval3-scene2.pdf"],
+                description: "Escena 2: Pregunta sobre Express.js",
+                createdAt: new Date(),
+                opcion: [
+                  {
+                    description: "Respuesta A: app.get('/ruta')",
+                    points: 10,
+                    next: null
+                  },
+                  {
+                    description: "Respuesta B: app.post('/ruta')",
+                    points: 5,
+                    next: null
+                  }
+                ]
+              }
+            ],
         title: "Node.js Documentation",
         description: "Documentación oficial de Node.js",
-        downloadLinks: ["https://example.com/nodejs-docs.pdf"],
+        videoUrl: ["https://example.com/nodejs-docs.pdf"],
         createdAt: new Date()
       },
       {
         title: "Express.js Guide",
         description: "Framework para desarrollo de servidores",
-        downloadLinks: ["https://example.com/express-guide.pdf"],
+        videoUrl: ["https://example.com/express-guide.pdf"],
         createdAt: new Date()
       },
       {
         title: "RESTful API Design",
         description: "Buenas prácticas en diseño de APIs",
-        downloadLinks: ["https://example.com/rest-api.pdf"],
+        videoUrl: ["https://example.com/rest-api.pdf"],
         createdAt: new Date()
       }
     ],
@@ -108,13 +172,44 @@ export const sampleLevels = [
       duration: 70,
       createdAt: new Date()
     },
-    evaluation: {
-      videoUrl: "https://www.youtube.com/embed/evaluation3",
-      description: "Evaluación de fundamentos en Node.js",
-      passingScore: 80,
-      maxAttempts: 3,
-      createdAt: new Date()
-    },
+    evaluation: [
+      {
+        idScene: 0,
+        videoUrl: ["https://example.com/eval3-scene1.pdf"],
+        description: "Escena 1: Pregunta sobre Node.js",
+        createdAt: new Date(),
+        opcion: [
+          {
+            description: "Respuesta A: require('fs')",
+            points: 10,
+            next: 1
+          },
+          {
+            description: "Respuesta B: require('http')",
+            points: 5,
+            next: 1
+          }
+        ]
+      },
+      {
+        idScene: 1,
+        videoUrl: ["https://example.com/eval3-scene2.pdf"],
+        description: "Escena 2: Pregunta sobre Express.js",
+        createdAt: new Date(),
+        opcion: [
+          {
+            description: "Respuesta A: app.get('/ruta')",
+            points: 10,
+            next: null
+          },
+          {
+            description: "Respuesta B: app.post('/ruta')",
+            points: 5,
+            next: null
+          }
+        ]
+      }
+    ],
     isActive: true
   },
 
@@ -127,19 +222,19 @@ export const sampleLevels = [
       {
         title: "Machine Learning Yearning",
         description: "Guía introductoria de Andrew Ng",
-        downloadLinks: ["https://example.com/ml-intro.pdf"],
+        videoUrl: ["https://example.com/ml-intro.pdf"],
         createdAt: new Date()
       },
       {
         title: "Hands-On ML",
         description: "Libro práctico con ejemplos en Python",
-        downloadLinks: ["https://example.com/hands-on-ml.pdf"],
+        videoUrl: ["https://example.com/hands-on-ml.pdf"],
         createdAt: new Date()
       },
       {
         title: "Scikit-Learn Docs",
         description: "Documentación de librería en Python",
-        downloadLinks: ["https://example.com/sklearn-docs.pdf"],
+        videoUrl: ["https://example.com/sklearn-docs.pdf"],
         createdAt: new Date()
       }
     ],
@@ -149,13 +244,44 @@ export const sampleLevels = [
       duration: 40,
       createdAt: new Date()
     },
-    evaluation: {
-      videoUrl: "https://www.youtube.com/embed/mleval1",
-      description: "Evaluación de conceptos básicos de ML",
-      passingScore: 70,
-      maxAttempts: 3,
-      createdAt: new Date()
-    },
+    evaluation: [
+      {
+        idScene: 0,
+        videoUrl: ["https://example.com/evalml-scene1.pdf"],
+        description: "Escena 1: Pregunta sobre ML básico",
+        createdAt: new Date(),
+        opcion: [
+          {
+            description: "Respuesta A: supervised learning",
+            points: 10,
+            next: 1
+          },
+          {
+            description: "Respuesta B: unsupervised learning",
+            points: 5,
+            next: 1
+          }
+        ]
+      },
+      {
+        idScene: 1,
+        videoUrl: ["https://example.com/evalml-scene2.pdf"],
+        description: "Escena 2: Pregunta sobre aplicaciones ML",
+        createdAt: new Date(),
+        opcion: [
+          {
+            description: "Respuesta A: clasificación",
+            points: 10,
+            next: null
+          },
+          {
+            description: "Respuesta B: regresión",
+            points: 5,
+            next: null
+          }
+        ]
+      }
+    ],
     isActive: true
   },
   {
@@ -166,19 +292,19 @@ export const sampleLevels = [
       {
         title: "Introducción a la Regresión",
         description: "Fundamentos matemáticos",
-        downloadLinks: ["https://example.com/regresion.pdf"],
+        videoUrl: ["https://example.com/regresion.pdf"],
         createdAt: new Date()
       },
       {
         title: "Estadística Aplicada",
         description: "Conceptos de probabilidad y regresión",
-        downloadLinks: ["https://example.com/estadistica.pdf"],
+        videoUrl: ["https://example.com/estadistica.pdf"],
         createdAt: new Date()
       },
       {
         title: "Python for Data Science",
         description: "Ejemplos prácticos de regresión",
-        downloadLinks: ["https://example.com/python-ds.pdf"],
+        videoUrl: ["https://example.com/python-ds.pdf"],
         createdAt: new Date()
       }
     ],
@@ -188,13 +314,44 @@ export const sampleLevels = [
       duration: 55,
       createdAt: new Date()
     },
-    evaluation: {
-      videoUrl: "https://www.youtube.com/embed/mleval2",
-      description: "Evaluación de regresión lineal/logística",
-      passingScore: 75,
-      maxAttempts: 3,
-      createdAt: new Date()
-    },
+    evaluation: [
+      {
+        idScene: 0,
+        videoUrl: ["https://example.com/evalreg-scene1.pdf"],
+        description: "Escena 1: Pregunta sobre regresión lineal",
+        createdAt: new Date(),
+        opcion: [
+          {
+            description: "Respuesta A: y = mx + b",
+            points: 10,
+            next: 1
+          },
+          {
+            description: "Respuesta B: y = ax^2 + bx + c",
+            points: 5,
+            next: 1
+          }
+        ]
+      },
+      {
+        idScene: 1,
+        videoUrl: ["https://example.com/evalreg-scene2.pdf"],
+        description: "Escena 2: Pregunta sobre regresión logística",
+        createdAt: new Date(),
+        opcion: [
+          {
+            description: "Respuesta A: función sigmoide",
+            points: 10,
+            next: null
+          },
+          {
+            description: "Respuesta B: función lineal",
+            points: 5,
+            next: null
+          }
+        ]
+      }
+    ],
     isActive: true
   },
   {
@@ -205,19 +362,19 @@ export const sampleLevels = [
       {
         title: "Decision Trees Explained",
         description: "Guía sencilla sobre árboles",
-        downloadLinks: ["https://example.com/decision-trees.pdf"],
+        videoUrl: ["https://example.com/decision-trees.pdf"],
         createdAt: new Date()
       },
       {
         title: "CART Algorithm",
         description: "Introducción a algoritmos de clasificación",
-        downloadLinks: ["https://example.com/cart.pdf"],
+        videoUrl: ["https://example.com/cart.pdf"],
         createdAt: new Date()
       },
       {
         title: "Practical ML Trees",
         description: "Ejemplos prácticos de árboles",
-        downloadLinks: ["https://example.com/practical-ml.pdf"],
+        videoUrl: ["https://example.com/practical-ml.pdf"],
         createdAt: new Date()
       }
     ],
@@ -227,13 +384,44 @@ export const sampleLevels = [
       duration: 65,
       createdAt: new Date()
     },
-    evaluation: {
-      videoUrl: "https://www.youtube.com/embed/mleval3",
-      description: "Evaluación sobre árboles de decisión",
-      passingScore: 80,
-      maxAttempts: 3,
-      createdAt: new Date()
-    },
+    evaluation: [
+      {
+        idScene: 0,
+        videoUrl: ["https://example.com/evaltree-scene1.pdf"],
+        description: "Escena 1: Pregunta sobre árboles de decisión",
+        createdAt: new Date(),
+        opcion: [
+          {
+            description: "Respuesta A: nodo raíz",
+            points: 10,
+            next: 1
+          },
+          {
+            description: "Respuesta B: hoja",
+            points: 5,
+            next: 1
+          }
+        ]
+      },
+      {
+        idScene: 1,
+        videoUrl: ["https://example.com/evaltree-scene2.pdf"],
+        description: "Escena 2: Pregunta sobre algoritmos CART",
+        createdAt: new Date(),
+        opcion: [
+          {
+            description: "Respuesta A: clasificación",
+            points: 10,
+            next: null
+          },
+          {
+            description: "Respuesta B: regresión",
+            points: 5,
+            next: null
+          }
+        ]
+      }
+    ],
     isActive: true
   }
 

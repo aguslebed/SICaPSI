@@ -1,20 +1,20 @@
 // Formatter para mensajes
 import { IMensaje } from '../interfaces/IMensaje.js';
 
-export class MessageResponseFormatter {
-  static format(mensaje) {
+export class MessageResponseFormatter extends IMensaje{
+  static format(message) {
     return {
-      _id: mensaje._id,
-      sender: mensaje.sender,
-      recipient: mensaje.recipient,
-      courseId: mensaje.courseId,
-      subject: mensaje.subject,
-      message: mensaje.message,
-      attachments: mensaje.attachments,
-      status: mensaje.status,
-      isRead: mensaje.isRead,
-      folder: mensaje.folder,
-      createdAt: mensaje.createdAt
+      _id: message._id,
+      sender: message.sender,
+      recipient: message.recipient,
+      trainingId: message.trainingId,
+      subject: message.subject,
+      message: message.message,
+      attachments: message.attachments,
+      status: message.status,
+      isRead: message.isRead,
+      folder: message.folder,
+      createdAt: message.createdAt
     };
   }
 }

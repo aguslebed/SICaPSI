@@ -29,16 +29,16 @@ export class JsonResponseFormatter extends IResponseFormatter {
     if (user) delete user.contrasena;
 
     // Formatear cursos (eliminar campos sensibles si los hay)
-    const cursos = completeData.cursos.map(curso => ({
-      _id: curso._id,
-      title: curso.title,
-      subtitle: curso.subtitle,
-      description: curso.description,
-      image: curso.image,
-      isActive: curso.isActive,
-      totalLevels: curso.totalLevels,
-      introduction: curso.introduction,
-      levels: curso.levels.map(level => ({
+    const trainings = completeData.cursos.map(training => ({
+      _id: training._id,
+      title: training.title,
+      subtitle: training.subtitle,
+      description: training.description,
+      image: training.image,
+      isActive: training.isActive,
+      totalLevels: training.totalLevels,
+      introduction: training.introduction,
+      levels: training.levels.map(level => ({
         _id: level._id,
         levelNumber: level.levelNumber,
         title: level.title,
@@ -51,11 +51,11 @@ export class JsonResponseFormatter extends IResponseFormatter {
 
     return {
       user,
-      cursos,
-      progreso: completeData.progreso,
-      mensajes: completeData.mensajes,
-      reportes: completeData.reportes,
-      estadisticas: completeData.estadisticas
+      trainings,
+      progress: completeData.progreso,
+      messages: completeData.mensajes,
+      reports: completeData.reportes,
+      statistics: completeData.estadisticas
     };
   }
 

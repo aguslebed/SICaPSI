@@ -5,7 +5,7 @@ import { Bell } from "lucide-react"; // íconos
 import { Menu } from "@headlessui/react"; // dropdown accesible
 import { useUser } from "../../Context/UserContext";
 
-const Navbar = () => {
+const NavBar = () => {
   const navigate = useNavigate();
   const { logoutUser } = useUser();
   const { userData } = useUser();
@@ -97,4 +97,4 @@ const Navbar = () => {
   );
 };
 
-export default Navbar;
+export default NavBar;
