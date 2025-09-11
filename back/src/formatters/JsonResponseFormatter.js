@@ -45,7 +45,7 @@ export class JsonResponseFormatter extends IResponseFormatter {
         description: level.description,
         bibliography: level.bibliography,
         training: level.training,
-        evaluation: level.evaluation
+        test: level.test
       }))
     }));
 

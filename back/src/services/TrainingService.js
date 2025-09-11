@@ -15,7 +15,7 @@ export class TrainingService extends ITrainingService {
         path: 'assignedTraining',
         select: 'title subtitle description image isActive totalLevels introduction levels createdBy report progressPercentage',
         populate: [
-          { path: 'levels', select: 'levelNumber title description bibliography training evaluation isActive', model: this.Level },
+          { path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level },
           { path: 'createdBy', select: 'firstName lastName email', model: this.User }
         ],
         model: this.Training

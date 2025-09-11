@@ -5,8 +5,8 @@ import Training from '../models/Training.js';
 import Level from '../models/Level.js';
 import PrivateMessage from '../models/PrivateMessage.js'; 
 import { sampleLevels } from './cursos_y_niveles/levels.js';
-import { sampleCourses } from './cursos_y_niveles/cursos.js';
-import { sampleUsers } from './cursos_y_niveles/usuarios.js';
+import { sampleCourses } from './cursos_y_niveles/training.js';
+import { sampleUsers } from './cursos_y_niveles/users.js';
 
 // Configuración de conexión
 const MONGODB_URI = 'mongodb://localhost:27017/SICAPSI';
@@ -43,8 +43,8 @@ async function initializeDatabase() {
   const users = createdUsers;
 
     // Obtener admin y alumnos
-  const adminUser = users.find(user => user.role === 'Administrador');
-  const students = users.filter(user => user.role === 'Alumno');
+  const adminUser = users.find(user => user.role === 'Administrator');
+  const students = users.filter(user => user.role === 'Student');
 
     // Crear cursos
     console.log('📚 Creando cursos...');

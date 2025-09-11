@@ -10,6 +10,7 @@ import MisReportes from './Pages/UserPanel/Student/TrainingReports';
 import NivelBibliografia from './Pages/UserPanel/Student/Levelbibliogrhapy';
 import NivelCapacitacion from './Pages/UserPanel/Student/LevelTraining';
 import ConsultaCapacitador from './Components/Modals/consultaCapacitador';
+import LevelTest from './Pages/UserPanel/Student/LevelTest'
 
 export const routes = [
   { path: '/', element: <Home /> },
@@ -22,6 +23,6 @@ export const routes = [
   { path: '/userPanel/:idTraining/reports', element: <PrivateRoute><MisReportes /></PrivateRoute> },
   { path: '/userPanel/:idTraining/:nivelId/bibliogrhapy', element: <PrivateRoute><NivelBibliografia /></PrivateRoute> },
   { path: '/userPanel/:idTraining/:nivelId/training', element: <PrivateRoute><NivelCapacitacion /></PrivateRoute> },
-//  { path: '/userPanel/:idTraining/:nivelId/trainingExam', element: <PrivateRoute><NivelCapacitacion /></PrivateRoute> },
+  { path: '/userPanel/:idTraining/:nivelId/levelTest', element: <PrivateRoute><LevelTest /></PrivateRoute> },
   { path: '*', element: <NotFound /> }
 ];

@@ -34,7 +34,7 @@ const TrainingLevels = () => {
     navigate(`/userPanel/${idTraining}/${nivelId}/training`);
   };
   const LinkEvaluacion = (nivelId) => {
-    navigate(`/userPanel/${idTraining}/${nivelId}/trainingExam`);
+    navigate(`/userPanel/${idTraining}/${nivelId}/levelTest`);
   };
 
   return (
