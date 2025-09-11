@@ -1,59 +1,35 @@
 import React from "react";
 import WelcomeModal from "../../../componentes/alumno/bienvenida";
 import CapacitacionCard from "../../../componentes/alumno/capacitacion";
-import Navbar from "../../../componentes/alumno/nvar"
+import Navbar from "../../../componentes/alumno/nvar";
+import { useUser } from "../../../context/UserContext";
 
 // Panel principal de usuario
 const PanelDeUsuario = () => {
-  // Datos de ejemplo para las capacitaciones
-  const capacitaciones = [
-    {
-      titulo: "Capacitación 1",
-      subtitulo: "Edificio de departamentos",
-      porcentaje: 59,
-      estado: "activo",
-      link: "/panel/capacitacion/1",
-      imagen: "src/assets/capacitacion/departamentos.jpg",
-      
-    },
-    {
-      titulo: "Capacitación 2",
-      subtitulo: "Barrio privado pequeño",
-      porcentaje: 0,
-      estado: "activo",
-      link: "/panel/capacitacion/2",
-      imagen: "src/assets/capacitacion/barrioPrivadoChico.jpg",
-    },
-    {
-      titulo: "Capacitación 3",
-      subtitulo: "Barrio privado grande",
-      porcentaje: 0,
-      estado: "desactivado",
-      link: "/panel/capacitacion/3",
-      imagen: "src/assets/capacitacion/barrioPrivadoGrande.jpg",
-    },
-    {
-      titulo: "Capacitación 4",
-      subtitulo: "Garita de seguridad",
-      porcentaje: 0,
-      estado: "desactivado",
-      link: "/panel/capacitacion/4",
-      imagen: "src/assets/capacitacion/garitaDeSeguridad.jpg",
-    },
-    {
-      titulo: "Capacitación 5",
-      subtitulo: "Pubs y discotecas",
-      porcentaje: 0,
-      estado: "desactivado",
-      link: "/panel/capacitacion/5",
-      imagen: "src/assets/capacitacion/pubsYDisco.jpg",
-    },
-  ];
+  const { userData } = useUser();
 
+  // Si los datos aún no están cargados
+  if (!userData) {
+    return (
+      <>
+        <Navbar />
+        <div className="min-h-screen flex items-center justify-center bg-gray-100">
+          <div className="text-center">
+            <h2 className="text-2xl font-semibold text-gray-700 mb-4">Cargando datos de usuario...</h2>
+            <div className="animate-spin h-8 w-8 border-4 border-blue-400 border-t-transparent rounded-full mx-auto"></div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Cursos del usuario
+  const cursos = userData.data?.cursos || [];
+
+  // Renderizar solo los datos requeridos
   return (
     <>
       <Navbar />
-      <WelcomeModal />
       <div className="min-h-screen bg-gray-100 py-10 px-6">
         <div className="max-w-5xl mx-auto">
           {/* Encabezado */}
@@ -67,10 +43,22 @@ const PanelDeUsuario = () => {
           </div>
 
           {/* Grid de capacitaciones */}
-          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {capacitaciones.map((cap, index) => (
-              <CapacitacionCard key={index} {...cap} />
-            ))}
+          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-10">
+            {cursos.length > 0 ? (
+              cursos.map((curso) => (
+                <CapacitacionCard
+                  key={curso._id}
+                  titulo={curso.title}
+                  subtitulo={curso.subtitle}
+                  porcentaje={0} // Si tienes el progreso, puedes calcularlo aquí
+                  estado={curso.isActive ? "activo" : "desactivado"}
+                  link={`/panel/capacitacion/${curso._id}`}
+                  imagen={curso.image}
+                />
+              ))
+            ) : (
+              <div className="col-span-3 text-center text-gray-500">No tienes cursos asignados.</div>
+            )}
           </div>
         </div>
       </div>
@@ -78,4 +66,4 @@ const PanelDeUsuario = () => {
   );
 };
 
-export default PanelDeUsuario;
+export default PanelDeUsuario; 

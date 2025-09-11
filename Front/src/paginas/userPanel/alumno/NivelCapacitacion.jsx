@@ -1,17 +1,19 @@
 import React from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import MenuVertical from "../../../componentes/alumno/MenuVertical";
 import Navbar from "../../../componentes/alumno/nvar";
+import { useUser } from "../../../context/UserContext";
 
 const NivelCapacitacion = () => {
   const { id, nivelId } = useParams();
+  const { userData } = useUser();
 
-  // 🔹 Datos simulados (estos vendrán de backend en el futuro)
-  const nivel = {
-    titulo: `Nivel ${nivelId} - Capacitación`,
-    videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4", // Ejemplo
-    descripcion: "Descripción del nivel con los temas que verás en la capacitación.",
-  };
+  if (!userData) return <div>Cargando...</div>;
+
+  const curso = userData.cursos.find(c => c._id === id);
+  const nivel = curso?.levels.find(l => l._id === nivelId);
+  const videoUrl = nivel?.training?.videoUrl;
+  const descripcion = nivel?.training?.description;
 
   return (
     <>

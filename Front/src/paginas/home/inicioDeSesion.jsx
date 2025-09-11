@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { login } from "../../api/auth";
-import { Link } from "react-router-dom"; // Agrega esta línea
+import { Link } from "react-router-dom";
+import { useUser } from "../../context/UserContext";
 
 function InicioDeSesion() {
   const [error, setError] = useState("");
-  const [showPassword, setShowPassword] = useState(false); // Nuevo estado
+  const [showPassword, setShowPassword] = useState(false);
+  const { setUserData } = useUser(); 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -14,19 +16,15 @@ function InicioDeSesion() {
     const password = e.target.password.value;
 
     try {
-      const data = await login(email, password);
-      console.log("Login exitoso:", data);
+        const data = await login(email, password);
+        setUserData(data); 
+  
 
-      // Guardar token en localStorage
-      localStorage.setItem("token", data.token);
-      
       // Indicar que se debe mostrar el modal
-      sessionStorage.setItem("showWelcomeModal", "true");
+       sessionStorage.setItem("showWelcomeModal", "true");
 
       // Redirigir al dashboard
-      window.location.href = "/panel";
-
-
+        window.location.href = "/panel";
     } catch (err) {
       setError(err.message);
     }

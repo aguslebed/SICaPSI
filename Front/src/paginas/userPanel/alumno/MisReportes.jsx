@@ -4,42 +4,11 @@ import Navbar from "../../../componentes/alumno/nvar"
 import MenuVertical from "../../../componentes/alumno/MenuVertical";
 
 
-const MisReportes = ({ reportesExternos }) => {
+import { useUser } from "../../../context/UserContext";
+const MisReportes = () => {
   const [videoSeleccionado, setVideoSeleccionado] = useState(null);
-  const [reportes, setReportes] = useState([]);
-
-  // 🔹 Si vienen reportes como props → los uso
-  // 🔹 Si no vienen → simulo carga desde backend (ejemplo con fetch)
-  useEffect(() => {
-    if (reportesExternos && reportesExternos.length > 0) {
-      setReportes(reportesExternos);
-    } else {
-      // 🚀 Ejemplo: datos simulados hasta conectar backend
-      setReportes([
-        {
-          nivel: 1,
-          puntaje: 2,
-          errores: 0,
-          videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
-          comentarios: "Sin errores",
-        },
-        {
-          nivel: 2,
-          puntaje: null,
-          errores: null,
-          videoUrl: null,
-          comentarios: "En revisión",
-        },
-        {
-          nivel: 3,
-          puntaje: null,
-          errores: null,
-          videoUrl: null,
-          comentarios: "Pendiente",
-        },
-      ]);
-    }
-  }, [reportesExternos]);
+  const { userData } = useUser();
+  const reportes = userData?.reportes || [];
 
   return (
     <><Navbar />

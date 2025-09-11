@@ -64,3 +64,4 @@ export const UsuarioResponseFormatter = {
     };
   }
 };
+export default UsuarioResponseFormatter;

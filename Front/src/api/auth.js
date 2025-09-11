@@ -7,33 +7,23 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// Existe el usuario? Si existe, traeme todos sus datos menos la contraseña
 export async function login(email, password) {
   try {
     console.log("🔄 Enviando solicitud de login...");
     console.log("📧 Email:", email);
-    
-    const { data } = await api.post("/auth/login", { email, password }, { withCredentials: true });
 
-    // MOSTRAR EN CONSOLA TODO LO QUE ENVÍA EL BACKEND
-    console.log("✅ Login exitoso - Respuesta del backend:");
-    console.log("📦 Datos completos recibidos:", data);
-    console.log("👤 Información del usuario:", data.user);
-    console.log("📚 Cursos asignados:", data.user?.cursos);
-    console.log("📊 Progreso del usuario:", data.user?.progreso);
-    console.log("📨 Mensajes:", data.user?.mensajes);
-    console.log("📈 Reportes:", data.user?.reportes);
-    console.log("📊 Estadísticas:", data.user?.estadisticas);
+    // 1. Autenticación: solo recibe la cookie
+    await api.post("/auth/login", { email, password }, { withCredentials: true });
 
-    // El back puede devolver { user, token } o solo el user
+    // 2. Obtener datos completos del usuario autenticado
+    const { data } = await api.get("/user/me", { withCredentials: true });
+
+
     // Normalizamos para que el resto del front no explote
-    return {
-      user: data.user ?? data,
-      token: data.token ?? null,
-    };
+    return {data};
   } catch (error) {
     console.error("❌ Error en login:", error);
-    
+
     if (error.response) {
       const status = error.response.status;
       const msg = error.response.data?.message;
@@ -109,13 +99,8 @@ export async function logout() {
 
 // Verifica si el usuario está autenticado
 export async function checkAuth() {
-  try {
-    console.log("🔄 Verificando autenticación...");
-    
+  try { 
     const { data } = await api.get('/auth/check-auth', { withCredentials: true });
-    
-    console.log("✅ Usuario autenticado - Respuesta del backend:", data);
-    console.log("👤 Datos del usuario:", data.user);
     
     return {
       user: data.user ?? data,

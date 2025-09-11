@@ -23,12 +23,14 @@ function App() {
 
 
         <Route path="/panel" element={<PrivateRoute><PanelDeUsuario /></PrivateRoute>} /> 
-        <Route path="/panel/capacitacion/1" element={<PrivateRoute><DetalleCapacitacion/></PrivateRoute>} />
-        <Route path='/panel/capacitacion/1/niveles' element={<PrivateRoute><Niveles/></PrivateRoute>} />
-        <Route path='/panel/capacitacion/1/mensajeria' element={<PrivateRoute><ConsultaCapacitador/></PrivateRoute>} />
-        <Route path='/panel/capacitacion/1/reportes' element={<PrivateRoute><MisReportes/></PrivateRoute>} />
-        <Route path='/panel/capacitacion/1/niveles/bibliografia' element={<PrivateRoute><NivelBibliografia/></PrivateRoute>} />
-        <Route path='/panel/capacitacion/1/niveles/capacitacion' element={<PrivateRoute><NivelCapacitacion/></PrivateRoute>} />
+        <Route path="/panel/capacitacion/:id" element={<PrivateRoute><DetalleCapacitacion/></PrivateRoute>} />
+        <Route path='/panel/capacitacion/:id/niveles' element={<PrivateRoute><Niveles/></PrivateRoute>} />
+        <Route path='/panel/capacitacion/:id/mensajeria' element={<PrivateRoute><ConsultaCapacitador/></PrivateRoute>} />
+        <Route path='/panel/capacitacion/:id/reportes' element={<PrivateRoute><MisReportes/></PrivateRoute>} />
+
+        
+        <Route path='/panel/capacitacion/:id/niveles/:nivelId' element={<PrivateRoute><NivelBibliografia/></PrivateRoute>} />
+        <Route path='/panel/capacitacion/:id/niveles/capacitacion' element={<PrivateRoute><NivelCapacitacion/></PrivateRoute>} />
        
 
 

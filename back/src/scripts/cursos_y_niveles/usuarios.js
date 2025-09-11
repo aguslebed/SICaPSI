@@ -1,0 +1,62 @@
+export const sampleUsers = [
+  // Administradores
+  {
+    nombre: "Admin",
+    apellidos: "Sistema",
+    tipoDocumento: "DNI",
+    numeroDocumento: "40123456",
+    fechaNacimiento: new Date(1990, 0, 1),
+    email: "admin@sicapsi.com",
+    codigoPostal: "1000",
+    direccion: "Calle Admin",
+    numeroDireccion: "123",
+    departamento: "A",
+    provincia: "buenos_aires",
+    localidad: "CABA",
+    codArea: "011",
+    telefono: "12345678",
+    password: "password123",
+    tipo: "admin",
+    legajo: "ADM001",
+    cursosAsignados: []
+  },
+  // Alumnos
+  {
+    nombre: "Juan",
+    apellidos: "Pérez",
+    tipoDocumento: "DNI",
+    numeroDocumento: "35123456",
+    fechaNacimiento: new Date(1995, 5, 15),
+    email: "juan.perez@email.com",
+    codigoPostal: "8000",
+    direccion: "Calle Principal",
+    numeroDireccion: "456",
+    provincia: "buenos_aires",
+    localidad: "Bahía Blanca",
+    codArea: "0291",
+    telefono: "154567890",
+    password: "alumno123",
+    tipo: "alumno",
+    legajo: "ALU001",
+    cursosAsignados: []
+  },
+  {
+    nombre: "María",
+    apellidos: "González",
+    tipoDocumento: "DNI",
+    numeroDocumento: "36123457",
+    fechaNacimiento: new Date(1998, 8, 20),
+    email: "maria.gonzalez@email.com",
+    codigoPostal: "8000",
+    direccion: "Av. Secundaria",
+    numeroDireccion: "789",
+    provincia: "buenos_aires",
+    localidad: "Bahía Blanca",
+    codArea: "0291",
+    telefono: "155678901",
+    password: "alumno123",
+    tipo: "alumno",
+    legajo: "ALU002",
+    cursosAsignados: []
+  }
+];

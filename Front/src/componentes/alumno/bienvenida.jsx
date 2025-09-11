@@ -6,7 +6,6 @@ const WelcomeModal = () => {
   // Verificar al cargar si debemos mostrar el modal
   useEffect(() => {
     const shouldShowModal = sessionStorage.getItem("showWelcomeModal");
-    console.log(shouldShowModal)
     if (shouldShowModal === "true") {
       setIsOpen(true);
     }

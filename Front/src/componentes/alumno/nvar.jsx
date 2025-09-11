@@ -3,13 +3,16 @@ import { logout } from '../../api/auth';
 import { useNavigate } from 'react-router-dom';
 import { Bell } from "lucide-react"; // íconos
 import { Menu } from "@headlessui/react"; // dropdown accesible
+import { useUser } from "../../context/UserContext";
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const { logoutUser } = useUser();
 
   const handleLogout = async () => {
     try {
       await logout();
+      logoutUser(); // Limpia contexto y localStorage
       navigate('/');
     } catch (err) {
       alert('Error al cerrar sesión');

@@ -6,6 +6,9 @@ import { connectDB } from "./config/db.js";
 import usuarioRoutes from "./routes/usuarioRoutes.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import cookieParser from "cookie-parser";
+import authMiddleware from "./middlewares/authMiddleware.js";
+import { makeUserController } from "./controllers/userController.js";
+const userController = makeUserController();
 /**
  * Configurador principal de la aplicación
  * Responsabilidades:
@@ -42,8 +45,9 @@ class AppConfig {
    * Responsabilidad 2: Configurar rutas
    */
   configureRoutes() {
-    this.app.use("/login", usuarioRoutes);
     this.app.use("/auth", authRoutes); 
+    this.app.get("/user/me", authMiddleware, userController.getUserCompleteData);
+
   }
 
 
