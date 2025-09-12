@@ -25,7 +25,7 @@ const UserSchema = new mongoose.Schema({
   password: { type: String, required: true },
   role: { type: String, enum: ["Administrator", "Trainer", "Manager", "Student"], default: "Student", required: true },
   lastLogin: { type: Date },
-  institutionalID: { type: String, index: true, unique: true, sparse: true, default: null },
+  institutionalID: { type: Number, index: true, unique: true, sparse: true },
   profileImage: { type: String, required: false, default: null },
   assignedTraining: [{
     type: mongoose.Schema.Types.ObjectId,
@@ -39,3 +39,11 @@ const UserSchema = new mongoose.Schema({
  * M.User.Create (documented): instance creation
  */
 export default mongoose.model("User", UserSchema);
+// Pre-save hook para asignar institutionalID incremental
+UserSchema.pre('save', async function(next) {
+  if (this.institutionalID == null) {
+    const lastUser = await this.constructor.findOne({}, {}, { sort: { institutionalID: -1 } });
+    this.institutionalID = lastUser && lastUser.institutionalID != null ? lastUser.institutionalID + 1 : 0;
+  }
+  next();
+});

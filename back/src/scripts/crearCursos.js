@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
@@ -9,7 +10,7 @@ import { sampleCourses } from './cursos_y_niveles/training.js';
 import { sampleUsers } from './cursos_y_niveles/users.js';
 
 // Configuración de conexión
-const MONGODB_URI = 'mongodb://localhost:27017/SICAPSI';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/SICAPSI';
 const SALT_ROUNDS = 12;
  
 // Función principal
@@ -151,8 +152,8 @@ async function initializeDatabase() {
     console.log('✅ Base de datos inicializada exitosamente!');
     console.log('\n📊 RESUMEN:');
     console.log(`   Usuarios totales: ${users.length}`);
-    console.log(`   - Administradores: ${users.filter(u => u.role === 'admin').length}`);
-    console.log(`   - Alumnos: ${users.filter(u => u.role === 'student').length}`);
+  console.log(`   - Administradores: ${users.filter(u => u.role === 'Administrator').length}`);
+  console.log(`   - Alumnos: ${users.filter(u => u.role === 'Student').length}`);
     console.log(`   Trainings: ${createdTrainings.length}`);
     console.log(`   Niveles: ${createdLevels.length}`);
     console.log(`   Mensajes: ${sampleMessages.length}`); 

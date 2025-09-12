@@ -3,12 +3,10 @@ import express from "express";
 import cors from "cors";
 import authRoutes from "./routes/authRoutes.js";
 import { connectDB } from "./config/db.js";
-import usuarioRoutes from "./routes/usuarioRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import cookieParser from "cookie-parser";
-import authMiddleware from "./middlewares/authMiddleware.js";
-import { makeUserController } from "./controllers/userController.js";
-const userController = makeUserController();
+
 /**
  * Configurador principal de la aplicación
  * Responsabilidades:
@@ -43,18 +41,17 @@ class AppConfig {
 
   /**
    * Responsabilidad 2: Configurar rutas
-   */
+   */ 
   configureRoutes() {
-    this.app.use("/auth", authRoutes); 
-    this.app.get("/user/me", authMiddleware, userController.getUserCompleteData);
-
-  }
+    this.app.use("/users", userRoutes);
+    this.app.use("/auth", authRoutes);
+  } 
 
 
   /**
    * Responsabilidad 3: Configurar manejo de errores
    */
-  configureErrorHandling() {
+    configureErrorHandling() {
     this.app.use(errorHandler);
   }
 

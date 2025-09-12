@@ -12,35 +12,35 @@ function Register() {
 
   //Estado de los errores
   const [error, setError] = useState("");
-  const [tipoDocumento, setTipoDocumento] = useState("");
-  const [nombre, setNombre] = useState("");
-  const [apellidos, setApellidos] = useState("");
-  const [numeroDocumento, setNumeroDocumento] = useState("");
-  const [fechaNacimiento, setFechaNacimiento] = useState("");
+  const [documentType, setdocumentType] = useState("");
+  const [firstName, setfirstName] = useState("");
+  const [lastName, setlastName] = useState("");
+  const [documentNumber, setdocumentNumber] = useState("");
+  const [birthDate, setbirthDate] = useState("");
   const [email, setEmail] = useState("");
-  const [codigoPostal, setCodigoPostal] = useState("");
-  const [direccion, setDireccion] = useState("");
-  const [numeroDireccion, setNumeroDireccion] = useState("");
-  const [departamento, setDepartamento] = useState("");
-  const [codArea, setCodArea] = useState("");
-  const [telefono, setTelefono] = useState("");
+  const [postalCode, setpostalCode] = useState("");
+  const [address, setaddress] = useState("");
+  const [addressNumber, setaddressNumber] = useState("");
+  const [apartment, setapartment] = useState("");
+  const [areaCode, setareaCode] = useState("");
+  const [phone, setphone] = useState("");
   const [password, setPassword] = useState("");
-  const [repetirPassword, setRepetirPassword] = useState("");
+  const [rePassword, setrePassword] = useState("");
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
 
   
-  // Estados de las provincias y ciudades
-  const [provincia, setProvincia] = useState("");
+  // Estados de las provinces y ciudades
+  const [province, setprovince] = useState("");
   const [ciudad, setCiudad] = useState("");
   const [ciudades, setCiudades] = useState([]);
 
-  // Array de archivos de provincias
-  const provinciasArchivos = [
+  // Array de archivos de provinces
+  const provincesArchivos = [
     "buenos_aires", "catamarca", "chaco", "chubut", "ciudad_autónoma_de_buenos_aires", "corrientes", "córdoba", "entre_ríos", "formosa", "jujuy", "la_pampa", "la_rioja", "mendoza", "misiones", "neuquén", "río_negro", "salta", "san_juan", "san_luis", "santa_cruz", "santa_fe", "santiago_del_estero", "tierra_del_fuego,_antártida_e_islas_del_atlántico_sur", "tucumán"
   ];
 
-  // Mapeo para mostrar el nombre legible
-  const provinciaNombres = {
+  // Mapeo para mostrar el firstName legible
+  const provincefirstNames = {
     "buenos_aires": "Buenos Aires",
     "catamarca": "Catamarca",
     "chaco": "Chaco",
@@ -68,13 +68,13 @@ function Register() {
   };
 
   // Handler para cargar ciudades
-  const handleProvinciaChange = async (e) => {
+  const handleprovinceChange = async (e) => {
     const prov = e.target.value;
-    setProvincia(prov);
+    setprovince(prov);
     setCiudad("");
     if (prov) {
       try {
-        const data = await import(`../../componentes/Localidades/${prov}.json`);
+        const data = await import(`../../Components/Localidades/${prov}.json`);
         setCiudades(data.default.localidades || []);
       } catch (err) {
         setCiudades([]);
@@ -88,32 +88,14 @@ function Register() {
     e.preventDefault();
     setError("");
 
-    const form = e.target;
-    const nombre = form[0].value;
-    const apellidos = form[1].value;
-    const tipoDocumentoValue = form[2].value;
-    const numeroDocumento = form[3].value;
-    const fechaNacimiento = form[4].value;
-    const email = form[5].value;
-    const codigoPostal = form[6].value;
-    const direccion = form[7].value;
-    const numeroDireccion = form[8].value;
-    const departamento = form[9].value;
-    const provincia = form[10].value;
-    const localidad = form[11].value;
-    const codArea = form[12].value;
-    const telefono = form[13].value;
-    const password = form[14].value;
-    const repetirPassword = form[15].value;
-    const aceptaTerminos = form[16].checked;
-
-    if (!nombre || !apellidos || !tipoDocumentoValue || !numeroDocumento || !fechaNacimiento 
-     || !email || !codigoPostal || !direccion || !numeroDireccion || !provincia || !localidad || !codArea || !telefono || !password 
-     || !repetirPassword) {
+    // Validar usando los estados
+    if (!firstName || !lastName || !documentType || !documentNumber || !birthDate 
+     || !email || !postalCode || !address || !addressNumber || !province || !ciudad || !areaCode || !phone || !password 
+     || !rePassword) {
       setError("Todos los campos son obligatorios.");
       return;
     }
-    if (password !== repetirPassword) {
+    if (password !== rePassword) {
       setError("Las contraseñas no coinciden.");
       return;
     }
@@ -124,20 +106,20 @@ function Register() {
 
     try {
       const usuario = {
-        nombre,
-        apellidos,
-        tipoDocumento: tipoDocumentoValue,
-        numeroDocumento,
-        fechaNacimiento,
+        firstName,
+        lastName,
+        documentType,
+        documentNumber,
+        birthDate,
         email,
-        codigoPostal,
-        direccion,
-        numeroDireccion,
-        departamento,
-        provincia,
-        localidad,
-        codArea,
-        telefono,
+        postalCode,
+        address,
+        addressNumber,
+        apartment,
+        province,
+        city: ciudad,
+        areaCode,
+        phone,
         password
       };
       const data = await APIRegistro(usuario);
@@ -148,22 +130,22 @@ function Register() {
       setModalOpen(true);
 
       // Restablecer todos los campos
-      setNombre("");
-      setApellidos("");
-      setTipoDocumento("");
-      setNumeroDocumento("");
-      setFechaNacimiento("");
+      setfirstName("");
+      setlastName("");
+      setdocumentType("");
+      setdocumentNumber("");
+      setbirthDate("");
       setEmail("");
-      setCodigoPostal("");
-      setDireccion("");
-      setNumeroDireccion("");
-      setDepartamento("");
-      setProvincia("");
+      setpostalCode("");
+      setaddress("");
+      setaddressNumber("");
+      setapartment("");
+      setprovince("");
       setCiudad("");
-      setCodArea("");
-      setTelefono("");
+      setareaCode("");
+      setphone("");
       setPassword("");
-      setRepetirPassword("");
+      setrePassword("");
       setAceptaTerminos(false);
       setCiudades([]);
 
@@ -177,7 +159,7 @@ function Register() {
       }
       setModalMensaje(mensaje);
       setModalOpen(true);
-        }
+    }
   };
 
   return (
@@ -216,43 +198,51 @@ function Register() {
 
           {/* Formulario */}
           <form className="space-y-4" onSubmit={handleSubmit}>
-            {/* Nombre completo */}
+            {/* firstName completo */}
             <div className="grid grid-cols-2 gap-4">
               <input
                 type="text"
                 placeholder="Nombre"
                 className="border rounded-lg px-3 py-2 w-full"
+                value={firstName}
+                onChange={e => setfirstName(e.target.value)}
               />
               <input
                 type="text"
-                placeholder="Apellidos"
+                placeholder="Apellido"
                 className="border rounded-lg px-3 py-2 w-full"
+                value={lastName}
+                onChange={e => setlastName(e.target.value)}
               />
             </div>
 
             {/* DNI y Fecha de Nacimiento */}
             <div className="grid grid-cols-3 gap-4 ">
-              <select className="border rounded-lg px-3 py-2 w-full cursor-pointer" value={tipoDocumento} onChange={e => setTipoDocumento(e.target.value)} required>
+              <select className="border rounded-lg px-3 py-2 w-full cursor-pointer" value={documentType} onChange={e => setdocumentType(e.target.value)} required>
                 <option value="">Tipo de documento</option>
                 <option value="DNI">DNI</option>
                 <option value="CUIL/CUIT">CUIL/CUIT</option>
                 <option value="Pasaporte">Pasaporte</option>
               </select>
-              <input type="text" placeholder="Número" className="border rounded-lg px-3 py-2 w-full" required />
-              <input type="date" className="border rounded-lg px-3 py-2 w-full" required />
+              <input type="text" placeholder="Número" className="border rounded-lg px-3 py-2 w-full" required value={documentNumber} onChange={e => setdocumentNumber(e.target.value)} />
+              <input type="date" className="border rounded-lg px-3 py-2 w-full" required value={birthDate} onChange={e => setbirthDate(e.target.value)} />
             </div>
 
             {/* Email y Código Postal */}
             <div className="grid grid-cols-2 gap-4">
               <input
                 type="email"
-                placeholder="Mail"
+                placeholder="e-mail"
                 className="border rounded-lg px-3 py-2 w-full"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
               />
               <input
                 type="text"
                 placeholder="Código Postal"
                 className="border rounded-lg px-3 py-2 w-full"
+                value={postalCode}
+                onChange={e => setpostalCode(e.target.value)}
               />
             </div>
 
@@ -262,30 +252,36 @@ function Register() {
                 type="text"
                 placeholder="Dirección"
                 className="border rounded-lg px-3 py-2 col-span-1"
+                value={address}
+                onChange={e => setaddress(e.target.value)}
               />
               <input
                 type="text"
                 placeholder="Número"
                 className="border rounded-lg px-3 py-2 col-span-1"
+                value={addressNumber}
+                onChange={e => setaddressNumber(e.target.value)}
               />
               <input
                 type="text"
                 placeholder="Departamento"
                 className="border rounded-lg px-3 py-2 col-span-1"
+                value={apartment}
+                onChange={e => setapartment(e.target.value)}
               />
             </div>
 
-            {/* Provincia y Ciudad */}
+            {/* province y Ciudad */}
             <div className="grid grid-cols-2 gap-4">
               <select
                 className="border rounded-lg px-3 py-2 w-full max-h-48 overflow-y-auto cursor-pointer"
-                value={provincia}
-                onChange={handleProvinciaChange}
+                value={province}
+                onChange={handleprovinceChange}
                 required
               >
                 <option value="">Provincia</option>
-                {provinciasArchivos.map(p => (
-                  <option key={p} value={p}>{provinciaNombres[p]}</option>
+                {provincesArchivos.map(p => (
+                  <option key={p} value={p}>{provincefirstNames[p]}</option>
                 ))}
               </select>
               <select
@@ -293,7 +289,7 @@ function Register() {
                 value={ciudad}
                 onChange={e => setCiudad(e.target.value)}
                 required
-                disabled={!provincia}
+                disabled={!province}
               >
                 <option value="">Ciudad</option>
                 {ciudades.map(c => (
@@ -308,11 +304,15 @@ function Register() {
                 type="text"
                 placeholder="Código de área"
                 className="border rounded-lg px-3 py-2 w-full"
+                value={areaCode}
+                onChange={e => setareaCode(e.target.value)}
               />
               <input
                 type="text"
                 placeholder="Número de teléfono"
                 className="border rounded-lg px-3 py-2 w-full"
+                value={phone}
+                onChange={e => setphone(e.target.value)}
               />
             </div>
 
@@ -322,11 +322,15 @@ function Register() {
                 type="password"
                 placeholder="Contraseña"
                 className="border rounded-lg px-3 py-2 w-full"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
               />
               <input
                 type="password"
                 placeholder="Repetir contraseña"
                 className="border rounded-lg px-3 py-2 w-full"
+                value={rePassword}
+                onChange={e => setrePassword(e.target.value)}
               />
             </div>
 
@@ -335,6 +339,8 @@ function Register() {
               <input
                 type="checkbox"
                 className="h-5 w-5 text-sky-500 border-gray-300 rounded focus:ring-sky-500 cursor-pointer"
+                checked={aceptaTerminos}
+                onChange={e => setAceptaTerminos(e.target.checked)}
               />
               <label className="ml-2 text-gray-700">
                 Acepto los{" "}

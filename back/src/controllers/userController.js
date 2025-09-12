@@ -20,44 +20,70 @@ const userService = new UserService({ UserModel: User });
 const trainingService = new TrainingService({ UserModel: User, LevelModel: Level, TrainingModel: Training }); 
 const messageService = new MessageService({ PrivateMessageModel: PrivateMessage, UserModel: User, TrainingModel: Training }); 
 
-export const makeUserController = () => ({
-  async getUserCompleteData(req, res, next) {
-    try {
-      const userId = req.params.id || req.user?.userId;
-      if (!userId) throw new AppError('ID de usuario requerido', 400);
 
-      // Obtener datos de cada servicio
-      const user = await userService.getUserById(userId);
-      if (!user) throw new AppError('Usuario no encontrado', 404);
-      const training = await trainingService.getCoursesForUser(userId); 
-      const mensajes = await messageService.getMessagesForUser(userId); 
+export function makeUserController() {
+  return {
 
-      // Formatear datos
-      const userFormatted = UserResponseFormatter.toPublic(user);
-      const trainingFormatted = training.map(TrainingResponseFormatter.format); 
-      const messageFormatted = mensajes.map(MessageResponseFormatter.format); 
+    async create(req, res, next) {
+      try {
+        const user = await userService.create(req.body);
+        res.status(201).json(UserResponseFormatter.toPublic(user));
+      } catch (err) { next(err); }
+    },
 
-      // Estadísticas 
-      const unreadMessages = messageFormatted.filter(m => !m.isRead && m.recipient && m.recipient._id === userId).length;
-      console.log("datos del curso: ", trainingFormatted)
-      // Respuesta final
-      res.json({
-        user: userFormatted,
-        training: trainingFormatted, 
-        messages: { 
-          total: messageFormatted.length, 
-          unread: unreadMessages, 
-          items: messageFormatted 
-        }, 
-        metadata: {
-          ultimaActualizacion: new Date(),
-          version: '1.0.0'
-        }
-      });
-    } catch (err) {
-      next(err);
+    async list(req, res, next) {
+      try {
+        const users = await userService.list(req.query);
+        res.json(UserResponseFormatter.toPublicList(users));
+      } catch (err) { next(err); }
+    },
+
+    async getById(req, res, next) {
+      try {
+        let userId = req.params.id;
+        if (!userId) throw new AppError('ID de usuario requerido', 400);
+        const user = await userService.getById(userId);
+        if (!user) throw new AppError('Usuario no encontrado', 404);
+        res.json(UserResponseFormatter.toPublic(user));
+      } catch (err) { next(err); }
+    },
+
+    async update(req, res, next) {
+      try {
+        const user = await userService.update(req.params.id, req.body);
+        res.json(UserResponseFormatter.toPublic(user));
+      } catch (err) { next(err); }
+    },
+
+    async getUserCompleteData(req, res, next) {
+      try {
+        const userId = req.params.id || req.user?.userId;
+        if (!userId) throw new AppError('ID de usuario requerido', 400);
+        const user = await userService.getById(userId);
+        if (!user) throw new AppError('Usuario no encontrado', 404);
+        const training = await trainingService.getCoursesForUser(userId);
+        const mensajes = await messageService.getMessagesForUser(userId);
+        const userFormatted = UserResponseFormatter.toPublic(user);
+        const trainingFormatted = training.map(TrainingResponseFormatter.format);
+        const messageFormatted = mensajes.map(MessageResponseFormatter.format);
+        const unreadMessages = messageFormatted.filter(m => !m.isRead && m.recipient && m.recipient._id === userId).length;
+        console.log(training);
+        res.json({
+          user: userFormatted,
+          training: trainingFormatted,
+          messages: {
+            total: messageFormatted.length,
+            unread: unreadMessages,
+            items: messageFormatted
+          },
+          metadata: {
+            ultimaActualizacion: new Date(),
+            version: '1.0.0'
+          }
+        });
+      } catch (err) { next(err); }
     }
-  }
-});
+  };
+}
 
 export default makeUserController;

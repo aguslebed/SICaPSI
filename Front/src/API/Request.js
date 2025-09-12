@@ -14,7 +14,7 @@ export async function login(email, password) {
     await api.post("/auth/login", { email, password }, { withCredentials: true });
 
     // 2. Obtener datos completos del usuario autenticado
-    const { data } = await api.get("/user/me", { withCredentials: true });
+    const { data } = await api.get("/users/connect/me", { withCredentials: true }); 
 
 
     // Normalizamos para que el resto del front no explote
@@ -40,7 +40,7 @@ export async function login(email, password) {
 // Registro de usuario
 export async function APIRegistro(usuario) {
   try { 
-    const { data } = await api.post("/login/registro", usuario, { withCredentials: true });
+    const { data } = await api.post("/users/register", usuario, { withCredentials: true }); 
      
     return data;
   } catch (error) {
