@@ -18,6 +18,7 @@ const UserSchema = new mongoose.Schema({
   address: { type: String, required: true },
   addressNumber: { type: String, required: true },
   apartment: { type: String, required: false },
+  country: { type: String, required: true },
   province: { type: String, required: true },
   city: { type: String, required: true },
   areaCode: { type: String, required: true },
