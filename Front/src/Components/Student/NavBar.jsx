@@ -10,8 +10,7 @@ const NavBar = () => {
   const navigate = useNavigate();
   const { logoutUser } = useUser();
   const { userData } = useUser();
-  const [openProfile, setOpenProfile] = useState(false);
-
+  const [openProfile, setOpenProfile] = useState(false); 
   const handleLogout = async () => {
     try {
       await logout();
@@ -56,11 +55,12 @@ const NavBar = () => {
             <Menu as="div" className="relative">
               <Menu.Button className="flex items-center gap-2 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 rounded-full">
                 <span className="hidden sm:inline text-white font-medium max-w-[140px] truncate">
-                  {userData?.user?.role || 'Usuario'}
+                  {userData?.user?.firstName || 'Usuario'}
                 </span>
                 <img
                   src={resolveImageUrl(userData?.user?.profileImage) || "/images/alumno-avatar.png"}
-                  alt={userData?.user?.role || "Usuario"}
+          
+                  alt={userData?.user?.firstname || "Usuario"}
                   className="w-10 h-10 rounded-full border-2 border-white object-cover"
                 />
               </Menu.Button>

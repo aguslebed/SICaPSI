@@ -27,8 +27,7 @@ const ProfilePreferencesModal = ({ open, onClose }) => {
     birthDate: user?.birthDate ? String(user.birthDate).substring(0,10) : '',
     // Contacto
     city: user?.city || '',
-    province: user?.province || '',
-    country: user?.country || '',
+    province: user?.province || '', 
     postalCode: user?.postalCode || '',
     // Generales (preferencias locales; no hay campos en backend explícitos)
     showMyData: Boolean(user?.showMyData) || false,
@@ -61,8 +60,7 @@ const ProfilePreferencesModal = ({ open, onClose }) => {
         birthDate: form.birthDate || null,
         city: form.city,
         province: form.province,
-        postalCode: form.postalCode,
-        // Nota: `country` y preferencias pueden no existir en el backend; si no existen, se pueden manejar solo localmente
+        postalCode: form.postalCode, 
       };
 
       if (!userId) throw new Error('No se encontró el identificador del usuario');
@@ -324,11 +322,7 @@ const ProfilePreferencesModal = ({ open, onClose }) => {
               <label className="block">
                 <span className="text-sm text-gray-700">Provincia</span>
                 <input className="mt-1 w-full border rounded-md px-3 py-2" value={form.province} onChange={e => setField('province', e.target.value)} />
-              </label>
-              <label className="block md:col-span-2">
-                <span className="text-sm text-gray-700">País</span>
-                <input className="mt-1 w-full border rounded-md px-3 py-2" value={form.country} onChange={e => setField('country', e.target.value)} />
-              </label>
+              </label> 
               <label className="block">
                 <span className="text-sm text-gray-700">Código Postal</span>
                 <input className="mt-1 w-full border rounded-md px-3 py-2" value={form.postalCode} onChange={e => setField('postalCode', e.target.value)} />

@@ -16,8 +16,7 @@ export const sampleUsers = [
     areaCode: "011",
     phone: "12345678",
     password: "password123",
-    role: "Administrator",
-    institutionalID: "ADM001",
+    role: "Administrator", 
     profileImage: "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?w=400",
     assignedTraining: []
   },
@@ -37,8 +36,7 @@ export const sampleUsers = [
     areaCode: "0291",
     phone: "154567890",
     password: "alumno123",
-    role: "Student",
-    institutionalID: "ALU001",
+    role: "Student", 
     profileImage: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400",
     assignedTraining: []
   },
@@ -57,8 +55,7 @@ export const sampleUsers = [
     areaCode: "0291",
     phone: "155678901",
     password: "alumno123",
-    role: "Student",
-    institutionalID: "ALU002",
+    role: "Student", 
     profileImage: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=400",
     assignedTraining: []
   }
