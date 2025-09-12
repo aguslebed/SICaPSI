@@ -3,6 +3,7 @@ import CapacitacionCard from "../../../Components/Student/TrainingCard";
 import Navbar from "../../../Components/Student/NavBar";
 import { useUser } from "../../../Context/UserContext";
 import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
+import WelcomeModal from "../../../Components/Modals/WelcomeModal";
 
 // Panel principal de usuario
 const UserPanel = () => {
@@ -27,6 +28,7 @@ const UserPanel = () => {
   return (
     <>
       <Navbar />
+      <WelcomeModal />
       <div className="min-h-screen bg-gray-100 py-10 px-6">
         <div className="max-w-[1200px] mx-auto">
           {/* Encabezado */}
