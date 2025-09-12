@@ -1,9 +1,11 @@
 import React from "react";
+import { useNavigate } from 'react-router-dom';
 
 const TrainingCard = ({ titulo, subtitulo, porcentaje, estado, link, imagen }) => {
+  const navigate = useNavigate();
   const handleClick = () => {
     if (estado === "activo") {
-      window.location.href = link;
+      navigate(link);
     }
   };
 

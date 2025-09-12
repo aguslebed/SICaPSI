@@ -5,16 +5,17 @@ const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
 const api = axios.create({
   baseURL: API_BASE,
   headers: { "Content-Type": "application/json" },
+  withCredentials: true,
 });
 
 export async function login(email, password) {
   try { 
 
     // 1. Autenticación: solo recibe la cookie
-    await api.post("/auth/login", { email, password }, { withCredentials: true });
+    await api.post("/auth/login", { email, password });
 
     // 2. Obtener datos completos del usuario autenticado
-    const { data } = await api.get("/users/connect/me", { withCredentials: true }); 
+    const { data } = await api.get("/users/connect/me"); 
 
 
     // Normalizamos para que el resto del front no explote
@@ -40,7 +41,7 @@ export async function login(email, password) {
 // Registro de usuario
 export async function APIRegistro(usuario) {
   try { 
-    const { data } = await api.post("/users/register", usuario, { withCredentials: true }); 
+    const { data } = await api.post("/users/register", usuario); 
      
     return data;
   } catch (error) {
@@ -60,7 +61,7 @@ export async function APIRegistro(usuario) {
 // Logout de usuario
 export async function logout() {
   try {  
-    await api.post('/auth/logout', {}, { withCredentials: true });
+    await api.post('/auth/logout', {});
      
     return true;
   } catch (error) {
@@ -79,7 +80,7 @@ export async function logout() {
 // Verifica si el usuario está autenticado
 export async function checkAuth() {
   try { 
-    const { data } = await api.get('/auth/check-auth', { withCredentials: true });
+    const { data } = await api.get('/auth/check-auth');
     
     return {
       user: data.user ?? data,

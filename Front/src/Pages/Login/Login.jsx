@@ -2,11 +2,13 @@ import { useState } from "react";
 import { login } from "../../API/Request";
 import { Link } from "react-router-dom";
 import { useUser } from "../../Context/UserContext";
+import { useNavigate } from 'react-router-dom';
 
 function Login() {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const { setUserData } = useUser(); 
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,7 +26,7 @@ function Login() {
        sessionStorage.setItem("showWelcomeModal", "true");
 
       // Redirigir al dashboard
-        window.location.href = "/userPanel";
+      navigate('/userPanel');
     } catch (err) {
       setError(err.message);
     }
