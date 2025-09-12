@@ -1,14 +1,22 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { APIRegistro } from "../../API/Request";
 import ModalMensajeRegistro from "../../Components/Modals/RegisterModal";
 
 function Register() {
+  const navigate = useNavigate();
 
   //Estados MODAL
   const [modalOpen, setModalOpen] = useState(false);
   const [modalCodigo, setModalCodigo] = useState(null);
   const [modalMensaje, setModalMensaje] = useState("");
+
+  const handleModalClose = () => {
+    setModalOpen(false);
+    if (modalCodigo >= 200 && modalCodigo < 400) {
+      navigate("/login");
+    }
+  };
 
   //Estado de los errores
   const [error, setError] = useState("");
@@ -166,12 +174,12 @@ function Register() {
     <>
     {/* MODAL */}
       {modalOpen && (
-                      <ModalMensajeRegistro
-                        codigo={modalCodigo}
-                        mensaje={modalMensaje}
-                        onClose={() => setModalOpen(false)}
-                      />
-                    )}
+        <ModalMensajeRegistro
+          codigo={modalCodigo}
+          mensaje={modalMensaje}
+          onClose={handleModalClose}
+        />
+      )}
       {/* Fondo */}
       <div
         className="fixed inset-0 bg-[url('./assets/fondo.jpg')] bg-cover bg-center 
