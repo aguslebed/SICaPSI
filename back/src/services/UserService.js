@@ -46,6 +46,17 @@ export class UserService extends IUserService {
     }
     return updated;
   }
+
+  async changePassword(userId, currentPassword, newPassword) {
+    const user = await this.User.findById(userId).exec();
+    if (!user) throw new Error('Usuario no encontrado');
+    const bcrypt = (await import('bcryptjs')).default;
+    const ok = await bcrypt.compare(currentPassword, user.password);
+    if (!ok) throw new Error('La contraseña actual es incorrecta');
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+    return user;
+  }
 }
 
 export default UserService;

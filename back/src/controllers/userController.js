@@ -35,6 +35,36 @@ export function makeUserController({ userService, trainingService, messageServic
       } catch (err) { next(err); }
     },
 
+    async uploadProfileImage(req, res, next) {
+      try {
+        const userId = req.params.id;
+        if (!userId) throw new AppError('ID de usuario requerido', 400);
+        if (!req.file) throw new AppError('Archivo de imagen requerido', 400);
+
+        // Build public URL path
+        const filePath = `/uploads/${req.file.filename}`;
+        const user = await userService.update(userId, { profileImage: filePath });
+        res.status(200).json({ user: userFormatter.toPublic(user), profileImage: filePath });
+      } catch (err) { next(err); }
+    },
+
+    async changePassword(req, res, next) {
+      try {
+        const { currentPassword, newPassword, confirmPassword } = req.body || {};
+        if (!currentPassword || !newPassword || !confirmPassword) {
+          throw new AppError('Campos requeridos: currentPassword, newPassword, confirmPassword', 400);
+        }
+        if (newPassword !== confirmPassword) {
+          throw new AppError('La confirmación de contraseña no coincide', 400);
+        }
+        // El usuario autenticado viene del middleware
+        const authUserId = req.user?.userId;
+        if (!authUserId) throw new AppError('No autorizado', 401);
+        await userService.changePassword(authUserId, currentPassword, newPassword);
+        res.json({ message: 'Contraseña actualizada' });
+      } catch (err) { next(err); }
+    },
+
     async getUserCompleteData(req, res, next) {
       try {
         const userId = req.params.id || req.user?.userId;

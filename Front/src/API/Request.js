@@ -8,6 +8,15 @@ const api = axios.create({
   withCredentials: true,
 });
 
+// Utilidad: resuelve URLs de imagen (prefija host del backend cuando vienen como '/uploads/...')
+export function resolveImageUrl(url) {
+  if (!url) return url;
+  if (typeof url !== 'string') return url;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (url.startsWith('/uploads/')) return `${API_BASE}${url}`;
+  return url;
+}
+
 export async function login(email, password) {
   try { 
 
@@ -114,6 +123,46 @@ export async function updateUser(userId, patch) {
   } catch (error) {
     if (error.response) {
       throw new Error(error.response.data?.message || 'Error al actualizar usuario');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+// Cambia la contraseña del usuario autenticado
+export async function changePassword({ currentPassword, newPassword, confirmPassword }) {
+  try {
+    const { data } = await api.post('/users/change-password', {
+      currentPassword,
+      newPassword,
+      confirmPassword
+    });
+    return data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al cambiar contraseña');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+// Sube una imagen de perfil
+export async function uploadProfileImage(userId, file) {
+  const form = new FormData();
+  form.append('image', file);
+  try {
+    const { data } = await api.post(`/users/${userId}/profile-image`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al subir imagen');
     } else if (error.request) {
       throw new Error('Error de conexión con el servidor');
     } else {

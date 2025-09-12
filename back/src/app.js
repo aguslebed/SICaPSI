@@ -1,4 +1,5 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config();
 import express from "express";
 import cors from "cors";
 import authRoutes from "./routes/authRoutes.js";
@@ -6,6 +7,13 @@ import { connectDB } from "./config/db.js";
 import userRoutes from "./routes/userRoutes.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import cookieParser from "cookie-parser";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from 'url';
+
+// __dirname equivalent for ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Configurador principal de la aplicación
@@ -37,6 +45,17 @@ class AppConfig {
     }));
     this.app.use(express.json());
     this.app.use(cookieParser());
+
+    // Ensure uploads directory exists and serve it statically
+    const uploadsDir = path.resolve(__dirname, "..", "uploads");
+    try {
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+    } catch (e) {
+      console.error("No se pudo crear el directorio de uploads:", e);
+    }
+    this.app.use("/uploads", express.static(uploadsDir));
   }
 
   /**
