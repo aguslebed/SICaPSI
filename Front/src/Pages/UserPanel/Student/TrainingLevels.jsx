@@ -4,6 +4,7 @@ import { ChevronDown, CheckCircle, Lock, BookOpen, PlayCircle } from "lucide-rea
 import Navbar from "../../../Components/Student/NavBar";
 import MenuVertical from "../../../Components/Student/SideBar";
 import { useUser } from "../../../Context/UserContext";
+import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
 
 const TrainingLevels = () => {
   const [openLevel, setOpenLevel] = useState(null);
@@ -12,11 +13,15 @@ const TrainingLevels = () => {
   const navigate = useNavigate();
  
 
-  if (!userData || !userData.data || !Array.isArray(userData.data.training)) {
-    return <div className="text-center mt-20">Cargando datos de curso...</div>;
+  if (!userData || !Array.isArray(userData.training)) {
+    return (
+      <>
+        <Navbar />
+        <LoadingOverlay label="Cargando datos de curso..." />
+      </>
+    );
   }
-
-  const curso = userData.data.training.find(c => c._id === idTraining);
+  const curso = userData.training.find(c => c._id === idTraining);
   const niveles = curso?.levels || [];
 
   const toggleNivel = (nivelId) => {
@@ -40,9 +45,10 @@ const TrainingLevels = () => {
   return (
     <>
       <Navbar />
-      <div className="flex min-h-screen bg-gray-100">
-        <MenuVertical />
-        <main className="flex-1 p-8">
+      <div className="min-h-screen bg-gray-100">
+        <div className="max-w-[1200px] w-full mx-auto flex">
+          <MenuVertical />
+          <main className="flex-1 p-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-6">Niveles</h1>
           <div className="space-y-4">
             {niveles.map((nivel) => (
@@ -82,7 +88,8 @@ const TrainingLevels = () => {
               </div>
             ))}
           </div>
-        </main>
+          </main>
+        </div>
       </div>
     </>
   );

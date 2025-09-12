@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useParams } from "react-router-dom";
 import Navbar from "../../../Components/Student/NavBar";
 import MenuVertical from "../../../Components/Student/SideBar";
+import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
 import { useUser } from "../../../Context/UserContext";
 
 const LevelTest = () => {
@@ -26,10 +27,10 @@ const LevelTest = () => {
   const { idTraining, nivelId } = useParams();
   const { userData } = useUser();
 
-  if (!userData?.data?.training) return <div>Cargando...</div>;
+  if (!userData?.training) return <LoadingOverlay label="Cargando capacitación..." />;
 
   // Buscar el curso y nivel
-  const training = userData.data.training.find(t => t._id === idTraining);
+  const training = userData.training.find(t => t._id === idTraining);
   if (!training) return <div>No se encontró el curso.</div>;
   const level = Array.isArray(training.levels) ? training.levels.find(l => l._id === nivelId) : null;
   if (!level) return <div>No se encontró el nivel.</div>;
@@ -120,9 +121,10 @@ const LevelTest = () => {
       ) : (
         <>
           <Navbar />
-          <div className="flex min-h-screen bg-gray-100">
-            <MenuVertical />
-            <main className="flex-1 p-8 flex justify-center items-center">
+          <div className="min-h-screen bg-gray-100">
+            <div className="max-w-[1200px] w-full mx-auto flex">
+              <MenuVertical />
+              <main className="flex-1 p-8 flex justify-center items-center">
               <div className="bg-white rounded-2xl shadow-xl p-8 max-w-3xl w-full flex flex-col items-center" style={{ minHeight: 500 }}>
                 {/* Imagen/video inicial */}
                 <img
@@ -146,7 +148,8 @@ const LevelTest = () => {
                   </button>
                 </div>
               </div>
-            </main>
+              </main>
+            </div>
           </div>
         </>
       )}

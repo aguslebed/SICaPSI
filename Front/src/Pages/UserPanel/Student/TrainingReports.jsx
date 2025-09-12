@@ -8,19 +8,20 @@ const TrainingReports = () => {
   const [videoSeleccionado, setVideoSeleccionado] = useState(null);
   const { userData } = useUser();
   const { idTraining } = useParams();
-  const trainings = userData.data.training || [];
+  const trainings = userData?.training || [];
   // Filtrar solo el training actual
   const selectedTraining = trainings.find(t => t._id === idTraining);
   const reports = selectedTraining?.report || []; 
   return (
     <>
       <Navbar />
-      <div className="flex min-h-screen bg-gray-100">
-        {/* Sidebar */}
-        <MenuVertical />
+      <div className="min-h-screen bg-gray-100">
+        <div className="max-w-[1200px] w-full mx-auto flex">
+          {/* Sidebar */}
+          <MenuVertical />
 
-        {/* Contenido principal */}
-        <main className="flex-1 p-8">
+          {/* Contenido principal */}
+          <main className="flex-1 p-8">
           <h1 className="text-2xl font-bold text-gray-800 mb-6">
             Mis reportes (HU-11 Alumno)
           </h1>
@@ -89,7 +90,8 @@ const TrainingReports = () => {
               </div>
             </div>
           )}
-        </main>
+          </main>
+        </div>
       </div>
     </>
   );

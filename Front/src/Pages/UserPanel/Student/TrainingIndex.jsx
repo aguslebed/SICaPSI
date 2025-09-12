@@ -3,24 +3,31 @@ import { useParams, Link } from "react-router-dom";
 import Navbar from "../../../Components/Student/NavBar";
 import MenuVertical from "../../../Components/Student/SideBar";
 import { useUser } from "../../../Context/UserContext";
+import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
 
 const TrainingIndex = () => {
   const { idTraining } = useParams();
   const { userData } = useUser();
 
-  if (!userData || !userData.data || !Array.isArray(userData.data.training)) {
-    return <div className="text-center mt-20">Cargando datos de training...</div>;
+  if (!userData || !Array.isArray(userData.training)) {
+    return (
+      <>
+        <Navbar />
+        <LoadingOverlay label="Cargando datos de capacitación..." />
+      </>
+    );
   } 
-  const training = userData.data.training.find(c => c._id === idTraining);
+  const training = userData.training.find(c => c._id === idTraining);
   if (!training) return <p className="text-center mt-20">Capacitación no encontrada</p>;
 
  
   return (
     <>
       <Navbar />
-      <div className="flex">
-        <MenuVertical />
-        <main className="flex-1 p-8">
+      <div className="min-h-screen bg-gray-100">
+        <div className="max-w-[1200px] w-full mx-auto flex">
+          <MenuVertical />
+          <main className="flex-1 p-8">
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             {/* Imagen y título */}
             <div
@@ -45,7 +52,8 @@ const TrainingIndex = () => {
               <p>{training.description}</p>
             </div>
           </div>
-        </main>
+          </main>
+        </div>
       </div>
     </>
   );

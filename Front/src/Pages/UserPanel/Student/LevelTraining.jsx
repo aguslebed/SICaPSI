@@ -4,14 +4,15 @@ import { useParams } from "react-router-dom";
 import MenuVertical from "../../../Components/Student/SideBar";
 import Navbar from "../../../Components/Student/NavBar";
 import { useUser } from "../../../Context/UserContext";
+import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
 
 const LevelTraining = () => {
   const { idTraining, nivelId } = useParams();
   const { userData } = useUser();
 
-  if (!userData.data || !Array.isArray(userData.data.training)) return <div>Cargando...</div>;
+  if (!userData || !Array.isArray(userData.training)) return <LoadingOverlay label="Cargando capacitación..." />;
 
-  const curso = userData.data.training.find(c => c._id === idTraining);
+  const curso = userData.training.find(c => c._id === idTraining);
   if (!curso) return <div>No se encontró el curso.</div>;
 
   const nivel = Array.isArray(curso.levels) ? curso.levels.find(l => l._id === nivelId) : null;
@@ -22,9 +23,10 @@ const LevelTraining = () => {
   return (
     <>
       <Navbar />
-      <div className="flex min-h-screen bg-gray-100">
-        <MenuVertical />
-        <main className="flex-1 p-8">
+      <div className="min-h-screen bg-gray-100">
+        <div className="max-w-[1200px] w-full mx-auto flex">
+          <MenuVertical />
+          <main className="flex-1 p-8">
           <div className="bg-gradient-to-br from-blue-50 via-white to-blue-100 p-8 rounded-2xl shadow-xl border border-blue-200 max-w-3xl mx-auto flex flex-col gap-6">
             <h1 className="text-3xl font-bold text-blue-700 mb-2">{nivel.title}</h1>
             <h2 className="text-lg text-gray-600 mb-4">{nivel.description}</h2>
@@ -52,7 +54,8 @@ const LevelTraining = () => {
               <div className="text-sm text-blue-500 mt-2">Duración: {training.duration} minutos</div>
             )}
           </div>
-        </main>
+          </main>
+        </div>
       </div>
     </>
   );

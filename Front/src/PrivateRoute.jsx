@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { checkAuth } from './API/Request';
+import LoadingOverlay from './Components/Shared/LoadingOverlay';
 
 export default function PrivateRoute({ children }) {
   const [auth, setAuth] = useState(null);
@@ -11,6 +12,6 @@ export default function PrivateRoute({ children }) {
       .catch(() => setAuth(false));
   }, []);
 
-  if (auth === null) return <div>Cargando...</div>;
+  if (auth === null) return <LoadingOverlay label="Verificando sesión..." />;
   return auth ? children : <Navigate to="/login" />;
 }

@@ -2,8 +2,6 @@ import { useState } from "react";
 import ModalWrapper from "./ModalWrapper";
 import ModalError from "./ErrorModal";
 import ModalExito from "./SucessModal";
-import Navbar from "../Student/NavBar";
-import MenuVertical from "../Student/SideBar";
  
 const ConsultaCapacitador = ({ onClose }) => {
   const [nombre, setNombre] = useState("");
@@ -43,8 +41,6 @@ const ConsultaCapacitador = ({ onClose }) => {
 
   return (
     <>
-       <Navbar/> 
-       <MenuVertical/> 
         <ModalWrapper onClose={onClose}>
           <h2 className="text-lg font-bold text-center mb-4">
             Consulta a capacitador

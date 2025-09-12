@@ -17,9 +17,8 @@ export async function login(email, password) {
     // 2. Obtener datos completos del usuario autenticado
     const { data } = await api.get("/users/connect/me"); 
 
-
-    // Normalizamos para que el resto del front no explote
-    return {data};
+    // Devolver directamente la data (sin envolver en {data})
+    return data;
   } catch (error) {
     console.error("❌ Error en login:", error);
 
@@ -99,4 +98,10 @@ export async function checkAuth() {
     
     throw new Error('No autenticado');
   }
+}
+
+// Obtiene los datos completos del usuario (perfil + training, etc.)
+export async function getMe() {
+  const { data } = await api.get('/users/connect/me');
+  return data;
 }

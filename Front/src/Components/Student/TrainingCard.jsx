@@ -10,11 +10,14 @@ const TrainingCard = ({ titulo, subtitulo, porcentaje, estado, link, imagen }) =
   };
 
   return (
-    <div
-      className={`relative w-full h-40 rounded-md overflow-hidden cursor-pointer transition ${
-        estado === "activo" ? "hover:shadow-lg" : "cursor-not-allowed"
+    <button
+      type="button"
+      className={`relative w-full h-40 rounded-md overflow-hidden transition text-left ${
+        estado === "activo" ? "hover:shadow-lg cursor-pointer" : "cursor-not-allowed opacity-80"
       }`}
       onClick={handleClick}
+      disabled={estado !== "activo"}
+      aria-disabled={estado !== "activo"}
     >
       {/* Imagen de fondo */}
       <div
@@ -50,7 +53,7 @@ const TrainingCard = ({ titulo, subtitulo, porcentaje, estado, link, imagen }) =
           </span>
         </div>
       )}
-    </div>
+    </button>
   );
 };
 

@@ -10,8 +10,6 @@ const NavBar = () => {
   const { logoutUser } = useUser();
   const { userData } = useUser();
 
-  console.log("DATOS USUARIO:  ", userData?.data)
-
   const handleLogout = async () => {
     try {
       await logout();
@@ -37,20 +35,20 @@ const NavBar = () => {
         {/* Notificaciones y perfil */}
         <div className="flex items-center gap-6">
           {/* Icono de campana */}
-          <button className="relative hover:text-gray-200">
-            <Bell className="w-6 h-6 cursor-pointer" />
+          <button type="button" aria-label="Ver notificaciones" className="relative hover:text-gray-200">
+            <Bell className="w-6 h-6" />
             {/* Badge de notificaciones */}
             <span className="absolute -top-1 -right-1 bg-red-500 text-xs text-white rounded-full px-1 cursor-pointer">
-              {userData?.data?.messages?.total || 0}
+              {userData?.messages?.total || 0}
             </span>
           </button>
           {/* Dropdown de usuario */}
           <Menu as="div" className="relative">
             <Menu.Button className="flex items-center gap-2 cursor-pointer">
-              <span className="font-medium text-white">{userData?.data?.user?.role || "Usuario"}</span>
+              <span className="font-medium text-white">{userData?.user?.role || "Usuario"}</span>
               <img
-                src={userData?.data?.user?.profileImage || "/images/alumno-avatar.png"}
-                alt={userData?.data?.user?.role || "Usuario"}
+                src={userData?.user?.profileImage || "/images/alumno-avatar.png"}
+                alt={userData?.user?.role || "Usuario"}
                 className="w-10 h-10 rounded-full border-2 border-white"
               />
             </Menu.Button>
