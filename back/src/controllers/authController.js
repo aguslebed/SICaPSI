@@ -1,8 +1,7 @@
 // authController.js
-import jwt from 'jsonwebtoken';
 import AppError from '../middlewares/AppError.js';
 
-export const makeAuthController = ({ authService, loginValidator }) => ({
+export const makeAuthController = ({ authService, loginValidator, tokenService }) => ({
   /**
    * C.Auth.Login
    */
@@ -16,9 +15,7 @@ export const makeAuthController = ({ authService, loginValidator }) => ({
 
       // 2) Valida formato
       const { isValid, errors } = loginValidator.validate(body);
-      if (!isValid) {
-        throw new AppError("Datos inválidos", 400, "AUTH_400", errors);
-      }
+      if (!isValid) throw new AppError("Datos inválidos", 400, "AUTH_400", errors);
 
       // 3) Autentica contra BD
       const user = await authService.authenticate(body.email, body.password);
@@ -27,22 +24,19 @@ export const makeAuthController = ({ authService, loginValidator }) => ({
       }
 
       // 4) Genera token JWT con payload completo
-      const token = jwt.sign(
-        { 
-          userId: user._id || user.id,
-          email: user.email,
-          role: user.role || 'user',
-          sub: user._id
-        }, 
-        process.env.JWT_SECRET, 
-        { expiresIn: "12h" }
-      );
+      const token = tokenService.sign({
+        userId: user._id || user.id,
+        email: user.email,
+        role: user.role || 'user',
+        sub: user._id
+      });
 
       // 5) Cookie segura con configuración adaptable
+      const isProd = process.env.NODE_ENV === 'production';
       res.cookie('token', token, { 
         httpOnly: true, 
-        secure: true,
-        sameSite: 'none',
+        secure: isProd,
+        sameSite: isProd ? 'none' : 'lax',
         maxAge: 12 * 60 * 60 * 1000
       });
 
@@ -58,10 +52,11 @@ export const makeAuthController = ({ authService, loginValidator }) => ({
   },
 
   logout: (req, res) => {
+    const isProd = process.env.NODE_ENV === 'production';
     res.clearCookie('token', {
       httpOnly: true,
-      secure: true,
-      sameSite: 'none'
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax'
     });
     res.json({ message: 'Logout exitoso' });
   },

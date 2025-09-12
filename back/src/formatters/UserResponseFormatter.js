@@ -47,30 +47,30 @@ const toPublicOne = (userDoc) => {
   };
 };
 
-export const UserResponseFormatter = {
-  /**
-   * Un usuario -> público
-   */
+export class UserResponseFormatter {
   toPublic(userDoc) {
     return toPublicOne(userDoc);
-  },
+  }
 
-  /**
-   * Página paginada -> público
-   * Acepta forma { items, total, page, limit } o similares
-   */
   toPublicList(paged = {}) {
-    const items = Array.isArray(paged.items) ? paged.items : [];
-    const total = Number.isFinite(paged.total) ? paged.total : items.length;
+    // soportar arrays además de objetos paginados
+    const itemsSource = Array.isArray(paged)
+      ? paged
+      : (Array.isArray(paged.items) ? paged.items : []);
+    const total = Number.isFinite(paged.total)
+      ? paged.total
+      : itemsSource.length;
     const page = Number.isFinite(paged.page) ? paged.page : 1;
-    const limit = Number.isFinite(paged.limit) ? paged.limit : items.length || 0;
+    const limit = Number.isFinite(paged.limit)
+      ? paged.limit
+      : (itemsSource.length || 0);
 
     return {
       total,
       page,
       limit,
-      items: items.map(toPublicOne)
+      items: itemsSource.map(toPublicOne)
     };
   }
-};
+}
 export default UserResponseFormatter;

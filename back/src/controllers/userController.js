@@ -1,40 +1,20 @@
-// Nuevo controlador desacoplado para usuario y datos completos
-import UserResponseFormatter from '../formatters/UserResponseFormatter.js';
-import TrainingResponseFormatter from '../formatters/TrainingResponseFormatter.js'; 
-import MessageResponseFormatter from '../formatters/MessageResponseFormatter.js'; 
+// Controlador desacoplado que orquesta servicios y formatters
 import AppError from '../middlewares/AppError.js';
 
-// Importar modelos
-import User from '../models/User.js';
-import Training from '../models/Training.js';
-import Level from '../models/Level.js'; 
-import PrivateMessage from '../models/PrivateMessage.js'; 
-
-// Importar servicios
-import UserService from '../services/UserService.js';
-import TrainingService from '../services/TrainingService.js'; 
-import MessageService from '../services/MessageService.js'; 
-
-// Instanciar servicios pasando los modelos
-const userService = new UserService({ UserModel: User });
-const trainingService = new TrainingService({ UserModel: User, LevelModel: Level, TrainingModel: Training }); 
-const messageService = new MessageService({ PrivateMessageModel: PrivateMessage, UserModel: User, TrainingModel: Training }); 
-
-
-export function makeUserController() {
+export function makeUserController({ userService, trainingService, messageService, userFormatter, trainingFormatter, messageFormatter }) {
   return {
 
     async create(req, res, next) {
       try {
         const user = await userService.create(req.body);
-        res.status(201).json(UserResponseFormatter.toPublic(user));
+        res.status(201).json(userFormatter.toPublic(user));
       } catch (err) { next(err); }
     },
 
     async list(req, res, next) {
       try {
         const users = await userService.list(req.query);
-        res.json(UserResponseFormatter.toPublicList(users));
+        res.json(userFormatter.toPublicList(users));
       } catch (err) { next(err); }
     },
 
@@ -44,14 +24,14 @@ export function makeUserController() {
         if (!userId) throw new AppError('ID de usuario requerido', 400);
         const user = await userService.getById(userId);
         if (!user) throw new AppError('Usuario no encontrado', 404);
-        res.json(UserResponseFormatter.toPublic(user));
+        res.json(userFormatter.toPublic(user));
       } catch (err) { next(err); }
     },
 
     async update(req, res, next) {
       try {
         const user = await userService.update(req.params.id, req.body);
-        res.json(UserResponseFormatter.toPublic(user));
+        res.json(userFormatter.toPublic(user));
       } catch (err) { next(err); }
     },
 
@@ -59,15 +39,20 @@ export function makeUserController() {
       try {
         const userId = req.params.id || req.user?.userId;
         if (!userId) throw new AppError('ID de usuario requerido', 400);
-        const user = await userService.getById(userId);
+        const [user, training, mensajes] = await Promise.all([
+          userService.getById(userId),
+          trainingService.getCoursesForUser(userId),
+          messageService.getMessagesForUser(userId)
+        ]);
         if (!user) throw new AppError('Usuario no encontrado', 404);
-        const training = await trainingService.getCoursesForUser(userId);
-        const mensajes = await messageService.getMessagesForUser(userId);
-        const userFormatted = UserResponseFormatter.toPublic(user);
-        const trainingFormatted = training.map(TrainingResponseFormatter.format);
-        const messageFormatted = mensajes.map(MessageResponseFormatter.format);
-        const unreadMessages = messageFormatted.filter(m => !m.isRead && m.recipient && m.recipient._id === userId).length;
-        console.log(training);
+        const userFormatted = userFormatter.toPublic(user);
+        const trainingFormatted = training.map(t => trainingFormatter.format(t));
+        const messageFormatted = mensajes.map(m => messageFormatter.format(m));
+        const uidStr = userId.toString();
+        const unreadMessages = messageFormatted.filter(m => {
+          const recipientId = m?.recipient?._id?.toString?.() ?? m?.recipient?.toString?.();
+          return !m.isRead && recipientId === uidStr;
+        }).length;
         res.json({
           user: userFormatted,
           training: trainingFormatted,
