@@ -105,3 +105,19 @@ export async function getMe() {
   const { data } = await api.get('/users/connect/me');
   return data;
 }
+
+// Actualiza datos del usuario por ID
+export async function updateUser(userId, patch) {
+  try {
+    const { data } = await api.patch(`/users/${userId}`, patch);
+    return data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al actualizar usuario');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}

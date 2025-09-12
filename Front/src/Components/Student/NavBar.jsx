@@ -1,14 +1,16 @@
-import React from "react";
+import React, { useState } from "react";
 import { logout } from '../../API/Request';
 import { useNavigate } from 'react-router-dom';
 import { Bell } from "lucide-react"; // íconos
 import { Menu } from "@headlessui/react"; // dropdown accesible
 import { useUser } from "../../Context/UserContext";
+import ProfilePreferencesModal from "../Modals/ProfilePreferencesModal";
 
 const NavBar = () => {
   const navigate = useNavigate();
   const { logoutUser } = useUser();
   const { userData } = useUser();
+  const [openProfile, setOpenProfile] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -59,6 +61,7 @@ const NavBar = () => {
                     className={`w-full text-left px-4 py-2 text-sm hover:cursor-pointer ${
                       active ? "bg-blue-600" : ""
                     }`}
+                    onClick={() => setOpenProfile(true)}
                   >
                     Perfil y preferencias
                   </button>
@@ -91,6 +94,9 @@ const NavBar = () => {
           </Menu>
         </div>
       </div>
+      {openProfile && (
+        <ProfilePreferencesModal open={openProfile} onClose={() => setOpenProfile(false)} />
+      )}
     </header>
   );
 };
