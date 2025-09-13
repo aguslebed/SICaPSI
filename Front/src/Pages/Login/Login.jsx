@@ -22,6 +22,7 @@ function Login() {
     try {
       setIsLoading(true);
       const data = await login(email, password);
+      
       setUserData(data);
 
       // Indicar que se debe mostrar el modal

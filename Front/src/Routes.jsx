@@ -3,6 +3,7 @@ import { createBrowserRouter, redirect } from 'react-router-dom';
 import ProtectedLayout from './Layouts/ProtectedLayout';
 import { getMe, checkAuth } from './API/Request';
 
+const Mensajeria = lazy(() => import('./components/Mensajeria/Mensajeria'));
 const Home = lazy(() => import('./Pages/Home/Home'));
 const InicioDeSesion = lazy(() => import('./Pages/Login/Login'));
 const Registrarse = lazy(() => import('./Pages/Register/Register'));
@@ -43,6 +44,7 @@ export const router = createBrowserRouter([
       { path: ':idTraining/:nivelId/bibliogrhapy', element: <NivelBibliografia /> },
       { path: ':idTraining/:nivelId/training', element: <NivelCapacitacion /> },
       { path: ':idTraining/:nivelId/levelTest', element: <LevelTest /> },
+      { path: 'mensajeria', element: <Mensajeria /> }, // 👈 Agregado aquí
     ],
   },
   { path: '*', element: <NotFound /> },
