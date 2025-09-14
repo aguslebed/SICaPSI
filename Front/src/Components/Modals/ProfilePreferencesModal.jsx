@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ModalWrapper from './ModalWrapper';
-import { useUser } from '../../Context/UserContext';
+import { useUser } from '../../context/UserContext';
 import { updateUser, getMe, uploadProfileImage, resolveImageUrl, changePassword } from '../../API/Request';
 import { User as UserIcon, Settings as SettingsIcon, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -21,19 +21,19 @@ const ProfilePreferencesModal = ({ open, onClose }) => {
   // Formularios locales
   const [form, setForm] = useState({
     // Datos principales
-    firstName: user?.firstName || '',
-    lastName: user?.lastName || '',
-    email: user?.email || '',
-    birthDate: user?.birthDate ? String(user.birthDate).substring(0,10) : '',
+    firstName: '',
+    lastName: '',
+    email: '',
+    birthDate: '',
     // Contacto
-    city: user?.city || '',
-    province: user?.province || '', 
-    postalCode: user?.postalCode || '',
+    city: '',
+    province: '', 
+    postalCode: '',
     // Generales (preferencias locales; no hay campos en backend explícitos)
-    showMyData: Boolean(user?.showMyData) || false,
-    preferredLanguage: user?.preferredLanguage || 'Español',
-    timezone: user?.timezone || 'America/Argentina/Buenos_Aires',
-    unreadHighlight: user?.unreadHighlight || 'Desde el último acceso',
+    showMyData: false,
+    preferredLanguage: 'Español',
+    timezone: 'America/Argentina/Buenos_Aires',
+    unreadHighlight: 'Desde el último acceso',
   });
 
   const [saving, setSaving] = useState(false);
@@ -45,6 +45,29 @@ const ProfilePreferencesModal = ({ open, onClose }) => {
   const [pwdSaving, setPwdSaving] = useState(false);
 
   const setField = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
+
+  // Keep local form & preview in sync with userData whenever modal opens or userData updates
+  // This avoids the issue where updates only appear after full page reload.
+  useEffect(() => {
+    if (!open) return; // only sync when modal is visible to avoid stomping edits
+    const u = user || {};
+    setForm({
+      firstName: u.firstName || '',
+      lastName: u.lastName || '',
+      email: u.email || '',
+      birthDate: u.birthDate ? String(u.birthDate).substring(0,10) : '',
+      city: u.city || '',
+      province: u.province || '',
+      postalCode: u.postalCode || '',
+      showMyData: Boolean(u.showMyData) || false,
+      preferredLanguage: u.preferredLanguage || 'Español',
+      timezone: u.timezone || 'America/Argentina/Buenos_Aires',
+      unreadHighlight: u.unreadHighlight || 'Desde el último acceso',
+    });
+    // Ensure preview shows current profile image
+    const resolved = resolveImageUrl(u?.profileImage) || null;
+    setPreviewUrl(resolved);
+  }, [open, userData]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -167,7 +190,7 @@ const ProfilePreferencesModal = ({ open, onClose }) => {
             <button
               type="button"
               onClick={onPickImage}
-              className={`mt-1 text-xs px-3 py-1 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-200 cursor-pointer ${uploading ? 'opacity-60 cursor-wait' : ''}`}
+                className={`mt-1 text-xs px-3 py-1 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-200 cursor-pointer ${uploading ? 'opacity-60 cursor-wait' : ''}`}
               disabled={uploading}
             >
               {uploading ? 'Subiendo...' : 'Cambiar imagen'}
@@ -285,10 +308,10 @@ const ProfilePreferencesModal = ({ open, onClose }) => {
 
           {/* Navegación de tabs en mobile */}
           <div className="md:hidden flex gap-2 mb-4">
-            <button className={`px-3 py-2 rounded-md text-sm ${activeTab === 'datos' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100'}`} onClick={() => setActiveTab('datos')}>Datos</button>
-            <button className={`px-3 py-2 rounded-md text-sm ${activeTab === 'contacto' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100'}`} onClick={() => setActiveTab('contacto')}>Contacto</button>
-            <button className={`px-3 py-2 rounded-md text-sm ${activeTab === 'generales' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100'}`} onClick={() => setActiveTab('generales')}>Generales</button>
-            <button className={`px-3 py-2 rounded-md text-sm ${activeTab === 'seguridad' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100'}`} onClick={() => setActiveTab('seguridad')}>Seguridad</button>
+            <button className={`px-3 py-2 rounded-md text-sm ${activeTab === 'datos' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100'} cursor-pointer`} onClick={() => setActiveTab('datos')}>Datos</button>
+            <button className={`px-3 py-2 rounded-md text-sm ${activeTab === 'contacto' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100'} cursor-pointer`} onClick={() => setActiveTab('contacto')}>Contacto</button>
+            <button className={`px-3 py-2 rounded-md text-sm ${activeTab === 'generales' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100'} cursor-pointer`} onClick={() => setActiveTab('generales')}>Generales</button>
+            <button className={`px-3 py-2 rounded-md text-sm ${activeTab === 'seguridad' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100'} cursor-pointer`} onClick={() => setActiveTab('seguridad')}>Seguridad</button>
           </div>
 
           {/* Campos según sección */}

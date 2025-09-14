@@ -170,3 +170,140 @@ export async function uploadProfileImage(userId, file) {
     }
   }
 }
+
+// --- Mensajería ---
+export async function sendMessage({ to, subject, body, recipientId, attachments, trainingId }) {
+  try {
+    const { data } = await api.post('/messages', { to, subject, body, recipientId, attachments, trainingId });
+    return data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al enviar mensaje');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+export async function setMessageRead({ id, isRead }) {
+  try {
+    const { data } = await api.patch(`/messages/${id}/read`, { isRead });
+    return data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al actualizar lectura');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+export async function moveMessageToTrash(id) {
+  try {
+    const { data } = await api.post(`/messages/${id}/trash`);
+    return data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al mover a papelera');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+// --- Operaciones en lote (cliente) ---
+export async function bulkMoveToTrash(ids = []) {
+  await Promise.all(ids.map((id) => moveMessageToTrash(id)));
+}
+
+export async function bulkSetMessageRead(ids = [], isRead) {
+  await Promise.all(ids.map((id) => setMessageRead({ id, isRead })));
+}
+
+export async function restoreMessage(id) {
+  try {
+    const { data } = await api.post(`/messages/${id}/restore`);
+    return data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al restaurar mensaje');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+export async function bulkRestoreMessages(ids = []) {
+  await Promise.all(ids.map((id) => restoreMessage(id)));
+}
+
+export async function deleteMessagePermanent(id) {
+  try {
+    const { data } = await api.delete(`/messages/${id}`);
+    return data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al eliminar mensaje');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+export async function bulkDeleteMessagesPermanent(ids = []) {
+  await Promise.all(ids.map((id) => deleteMessagePermanent(id)));
+}
+
+// Lista de usuarios para seleccionar destinatarios
+export async function listUsers(query = {}) {
+  try {
+    // If trainingId is provided, hit recipients endpoint to restrict to teachers/classmates
+    const params = new URLSearchParams(query);
+    let url = '/users';
+    if (query && (query.trainingId || params.get('trainingId'))) {
+      url = `/users/recipients?${params.toString()}`;
+    } else {
+      url = `/users?${params.toString()}`;
+    }
+    const { data } = await api.get(url);
+    return data; // se asume que ya viene formateado por el formatter
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al listar usuarios');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+// Subir adjuntos de mensajes
+export async function uploadMessageAttachments(files) {
+  const form = new FormData();
+  for (const f of files) form.append('files', f);
+  try {
+    const { data } = await api.post('/messages/attachments', form, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return data.attachments;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al subir adjuntos');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}

@@ -1,9 +1,7 @@
 import React, { useState } from "react";
 import { useParams } from "react-router-dom";
-import Navbar from "../../../Components/Student/NavBar";
-import MenuVertical from "../../../Components/Student/SideBar";
 import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
-import { useUser } from "../../../Context/UserContext";
+import { useUser } from "../../../context/UserContext";
 
 const LevelTest = () => {
   // Tamaño fijo para los botones de opciones
@@ -120,11 +118,9 @@ const LevelTest = () => {
         </div>
       ) : (
         <>
-          <Navbar />
           <div className="min-h-screen bg-gray-100">
-            <div className="max-w-[1200px] w-full mx-auto flex">
-              <MenuVertical />
-              <main className="flex-1 p-8 flex justify-center items-center">
+            <div className="max-w-screen-xl w-full mx-auto flex px-4 sm:px-6 md:px-8">
+              <main className="flex-1 min-w-0 py-6 md:py-8 flex justify-center items-center">
               <div className="bg-white rounded-2xl shadow-xl p-8 max-w-3xl w-full flex flex-col items-center" style={{ minHeight: 500 }}>
                 {/* Imagen/video inicial */}
                 <img

@@ -2,9 +2,10 @@
 import { IUserService } from '../interfaces/IUserService.js';
 
 export class UserService extends IUserService {
-  constructor({ UserModel }) {
+  constructor({ UserModel, TrainingModel }) {
     super();
     this.User = UserModel;
+    this.Training = TrainingModel;
   }
 
   async getById(id) {
@@ -33,6 +34,48 @@ export class UserService extends IUserService {
   async list(query) {
     // Puedes agregar paginación si lo necesitas
     return await this.User.find().sort({ createdAt: -1 }).exec();
+  }
+
+  /**
+   * Retorna destinatarios permitidos para redactar mensajes según cursos del remitente.
+   * - Profesores: usuarios que figuran como createdBy de los trainings del remitente
+   * - Compañeros: estudiantes que comparten al menos uno de esos trainings
+   */
+  async findRecipientsForCompose({ senderId, trainingId }) {
+    const sender = await this.User.findById(senderId).select('assignedTraining role').lean();
+    if (!sender) throw new Error('Usuario remitente no encontrado');
+
+    const assigned = (sender.assignedTraining || []).map((id) => id.toString());
+    let trainingScope = assigned;
+    if (trainingId) {
+      const tStr = trainingId.toString();
+      if (assigned.includes(tStr)) {
+        trainingScope = [tStr];
+      }
+    }
+
+    // Profesores: createdBy de trainings dentro del scope
+    const trainings = await this.Training.find({ _id: { $in: trainingScope } }).select('createdBy').lean();
+    const teacherIds = [...new Set(trainings.map(t => t.createdBy?.toString()).filter(Boolean))];
+
+    // Compañeros: estudiantes que comparten al menos un training del scope
+    const classmates = await this.User.find({
+      _id: { $ne: senderId },
+      role: 'Student',
+      assignedTraining: { $in: trainingScope }
+    }).select('firstName lastName email role assignedTraining').lean();
+
+    // Profesores (cualquier rol) identificados por createdBy
+    const teachers = teacherIds.length
+      ? await this.User.find({ _id: { $in: teacherIds } }).select('firstName lastName email role').lean()
+      : [];
+
+    // Unificar y devolver únicos por _id
+    const byId = new Map();
+    for (const u of [...teachers, ...classmates]) {
+      byId.set(u._id.toString(), u);
+    }
+    return Array.from(byId.values());
   }
 
   async update(id, patch) {

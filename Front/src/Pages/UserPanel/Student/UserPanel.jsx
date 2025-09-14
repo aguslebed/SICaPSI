@@ -1,24 +1,17 @@
 import React from "react";
 import CapacitacionCard from "../../../Components/Student/TrainingCard";
-import Navbar from "../../../Components/Student/NavBar";
-import { useUser } from "../../../Context/UserContext";
-import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
 import WelcomeModal from "../../../Components/Modals/WelcomeModal";
+import { useUser } from "../../../context/UserContext";
+import LoadingOverlay from "../../../Components/Shared/LoadingOverlay"; 
 
 // Panel principal de usuario
 const UserPanel = () => {
   const { userData } = useUser();
+ 
 
   // Si los datos aún no están cargados
   if (!userData) {
-    return (
-      <>
-        <Navbar />
-        <div className="min-h-screen flex items-center justify-center bg-gray-100">
-          <LoadingOverlay label="Cargando datos de usuario..." />
-        </div>
-      </>
-    );
+    return <div className="min-h-[50vh] flex items-center justify-center"><LoadingOverlay label="Cargando datos de usuario..." /></div>;
   }
 
   // training del usuario
@@ -27,16 +20,15 @@ const UserPanel = () => {
   // Renderizar solo los datos requeridos
   return (
     <>
-      <Navbar />
       <WelcomeModal />
-      <div className="min-h-screen bg-gray-100 py-10 px-6">
-        <div className="max-w-[1200px] mx-auto">
+      <div className="">
+        <div className="">
           {/* Encabezado */}
-          <div className="text-left mb-12">
-            <h1 className="text-4xl font-bold text-gray-900 mb-3">
+          <div className="text-left mb-6 md:mb-12">
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
               Capacitaciones
             </h1>
-            <p className="text-gray-600 text-lg">
+            <p className="text-gray-600 text-base md:text-lg">
               Selecciona una capacitación para continuar tu entrenamiento
             </p>
           </div>

@@ -7,7 +7,12 @@ import Level from '../models/Level.js';
 import PrivateMessage from '../models/PrivateMessage.js'; 
 import { sampleLevels } from './cursos_y_niveles/levels.js';
 import { sampleCourses } from './cursos_y_niveles/training.js';
-import { sampleUsers } from './cursos_y_niveles/users.js';
+import { sampleAdministrators } from './cursos_y_niveles/administrators.js';
+import { sampleManagers } from './cursos_y_niveles/managers.js';
+import { sampleTrainers } from './cursos_y_niveles/trainers.js';
+import { sampleStudents } from './cursos_y_niveles/students.js';
+import { ensureTeacherForTraining } from './cursos_y_niveles/teachers.js';
+import { buildWelcomeMessageDocs, buildStudentInquiryDocs } from './cursos_y_niveles/messages.js';
 
 // Configuración de conexión
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/SICAPSI';
@@ -30,22 +35,27 @@ async function initializeDatabase() {
       PrivateMessage.deleteMany({})
     ]);
 
-    // Crear usuarios de simulación
-    console.log('👥 Creando usuarios de simulación...');
-    const hashedUsers = await Promise.all(
-      sampleUsers.map(async user => ({
-        ...user,
-        password: await bcrypt.hash(user.password, SALT_ROUNDS)
-      }))
-    );
-    
-  const createdUsers = await User.insertMany(hashedUsers);
-  console.log(`✅ ${createdUsers.length} users created`);
-  const users = createdUsers;
+    // Crear usuarios de simulación por rol (escalable)
+    console.log('👥 Creando usuarios (Administrators, Managers, Trainers, Students)...');
+    const toHash = [
+      ...sampleAdministrators,
+      ...sampleManagers,
+      ...sampleTrainers,
+      ...sampleStudents,
+    ];
+    const hashedUsers = await Promise.all(toHash.map(async user => ({
+      ...user,
+      password: await bcrypt.hash(user.password, SALT_ROUNDS)
+    })));
+    const createdUsers = await User.insertMany(hashedUsers);
+    console.log(`✅ ${createdUsers.length} users created`);
 
-    // Obtener admin y alumnos
-  const adminUser = users.find(user => user.role === 'Administrator');
-  const students = users.filter(user => user.role === 'Student');
+    // Mapas por rol
+    const admins = createdUsers.filter(u => u.role === 'Administrator');
+    const managers = createdUsers.filter(u => u.role === 'Manager');
+    const trainers = createdUsers.filter(u => u.role === 'Trainer');
+    const students = createdUsers.filter(u => u.role === 'Student');
+    const adminUser = admins[0];
 
     // Crear cursos
     console.log('📚 Creando cursos...');
@@ -100,30 +110,35 @@ async function initializeDatabase() {
       );
     }
 
+    // Crear / asegurar un docente por curso (escalable y reutilizable) y mensajes por curso
+    console.log('👩‍🏫 Creando/asegurando docentes por curso y mensajes de ejemplo por curso...');
+    const teacherByTraining = new Map();
+    for (const training of createdTrainings) {
+      const teacher = await ensureTeacherForTraining({ training, saltRounds: SALT_ROUNDS });
+      teacherByTraining.set(training._id.toString(), teacher);
+    }
 
-    // Crear algunos mensajes de ejemplo
-    console.log('📨 Creando mensajes de ejemplo...');
-    const sampleMessages = [
-      {
-        sender: adminUser._id,
-        recipient: students[0]._id,
-        subject: "Bienvenido al curso",
-        message: "¡Hola! Te damos la bienvenida al curso. Esperamos que tengas una excelente experiencia de aprendizaje.",
-        isRead: false,
-        folder: 'inbox'
-      },
-      {
-        sender: students[0]._id,
-        recipient: adminUser._id,
-        subject: "Consulta sobre el primer nivel",
-        message: "Hola, tengo una duda sobre el primer nivel del curso.",
-        isRead: true,
-        folder: 'sent'
+    // Mensajes: por cada curso, el profesor envía bienvenida a todos sus alumnos; y un alumno consulta a su profe
+    const messagesToInsert = [];
+    for (const training of createdTrainings) {
+      const tId = training._id;
+      const teacher = teacherByTraining.get(tId.toString());
+      const studentsInCourse = await User.find({ role: 'Student', assignedTraining: tId }).select('_id').lean();
+      const studentIds = studentsInCourse.map(s => s._id);
+      messagesToInsert.push(
+        ...buildWelcomeMessageDocs({ training, teacherId: teacher._id, studentIds })
+      );
+      if (studentIds.length) {
+        messagesToInsert.push(
+          ...buildStudentInquiryDocs({ training, teacherId: teacher._id, studentId: studentIds[0] })
+        );
       }
-    ];
+    }
 
-    await PrivateMessage.insertMany(sampleMessages);
-    console.log('✅ Sample messages created');
+    if (messagesToInsert.length) {
+      await PrivateMessage.insertMany(messagesToInsert);
+      console.log(`✅ Mensajes de ejemplo creados: ${messagesToInsert.length}`);
+    }
 
       
     // VERIFICACIÓN FINAL
@@ -151,12 +166,14 @@ async function initializeDatabase() {
 
     console.log('✅ Base de datos inicializada exitosamente!');
     console.log('\n📊 RESUMEN:');
-    console.log(`   Usuarios totales: ${users.length}`);
-  console.log(`   - Administradores: ${users.filter(u => u.role === 'Administrator').length}`);
-  console.log(`   - Alumnos: ${users.filter(u => u.role === 'Student').length}`);
+    console.log(`   Usuarios totales: ${createdUsers.length}`);
+    console.log(`   - Administradores: ${admins.length}`);
+    console.log(`   - Managers: ${managers.length}`);
+    console.log(`   - Trainers: ${trainers.length}`);
+    console.log(`   - Alumnos: ${students.length}`);
     console.log(`   Trainings: ${createdTrainings.length}`);
     console.log(`   Niveles: ${createdLevels.length}`);
-    console.log(`   Mensajes: ${sampleMessages.length}`); 
+  console.log(`   Mensajes: ${(await PrivateMessage.countDocuments())}`); 
     
     console.log('\n🔑 Credenciales de acceso:');
     console.log('   Admin: admin@sicapsi.com / password123');

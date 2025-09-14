@@ -1,8 +1,6 @@
 import React from "react";
 import { useParams, Link } from "react-router-dom";
-import Navbar from "../../../Components/Student/NavBar";
-import MenuVertical from "../../../Components/Student/SideBar";
-import { useUser } from "../../../Context/UserContext";
+import { useUser } from "../../../context/UserContext";
 import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
 
 const TrainingIndex = () => {
@@ -10,24 +8,16 @@ const TrainingIndex = () => {
   const { userData } = useUser();
 
   if (!userData || !Array.isArray(userData.training)) {
-    return (
-      <>
-        <Navbar />
-        <LoadingOverlay label="Cargando datos de capacitación..." />
-      </>
-    );
-  } 
+    return <LoadingOverlay label="Cargando datos de capacitación..." />;
+  }
   const training = userData.training.find(c => c._id === idTraining);
   if (!training) return <p className="text-center mt-20">Capacitación no encontrada</p>;
 
  
   return (
     <>
-      <Navbar />
-      <div className="min-h-screen bg-gray-100">
-        <div className="max-w-[1200px] w-full mx-auto flex">
-          <MenuVertical />
-          <main className="flex-1 p-8">
+      <div className="">
+        <div className="">
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             {/* Imagen y título */}
             <div
@@ -52,7 +42,6 @@ const TrainingIndex = () => {
               <p>{training.description}</p>
             </div>
           </div>
-          </main>
         </div>
       </div>
     </>

@@ -5,7 +5,7 @@ const PrivateMessageSchema = new mongoose.Schema(
   {
     sender: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     recipient: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    trainingId: { type: mongoose.Schema.Types.ObjectId, ref: "Training" },
+  trainingId: { type: mongoose.Schema.Types.ObjectId, ref: "Training", required: true },
     subject: { type: String, required: true, trim: true },
     message: { type: String, required: true },
 

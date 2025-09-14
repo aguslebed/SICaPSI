@@ -18,6 +18,16 @@ export function makeUserController({ userService, trainingService, messageServic
       } catch (err) { next(err); }
     },
 
+    async listRecipients(req, res, next) {
+      try {
+        const senderId = req.user?.userId;
+        if (!senderId) throw new AppError('No autorizado', 401);
+        const { trainingId } = req.query || {};
+        const recipients = await userService.findRecipientsForCompose({ senderId, trainingId });
+        res.json(userFormatter.toPublicList(recipients));
+      } catch (err) { next(err); }
+    },
+
     async getById(req, res, next) {
       try {
         let userId = req.params.id;

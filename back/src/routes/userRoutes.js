@@ -31,7 +31,7 @@ const jwtTokenService = new JwtTokenService({ secret: resolvedSecret });
 const authMiddleware = makeAuthMiddleware({ tokenService: jwtTokenService });
 
 const userController = makeUserController({ 
-    userService: new UserService({ UserModel: User }), 
+    userService: new UserService({ UserModel: User, TrainingModel: Training }), 
     trainingService: new TrainingService({ UserModel: User, LevelModel: Level, TrainingModel: Training }), 
     messageService: new MessageService({ PrivateMessageModel: PrivateMessage, UserModel: User, TrainingModel: Training }), 
     userFormatter: new UserResponseFormatter(), 
@@ -58,6 +58,7 @@ const upload = multer({ storage });
 const router = Router();
 router.post("/register", RegistrationValidator, userController.create);
 router.get("/", authMiddleware, userController.list);
+router.get("/recipients", authMiddleware, userController.listRecipients);
 router.get("/connect/me", authMiddleware, userController.getUserCompleteData);
 router.get("/:id", authMiddleware, userController.getById);
 router.patch("/:id", authMiddleware, userController.update); 

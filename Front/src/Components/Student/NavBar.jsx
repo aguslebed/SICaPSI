@@ -1,16 +1,27 @@
-import React, { useState } from "react";
-import { logout, resolveImageUrl } from '../../API/Request';
+import React, { useMemo, useState } from "react";
+import { logout, resolveImageUrl, setMessageRead } from '../../API/Request';
 import { useNavigate } from 'react-router-dom';
 import { Bell } from "lucide-react"; // íconos
 import { Menu } from "@headlessui/react"; // dropdown accesible
-import { useUser } from "../../Context/UserContext";
+import { useUser } from "../../context/UserContext";
 import ProfilePreferencesModal from "../Modals/ProfilePreferencesModal";
 
 const NavBar = () => {
   const navigate = useNavigate();
   const { logoutUser } = useUser();
-  const { userData } = useUser();
+  const { userData, setUserData } = useUser();
   const [openProfile, setOpenProfile] = useState(false); 
+  const items = useMemo(() => userData?.messages?.items || [], [userData]);
+  const trainings = useMemo(() => userData?.training || userData?.assignedTraining || [], [userData]);
+  const firstTrainingId = trainings?.[0]?._id || trainings?.[0] || '';
+  const resolveTrainingId = (msg) => {
+    const fromMsg = msg?.trainingId?._id || msg?.trainingId;
+    if (fromMsg) return fromMsg;
+    if (firstTrainingId) return firstTrainingId;
+    return '';
+  };
+  const unreadItems = useMemo(() => items.filter(m => m.folder === 'inbox' && !m.isRead), [items]);
+  const unreadCount = unreadItems.length;
   const handleLogout = async () => {
     try {
       await logout();
@@ -38,18 +49,75 @@ const NavBar = () => {
       <div className="w-full bg-[#0888c2]">
         <div className="max-w-screen-xl mx-auto px-4 sm:px-6 md:px-8 h-14 md:h-16 flex items-center justify-end">
           <div className="flex items-center gap-3 sm:gap-5">
-            {/* Notificaciones */}
-            <button
-              type="button"
-              aria-label="Ver notificaciones"
-              className="relative p-2 rounded-full text-white/90 hover:text-white hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-            >
-              <Bell className="w-6 h-6" />
-              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 text-[11px] font-semibold bg-red-500 text-white rounded-full flex items-center justify-center ring-2 ring-[#0888c2]">
-                {userData?.messages?.total || 0}
-              </span>
-              <span className="sr-only">Notificaciones</span>
-            </button>
+            {/* Notificaciones (campana) */}
+            <Menu as="div" className="relative">
+              <Menu.Button
+                type="button"
+                aria-label="Ver notificaciones"
+                className="relative p-2 rounded-full text-white/90 hover:text-white hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+              >
+                <Bell className="cursor-pointer w-6 h-6" />
+                {unreadCount > 0 && (
+                  <span className="cursor-pointer absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 text-[11px] font-semibold bg-red-500 text-white rounded-full flex items-center justify-center ring-2 ring-[#0888c2]">
+                    {unreadCount}
+                  </span>
+                )}
+                <span className="sr-only">Notificaciones</span>
+              </Menu.Button>
+              <Menu.Items className="absolute right-0 mt-2 w-80 max-w-[95vw] rounded-lg bg-white text-gray-800 shadow-lg ring-1 ring-black/10 overflow-hidden z-50">
+                <div className="py-2 max-h-96 overflow-auto">
+                  {unreadItems.length === 0 ? (
+                    <div className="px-4 py-6 text-center text-sm text-gray-500">No hay mensajes nuevos</div>
+                  ) : (
+                    unreadItems.slice(0, 8).map((m) => {
+                      const trainingId = resolveTrainingId(m);
+                      const senderName = `${m.sender?.firstName || ''} ${m.sender?.lastName || ''}`.trim();
+                      const date = new Date(m.createdAt).toLocaleDateString('es-AR');
+
+                      // Resolve training title from the trainings list (may be objects or ids)
+                      const resolvedTraining = Array.isArray(trainings)
+                        ? trainings.find(t => (t && ((t._id && t._id === trainingId) || t === trainingId)))
+                        : undefined;
+                      const trainingTitle = resolvedTraining?.title || resolvedTraining?.name || (trainingId ? `Curso ${String(trainingId).slice(0,6)}` : 'General');
+
+                      return (
+                        <Menu.Item key={m._id}>
+                          {({ active }) => (
+                            <button
+                              className={`w-full text-left px-4 py-3 text-sm ${active ? 'bg-gray-100' : ''} cursor-pointer`}
+                              onClick={async () => {
+                                // Optimista: marcar como leído en el store local para refrescar contador
+                                try {
+                                  if (!m.isRead) {
+                                    const next = { ...userData, messages: { ...userData.messages, items: userData.messages.items.map(it => it._id === m._id ? { ...it, isRead: true } : it) } };
+                                    setUserData(next);
+                                    // Backend
+                                    await setMessageRead({ id: m._id, isRead: true });
+                                  }
+                                } catch {}
+                                // Navegar a la bandeja del curso
+                                if (trainingId) navigate(`/userPanel/${trainingId}/messages`);
+                                else navigate('/userPanel');
+                              }}
+                              title="Ir a bandeja de entrada"
+                            >
+                              <div className="font-semibold truncate">{m.subject || '(Sin asunto)'}</div>
+                              <div className="text-xs text-gray-600 truncate">De: {senderName || 'Desconocido'} · {date}</div>
+                              <div className="mt-1">
+                                <span className="inline-block text-xs text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">{trainingTitle}</span>
+                              </div>
+                            </button>
+                          )}
+                        </Menu.Item>
+                      );
+                    })
+                  )}
+                </div>
+                {unreadItems.length > 8 && (
+                  <div className="border-t border-gray-200" />
+                )} 
+              </Menu.Items>
+            </Menu>
 
             {/* Usuario / Dropdown */}
             <Menu as="div" className="relative">

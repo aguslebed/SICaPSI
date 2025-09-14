@@ -5,6 +5,7 @@ import cors from "cors";
 import authRoutes from "./routes/authRoutes.js";
 import { connectDB } from "./config/db.js";
 import userRoutes from "./routes/userRoutes.js";
+import messageRoutes from "./routes/messageRoutes.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import cookieParser from "cookie-parser";
 import path from "path";
@@ -64,6 +65,7 @@ class AppConfig {
   configureRoutes() {
     this.app.use("/users", userRoutes);
     this.app.use("/auth", authRoutes);
+    this.app.use("/messages", messageRoutes);
   } 
 
 

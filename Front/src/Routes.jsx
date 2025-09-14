@@ -1,9 +1,12 @@
 import React, { lazy } from 'react';
 import { createBrowserRouter, redirect } from 'react-router-dom';
 import ProtectedLayout from './Layouts/ProtectedLayout';
+import StudentLayout from './Layouts/StudentLayout';
 import { getMe, checkAuth } from './API/Request';
+import RouteError from './Pages/RouteError';
 
-const Mensajeria = lazy(() => import('./components/Mensajeria/Mensajeria'));
+const Mensajeria = lazy(() => import('./Pages/UserPanel/Student/Mensajeria'));
+
 const Home = lazy(() => import('./Pages/Home/Home'));
 const InicioDeSesion = lazy(() => import('./Pages/Login/Login'));
 const Registrarse = lazy(() => import('./Pages/Register/Register'));
@@ -14,7 +17,6 @@ const TrainingLevels = lazy(() => import('./Pages/UserPanel/Student/TrainingLeve
 const MisReportes = lazy(() => import('./Pages/UserPanel/Student/TrainingReports'));
 const NivelBibliografia = lazy(() => import('./Pages/UserPanel/Student/Levelbibliogrhapy'));
 const NivelCapacitacion = lazy(() => import('./Pages/UserPanel/Student/LevelTraining'));
-const ConsultaCapacitador = lazy(() => import('./Components/Modals/consultaCapacitador'));
 const LevelTest = lazy(() => import('./Pages/UserPanel/Student/LevelTest'));
 
 async function authLoader() {
@@ -35,16 +37,21 @@ export const router = createBrowserRouter([
     path: '/userPanel',
     element: <ProtectedLayout />,
     loader: authLoader,
+    errorElement: <RouteError />, // Friendly error UI for route loading failures
     children: [
-      { index: true, element: <PanelDeUsuario /> },
-      { path: ':idTraining', element: <DetalleCapacitacion /> },
-      { path: ':idTraining/levels', element: <TrainingLevels /> },
-      { path: ':idTraining/messages', element: <ConsultaCapacitador /> },
-      { path: ':idTraining/reports', element: <MisReportes /> },
-      { path: ':idTraining/:nivelId/bibliogrhapy', element: <NivelBibliografia /> },
-      { path: ':idTraining/:nivelId/training', element: <NivelCapacitacion /> },
-      { path: ':idTraining/:nivelId/levelTest', element: <LevelTest /> },
-      { path: 'mensajeria', element: <Mensajeria /> }, // 👈 Agregado aquí
+      {
+        element: <StudentLayout />,
+        children: [
+          { index: true, element: <PanelDeUsuario /> },
+          { path: ':idTraining', element: <DetalleCapacitacion /> },
+          { path: ':idTraining/levels', element: <TrainingLevels /> },
+          { path: ':idTraining/reports', element: <MisReportes /> },
+          { path: ':idTraining/:nivelId/bibliogrhapy', element: <NivelBibliografia /> },
+          { path: ':idTraining/:nivelId/training', element: <NivelCapacitacion /> },
+          { path: ':idTraining/:nivelId/levelTest', element: <LevelTest /> },
+          { path: ':idTraining/messages', element: <Mensajeria /> },
+        ],
+      },
     ],
   },
   { path: '*', element: <NotFound /> },

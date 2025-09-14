@@ -1,9 +1,7 @@
 
 import React from "react";
 import { useParams } from "react-router-dom";
-import MenuVertical from "../../../Components/Student/SideBar";
-import Navbar from "../../../Components/Student/NavBar";
-import { useUser } from "../../../Context/UserContext";
+import { useUser } from "../../../context/UserContext";
 import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
 
 const LevelTraining = () => {
@@ -22,11 +20,9 @@ const LevelTraining = () => {
 
   return (
     <>
-      <Navbar />
       <div className="min-h-screen bg-gray-100">
-        <div className="max-w-[1200px] w-full mx-auto flex">
-          <MenuVertical />
-          <main className="flex-1 p-8">
+        <div className="max-w-screen-xl w-full mx-auto flex px-4 sm:px-6 md:px-8">
+          <main className="flex-1 min-w-0 py-6 md:py-8">
           <div className="bg-gradient-to-br from-blue-50 via-white to-blue-100 p-8 rounded-2xl shadow-xl border border-blue-200 max-w-3xl mx-auto flex flex-col gap-6">
             <h1 className="text-3xl font-bold text-blue-700 mb-2">{nivel.title}</h1>
             <h2 className="text-lg text-gray-600 mb-4">{nivel.description}</h2>

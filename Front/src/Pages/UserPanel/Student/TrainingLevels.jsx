@@ -1,9 +1,7 @@
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ChevronDown, CheckCircle, Lock, BookOpen, PlayCircle } from "lucide-react";
-import Navbar from "../../../Components/Student/NavBar";
-import MenuVertical from "../../../Components/Student/SideBar";
-import { useUser } from "../../../Context/UserContext";
+import { useUser } from "../../../context/UserContext";
 import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
 
 const TrainingLevels = () => {
@@ -16,7 +14,6 @@ const TrainingLevels = () => {
   if (!userData || !Array.isArray(userData.training)) {
     return (
       <>
-        <Navbar />
         <LoadingOverlay label="Cargando datos de curso..." />
       </>
     );
@@ -44,12 +41,10 @@ const TrainingLevels = () => {
 
   return (
     <>
-      <Navbar />
       <div className="min-h-screen bg-gray-100">
-        <div className="max-w-[1200px] w-full mx-auto flex">
-          <MenuVertical />
-          <main className="flex-1 p-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-6">Niveles</h1>
+        <div className="max-w-screen-xl w-full mx-auto flex px-4 sm:px-6 md:px-8">
+          <main className="flex-1 min-w-0 py-6 md:py-8">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6">Niveles</h1>
           <div className="space-y-4">
             {niveles.map((nivel) => (
               <div key={nivel._id} className="border rounded-lg bg-white shadow">

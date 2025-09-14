@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { useUser } from "../../Context/UserContext";
 import ModalWrapper from "../Modals/ModalWrapper";
 import MessageDetail from "./MessageDetail";
 import ComposeModal from "./ComposeModal";
+import { sendMessage, getMe } from "../../API/Request";
+import { useUser } from "../../context/UserContext";
+import { useParams } from "react-router-dom";
+import ErrorModal from "../Modals/ErrorModal";
+import SucessModal from "../Modals/SucessModal";
 
 export default function BuzonSalida() {
-  const { userData } = useUser();
+  const { userData, setUserData } = useUser();
+  const { idTraining } = useParams();
 
   // Mensajes en salida (carpeta 'outbox')
   const outbox = useMemo(
@@ -17,6 +22,8 @@ export default function BuzonSalida() {
   const [selected, setSelected] = useState(null);
   const [open, setOpen] = useState(false);
   const [composeOpen, setComposeOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
 
   useEffect(() => {
     setMessages(outbox);
@@ -36,7 +43,7 @@ export default function BuzonSalida() {
     <div className="flex flex-col gap-4">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-semibold">📤 Bandeja de salida</h3>
-        <button className="bg-green-500 text-white px-4 py-2 rounded" onClick={() => setComposeOpen(true)}>Redactar</button>
+        <button className="cursor-pointer bg-green-500 text-white px-4 py-2 rounded" onClick={() => setComposeOpen(true)}>Redactar</button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -74,21 +81,36 @@ export default function BuzonSalida() {
         </div>
 
         <div className="border rounded min-h-[300px]">
-          <MessageDetail message={selected} />
+          <MessageDetail message={selected} onClose={closeDetail} />
         </div>
       </div>
 
       {open && selected && (
         <ModalWrapper onClose={closeDetail} panelClassName="md:max-w-[720px]">
-          <MessageDetail message={selected} />
+          <MessageDetail message={selected} onClose={closeDetail} />
         </ModalWrapper>
       )}
 
       <ComposeModal
         open={composeOpen}
         onClose={() => setComposeOpen(false)}
-        onSend={(payload) => console.log("Enviar mensaje:", payload)}
+        trainingId={idTraining}
+        onSend={async (payload) => {
+          try {
+            await sendMessage({ to: payload.to, subject: payload.subject, body: payload.body, attachments: payload.attachments, trainingId: idTraining });
+            setComposeOpen(false);
+            setTimeout(() => setSuccessMessage('Mensaje enviado correctamente'), 0);
+            getMe().then(setUserData).catch((e) => console.error('getMe() fallo tras enviar:', e));
+          } catch (e) {
+            console.error(e);
+            setErrorMessage(e?.message || 'Error al enviar mensaje');
+          }
+        }}
       />
+      {errorMessage && <ErrorModal mensaje={errorMessage} onClose={() => setErrorMessage(null)} />}
+      {successMessage && (
+        <SucessModal titulo={'Mensaje enviado'} mensaje={successMessage} onClose={() => setSuccessMessage(null)} />
+      )}
     </div>
   );
 }

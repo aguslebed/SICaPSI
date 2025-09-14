@@ -1,9 +1,7 @@
 import React from "react";
 import { useParams } from "react-router-dom";
 import { FileText } from "lucide-react";
-import MenuVertical from "../../../Components/Student/SideBar";
-import Navbar from "../../../Components/Student/NavBar";
-import { useUser } from "../../../Context/UserContext";
+import { useUser } from "../../../context/UserContext";
 import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
 
 const Levelbibliogrhapy = () => {
@@ -23,11 +21,9 @@ const Levelbibliogrhapy = () => {
   const bibliografias = Array.isArray(nivel.bibliography) ? nivel.bibliography : [];
   return (
     <>
-      <Navbar />
       <div className="min-h-screen bg-gray-100">
-        <div className="max-w-[1200px] w-full mx-auto flex">
-          <MenuVertical />
-          <main className="flex-1 p-8">
+        <div className="max-w-screen-xl w-full mx-auto flex px-4 sm:px-6 md:px-8">
+          <main className="flex-1 min-w-0 py-6 md:py-8">
             <h1 className="text-2xl font-bold text-gray-800 mb-6">Bibliografía</h1>
             {bibliografias.length === 0 ? (
               <div className="text-gray-500">No hay bibliografía disponible para este nivel.</div>
