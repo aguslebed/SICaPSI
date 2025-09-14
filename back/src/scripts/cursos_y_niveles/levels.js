@@ -27,12 +27,13 @@ export const sampleLevels = [
       }
     ],
     training: {
-      videoUrl: "https://www.youtube.com/embed/placeholder1",
+      title: "Introducción a HTML y CSS (Training)",
+      videoUrl: "https://www.youtube.com/embed/dD2EISBDjWM",
       description: "Video introductorio a HTML y CSS",
       duration: 45,
       createdAt: new Date()
     },
-    test: sampleTest.flatMap(t => t.test),
+    test: sampleTest,
     createdAt: new Date(),
     isActive: true
   },
@@ -63,12 +64,13 @@ export const sampleLevels = [
       }
     ],
     training: {
-      videoUrl: "https://www.youtube.com/embed/ml1",
+      title: "Conceptos Básicos de ML (Training)",
+      videoUrl: "https://www.youtube.com/embed/dD2EISBDjWM",
       description: "Introducción al aprendizaje automático",
       duration: 40,
       createdAt: new Date()
     },
-    test: sampleTest.flatMap(t => t.test),
+    test: sampleTest,
     isActive: true
   },
   {
@@ -96,12 +98,13 @@ export const sampleLevels = [
       }
     ],
     training: {
-      videoUrl: "https://www.youtube.com/embed/ml2",
+      title: "Regresión Lineal y Logística (Training)",
+      videoUrl: "https://www.youtube.com/embed/dD2EISBDjWM",
       description: "Aplicación práctica de regresión",
       duration: 55,
       createdAt: new Date()
     },
-    test: sampleTest.flatMap(t => t.test),
+    test: sampleTest,
     isActive: true
   },
   {
@@ -129,12 +132,13 @@ export const sampleLevels = [
       }
     ],
     training: {
+      title: "Árboles de Decisión (Training)",
       videoUrl: "https://www.youtube.com/embed/ml3",
       description: "Cómo funcionan los árboles de decisión",
       duration: 65,
       createdAt: new Date()
     },
-    test: sampleTest.flatMap(t => t.test),
+    test: sampleTest,
     isActive: true
   }
 ];
