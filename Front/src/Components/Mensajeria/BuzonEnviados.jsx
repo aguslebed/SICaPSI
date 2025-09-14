@@ -242,8 +242,8 @@ export default function BuzonEnviados({ hideCompose = false, trainingId, sortBy 
         initialBody={replyInitial?.body}
         onSend={async (payload) => {
           try {
-            await sendMessage({ to: payload.to, subject: payload.subject, body: payload.body, attachments: payload.attachments, trainingId });
-            setComposeOpen(false);
+            await sendMessage({ to: payload.to, subject: payload.subject, body: payload.body, attachments: payload.attachments, trainingId, recipientEmails: payload.recipientEmails, recipientIds: payload.recipientIds });
+            // Refresh data; do not close compose modal here so ComposeModal can display inline success
             setReplyInitial(null);
             setTimeout(() => setSuccessMessage('Mensaje enviado correctamente'), 0);
             getMe().then(setUserData).catch((e) => console.error('getMe() fallo tras enviar:', e));
@@ -252,6 +252,7 @@ export default function BuzonEnviados({ hideCompose = false, trainingId, sortBy 
             setErrorMessage(e?.message || 'Error al enviar mensaje');
           }
         }}
+        onSuccess={() => setSuccessMessage('Mensaje enviado correctamente')}
       />
       {isLoading && <LoadingOverlay label={loadingLabel} />}
       {errorMessage && <ErrorModal mensaje={errorMessage} onClose={() => setErrorMessage(null)} />}

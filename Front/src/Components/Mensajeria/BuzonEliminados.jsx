@@ -245,8 +245,8 @@ export default function BuzonEliminados({ trainingId, sortBy = 'fecha' }) {
         initialBody={replyInitial?.body}
         onSend={async (payload) => {
           try {
-            await sendMessage({ to: payload.to, subject: payload.subject, body: payload.body, attachments: payload.attachments, trainingId });
-            setComposeOpen(false);
+            await sendMessage({ to: payload.to, subject: payload.subject, body: payload.body, attachments: payload.attachments, trainingId, recipientEmails: payload.recipientEmails, recipientIds: payload.recipientIds });
+            // Do not close here. ComposeModal will show inline success and call onClose itself.
             setReplyInitial(null);
             setTimeout(() => setSuccessMessage('Mensaje enviado correctamente'), 0);
             getMe().then(setUserData).catch((e) => console.error('getMe() fallo tras enviar:', e));
@@ -283,6 +283,7 @@ export default function BuzonEliminados({ trainingId, sortBy = 'fecha' }) {
             setIsLoading(false);
           }
         }}
+        onSuccess={() => setSuccessMessage('Mensaje enviado correctamente')}
       />
     </div>
   );

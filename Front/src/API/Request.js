@@ -172,10 +172,32 @@ export async function uploadProfileImage(userId, file) {
 }
 
 // --- Mensajería ---
-export async function sendMessage({ to, subject, body, recipientId, attachments, trainingId }) {
+export async function sendMessage({ to, subject, body, recipientId, attachments, trainingId, recipientEmails, recipientIds }) {
+  // Support multiple recipients: caller can pass recipientEmails (array), recipientIds (array),
+  // or a comma-separated `to` string. We will POST once per recipient.
+  const jobs = [];
+  // Normalize arrays
+  if (Array.isArray(recipientIds) && recipientIds.length) {
+    for (const id of recipientIds) {
+      jobs.push(api.post('/messages', { recipientId: id, subject, body, attachments, trainingId }));
+    }
+  } else if (Array.isArray(recipientEmails) && recipientEmails.length) {
+    for (const email of recipientEmails) {
+      jobs.push(api.post('/messages', { to: email, subject, body, attachments, trainingId }));
+    }
+  } else if (to && typeof to === 'string' && to.includes(',')) {
+    const parts = to.split(',').map(s => s.trim()).filter(Boolean);
+    for (const email of parts) jobs.push(api.post('/messages', { to: email, subject, body, attachments, trainingId }));
+  } else {
+    // single recipient (recipientId may be provided, or to as string)
+    jobs.push(api.post('/messages', { to, subject, body, recipientId, attachments, trainingId }));
+  }
+
   try {
-    const { data } = await api.post('/messages', { to, subject, body, recipientId, attachments, trainingId });
-    return data;
+    const results = await Promise.all(jobs);
+    // Return array of data when multiple, or single data when one
+    const datas = results.map(r => r.data);
+    return datas.length === 1 ? datas[0] : datas;
   } catch (error) {
     if (error.response) {
       throw new Error(error.response.data?.message || 'Error al enviar mensaje');

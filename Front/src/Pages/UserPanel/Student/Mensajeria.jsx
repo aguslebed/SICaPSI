@@ -5,6 +5,7 @@ import BuzonSalida from "../../../Components/Mensajeria/BuzonSalida";
 import BuzonEliminados from "../../../Components/Mensajeria/BuzonEliminados";
 import BuzonEnviados from "../../../Components/Mensajeria/BuzonEnviados";
 import ComposeModal from "../../../Components/Mensajeria/ComposeModal";
+import SucessModal from "../../../Components/Modals/SucessModal";
 import { sendMessage, getMe } from "../../../API/Request";
 import { useUser } from "../../../context/UserContext";
 import { MailPlus } from "lucide-react";
@@ -14,6 +15,7 @@ export default function Mensajeria() {
   const [tab, setTab] = useState("entrada");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [composeOpen, setComposeOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState(null);
   const [sortBy, setSortBy] = useState('fecha');
   const { userData, setUserData } = useUser();
 
@@ -148,15 +150,20 @@ export default function Mensajeria() {
         trainingId={idTraining}
         onSend={async (payload) => {
           try {
-            await sendMessage({ to: payload.to, subject: payload.subject, body: payload.body, attachments: payload.attachments, trainingId: idTraining });
+            await sendMessage({ to: payload.to, subject: payload.subject, body: payload.body, attachments: payload.attachments, trainingId: idTraining, recipientEmails: payload.recipientEmails, recipientIds: payload.recipientIds });
             const fresh = await getMe();
             setUserData(fresh);
-            setComposeOpen(false);
+            // Do not close here: ComposeModal shows inline success and will call onClose after a short delay
           } catch (e) {
             console.error('Error al enviar mensaje:', e);
           }
         }}
+        onSuccess={() => setSuccessMessage('Mensaje enviado correctamente')}
       />
+
+      {successMessage && (
+        <SucessModal titulo={'Mensaje enviado'} mensaje={successMessage} onClose={() => setSuccessMessage(null)} />
+      )}
     </>
   );
 }

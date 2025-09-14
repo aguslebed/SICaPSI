@@ -97,8 +97,8 @@ export default function BuzonSalida() {
         trainingId={idTraining}
         onSend={async (payload) => {
           try {
-            await sendMessage({ to: payload.to, subject: payload.subject, body: payload.body, attachments: payload.attachments, trainingId: idTraining });
-            setComposeOpen(false);
+            await sendMessage({ to: payload.to, subject: payload.subject, body: payload.body, attachments: payload.attachments, trainingId: idTraining, recipientEmails: payload.recipientEmails, recipientIds: payload.recipientIds });
+            // Parent will refresh data; ComposeModal will display inline success and close itself
             setTimeout(() => setSuccessMessage('Mensaje enviado correctamente'), 0);
             getMe().then(setUserData).catch((e) => console.error('getMe() fallo tras enviar:', e));
           } catch (e) {
@@ -106,6 +106,7 @@ export default function BuzonSalida() {
             setErrorMessage(e?.message || 'Error al enviar mensaje');
           }
         }}
+        onSuccess={() => setSuccessMessage('Mensaje enviado correctamente')}
       />
       {errorMessage && <ErrorModal mensaje={errorMessage} onClose={() => setErrorMessage(null)} />}
       {successMessage && (
