@@ -1,5 +1,6 @@
 // Servicio concreto para mensajes
 import { IMessageService } from '../interfaces/IMessageService.js';
+import mongoose from 'mongoose';
 
 export class MessageService extends IMessageService {
   constructor({ PrivateMessageModel, UserModel, TrainingModel }) {
@@ -34,9 +35,20 @@ export class MessageService extends IMessageService {
   }
 
   async send({ senderId, recipientEmail, recipientId, subject, message, attachments, trainingId }) {
-    const recipient = recipientId
-      ? await this.User.findById(recipientId)
-      : await this.User.findOne({ email: recipientEmail });
+    let recipient = null;
+    if (recipientId) {
+      // Si recipientId parece un email o no es un ObjectId válido, buscar por email
+      if (typeof recipientId === 'string' && recipientId.includes('@')) {
+        recipient = await this.User.findOne({ email: recipientId });
+      } else if (mongoose.Types.ObjectId.isValid(recipientId)) {
+        recipient = await this.User.findById(recipientId);
+      } else {
+        // Fallback: intentar buscar por email
+        recipient = await this.User.findOne({ email: recipientId });
+      }
+    } else if (recipientEmail) {
+      recipient = await this.User.findOne({ email: recipientEmail });
+    }
     if (!recipient) throw new Error('Destinatario no encontrado');
 
     const payload = {

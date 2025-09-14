@@ -9,84 +9,114 @@ import { sampleLevels } from './cursos_y_niveles/levels.js';
 import { sampleCourses } from './cursos_y_niveles/training.js';
 import { sampleAdministrators } from './cursos_y_niveles/administrators.js';
 import { sampleManagers } from './cursos_y_niveles/managers.js';
-import { sampleTrainers } from './cursos_y_niveles/trainers.js';
-import { sampleStudents } from './cursos_y_niveles/students.js';
 import { ensureTeacherForTraining } from './cursos_y_niveles/teachers.js';
-import { buildWelcomeMessageDocs, buildStudentInquiryDocs } from './cursos_y_niveles/messages.js';
 
 // Configuración de conexión
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/SICAPSI';
 const SALT_ROUNDS = 12;
+// Contraseña por defecto para todos los usuarios creados en el seed
+const DEFAULT_SEED_PASSWORD = process.env.SEED_DEFAULT_PASSWORD || 'secret123';
+// Control de logs: si quieres ver logs detallados exporta SEED_VERBOSE=true
+const VERBOSE = process.env.SEED_VERBOSE === 'true';
+const info = (...args) => { if (VERBOSE) console.log(...args); };
  
 // Función principal
 async function initializeDatabase() {
   try {
     // Conectar a MongoDB
-    console.log('Conectando a MongoDB...');
+    info('Conectando a MongoDB...');
     await mongoose.connect(MONGODB_URI);
-    console.log('✅ Conectado a MongoDB');
+    info('✅ Conectado a MongoDB');
 
     // Limpiar TODAS las collections para empezar fresco
-    console.log('🧹 Limpiando todos los datos...');
+    info('🧹 Limpiando todos los datos...');
     await Promise.all([
       User.deleteMany({}),
       Training.deleteMany({}),
       Level.deleteMany({}),
       PrivateMessage.deleteMany({})
     ]);
-
-    // Crear usuarios de simulación por rol (escalable)
-    console.log('👥 Creando usuarios (Administrators, Managers, Trainers, Students)...');
+    // Crear usuarios de simulación por rol (solo Administrator y Manager)
+    info('👥 Creando usuarios iniciales (Administrator y Manager)...');
     const toHash = [
       ...sampleAdministrators,
       ...sampleManagers,
-      ...sampleTrainers,
-      ...sampleStudents,
     ];
-    const hashedUsers = await Promise.all(toHash.map(async user => ({
+    // Guardaremos las credenciales en texto plano para mostrar al final
+    const credentialsList = [];
+    // Usamos la misma contraseña por defecto para todos los usuarios
+    const defaultPasswordPlain = DEFAULT_SEED_PASSWORD;
+    const defaultPasswordHash = await bcrypt.hash(defaultPasswordPlain, SALT_ROUNDS);
+
+    // Preparamos los usuarios (sobrescribimos sus passwords con la contraseña por defecto)
+    const hashedUsers = toHash.map(user => ({
       ...user,
-      password: await bcrypt.hash(user.password, SALT_ROUNDS)
-    })));
+      password: defaultPasswordHash
+    }));
     const createdUsers = await User.insertMany(hashedUsers);
-    console.log(`✅ ${createdUsers.length} users created`);
+  info(`✅ ${createdUsers.length} users created`);
 
-    // Mapas por rol
-    const admins = createdUsers.filter(u => u.role === 'Administrator');
-    const managers = createdUsers.filter(u => u.role === 'Manager');
-    const trainers = createdUsers.filter(u => u.role === 'Trainer');
-    const students = createdUsers.filter(u => u.role === 'Student');
-    const adminUser = admins[0];
+  // Mapas por rol (solo admins y managers fueron creados aquí)
+  const admins = createdUsers.filter(u => u.role === 'Administrator');
+  const managers = createdUsers.filter(u => u.role === 'Manager');
+  const adminUser = admins[0];
+  // Registrar credenciales en texto plano para administradores y managers
+  admins.forEach(a => credentialsList.push({ email: a.email, password: defaultPasswordPlain, role: 'Administrator', name: a.firstName || a.email }));
+  managers.forEach(m => credentialsList.push({ email: m.email, password: defaultPasswordPlain, role: 'Manager', name: m.firstName || m.email }));
 
-    // Crear cursos
-    console.log('📚 Creando cursos...');
-    const trainingsWithAdmin = sampleCourses.map(training => ({
+  // Crear 5 cursos: dos de ellos desactualizados (isActive = false)
+  info('📚 Creando 5 cursos (2 inactivos)...');
+    const coursesToCreate = sampleCourses.slice(0,5).map((training, idx) => ({
       ...training,
-      createdBy: adminUser._id
+      createdBy: adminUser._id,
+      // Marcar dos cursos como inactivos para simular desactualizados
+      isActive: idx === 1 || idx === 3 ? false : true
     }));
 
-    const createdTrainings = await Training.insertMany(trainingsWithAdmin);
-    console.log(`✅ ${createdTrainings.length} trainings created`);
+    const createdTrainings = await Training.insertMany(coursesToCreate);
+  info(`✅ ${createdTrainings.length} trainings created`);
 
-    // Crear niveles
-    console.log('🎯 Creando niveles...');
+  // Crear 3 niveles por curso (usar plantillas de sampleLevels pero adaptadas)
+  info('🎯 Creando 3 niveles por curso...');
     const levelsData = [];
-    
-    // Para cada curso crear niveles
-    createdTrainings.forEach((training, index) => {
-      sampleLevels.forEach(level => {
+    // Nos aseguramos de tener al menos 3 plantillas de nivel
+    const baseLevels = sampleLevels.slice(0,3);
+    createdTrainings.forEach((training, tIdx) => {
+      baseLevels.forEach((lvl, lIdx) => {
+        // Personalizar bibliografía y training video por curso
+        const bibliography = (lvl.bibliography || []).map(b => ({
+          ...b,
+          title: `${b.title} - ${training.title}`,
+          createdAt: new Date()
+        }));
+        const trainingObj = {
+          ...((lvl.training) || {}),
+          videoUrl: (lvl.training && lvl.training.videoUrl) ? lvl.training.videoUrl : `https://www.youtube.com/embed/placeholder-${tIdx}-${lIdx}`,
+          description: `${training.title} - Nivel ${lIdx + 1}: ${lvl.title}`,
+          duration: (lvl.training && lvl.training.duration) ? lvl.training.duration : 30,
+          createdAt: new Date()
+        };
+
         levelsData.push({
-          ...level,
-          trainingId: training._id,
-          title: index === 0 ? level.title : `ML - ${level.title}`
+          levelNumber: lIdx + 1,
+          // Título único por curso y por nivel
+          title: `${training.title} - Nivel ${lIdx + 1}: ${lvl.title}`,
+          description: lvl.description,
+          bibliography,
+          training: trainingObj,
+          test: lvl.test || [], // pruebas idénticas según tus instrucciones
+          createdAt: new Date(),
+          isActive: typeof lvl.isActive === 'boolean' ? lvl.isActive : true,
+          trainingId: training._id
         });
       });
     });
 
-  const createdLevels = await Level.insertMany(levelsData);
-  console.log(`✅ ${createdLevels.length} levels created`);
+    const createdLevels = await Level.insertMany(levelsData);
+  info(`✅ ${createdLevels.length} levels created`);
 
-    // Actualizar cursos con referencias a niveles
-    console.log('🔗 Actualizando cursos con niveles...');
+  // Actualizar cursos con referencias a niveles
+  info('🔗 Actualizando cursos con niveles...');
     for (const training of createdTrainings) {
       const trainingLevels = createdLevels.filter(level => 
         level.trainingId.toString() === training._id.toString()
@@ -97,88 +127,176 @@ async function initializeDatabase() {
       });
     }
 
-    // Asignar cursos a los alumnos
-    console.log('🎓 Asignando cursos a alumnos...');
-    for (const student of students) {
-      await User.findByIdAndUpdate(
-        student._id,
-        { 
-          $set: { 
-            assignedTraining: createdTrainings.map(training => training._id) 
-          } 
-        }
-      );
+  // Eliminar usuarios específicos que no queremos (Juan / María) en caso de que existan
+  await User.deleteMany({ email: { $in: ['juan.perez@email.com', 'maria.gonzalez@email.com'] } });
+
+  // Crear exactamente 3 alumnos globales y asignarlos a todos los trainings
+  info('🎓 Creando exactamente 3 alumnos y asignándolos a todos los cursos...');
+  // obtener estudiantes existentes (si algun otro existe)
+  let existingStudents = await User.find({ role: 'Student' }).exec();
+    // Si hay más de 0 alumnos (por la inserción anterior) los usamos; si no, los creamos
+    const studentsToEnsure = [];
+    if (existingStudents.length < 3) {
+      for (let i = 1; i <= 3; i++) {
+        studentsToEnsure.push({
+          firstName: `Alumno${i}`,
+          lastName: `Demo`,
+          documentType: 'DNI',
+          documentNumber: `${Math.floor(20000000 + Math.random() * 80000000)}`,
+          birthDate: new Date(2000, 0, 1),
+          email: `alumno${i}@sicapsi.com`,
+          postalCode: '8000',
+          address: 'Calle Demo',
+          addressNumber: `${100 + i}`,
+          province: 'buenos_aires',
+          city: 'Bahía Blanca',
+          areaCode: '0291',
+          phone: `1540000${i}`,
+          password: defaultPasswordPlain,
+          role: 'Student',
+          profileImage: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400',
+          assignedTraining: []
+        });
+      }
+      // Hash ya disponible en defaultPasswordHash
+      const preparedStudents = studentsToEnsure.map(s => ({ ...s, password: defaultPasswordHash }));
+      const createdNewStudents = await User.insertMany(preparedStudents);
+  info(`✅ ${createdNewStudents.length} alumnos creados`);
+      // registrar credenciales
+      studentsToEnsure.forEach(s => credentialsList.push({ email: s.email, password: defaultPasswordPlain, role: 'Student', name: s.firstName }));
+      existingStudents = createdNewStudents;
+    } else {
+      info('✅ Ya existen alumnos en la BD; usándolos');
     }
 
-    // Crear / asegurar un docente por curso (escalable y reutilizable) y mensajes por curso
-    console.log('👩‍🏫 Creando/asegurando docentes por curso y mensajes de ejemplo por curso...');
+    // Asignar cada estudiante a todos los trainings
+    for (const student of existingStudents) {
+      for (const training of createdTrainings) {
+        await User.findByIdAndUpdate(student._id, { $addToSet: { assignedTraining: training._id } });
+      }
+    }
+
+  // Crear / asegurar un docente por curso y generar mensajes personalizados
+  info('👩‍🏫 Creando/asegurando docentes por curso y generando mensajes personalizados...');
     const teacherByTraining = new Map();
-    for (const training of createdTrainings) {
-      const teacher = await ensureTeacherForTraining({ training, saltRounds: SALT_ROUNDS });
-      teacherByTraining.set(training._id.toString(), teacher);
-    }
-
-    // Mensajes: por cada curso, el profesor envía bienvenida a todos sus alumnos; y un alumno consulta a su profe
     const messagesToInsert = [];
-    for (const training of createdTrainings) {
-      const tId = training._id;
-      const teacher = teacherByTraining.get(tId.toString());
-      const studentsInCourse = await User.find({ role: 'Student', assignedTraining: tId }).select('_id').lean();
+    for (let idx = 0; idx < createdTrainings.length; idx++) {
+      const training = createdTrainings[idx];
+      // Pasamos el hash de la contraseña por defecto para que el helper lo use
+      const teacher = await ensureTeacherForTraining({ training, saltRounds: SALT_ROUNDS, index: idx, defaultPasswordHash });
+      teacherByTraining.set(training._id.toString(), teacher);
+
+  // Registrar credenciales del docente (por defecto docente123)
+  credentialsList.push({ email: teacher.email, password: defaultPasswordPlain, role: 'Trainer', name: teacher.firstName || `Profesor ${training.title}` });
+
+      // Obtener alumnos asignados al curso (al menos 3 garantizados arriba)
+      const studentsInCourse = await User.find({ role: 'Student', assignedTraining: training._id }).select('_id firstName email').lean();
       const studentIds = studentsInCourse.map(s => s._id);
-      messagesToInsert.push(
-        ...buildWelcomeMessageDocs({ training, teacherId: teacher._id, studentIds })
-      );
+
+  // Mensajes de bienvenida personalizados (teacher -> each student)
+      for (const sid of studentIds) {
+        const subject = `Bienvenida a ${training.title}`;
+        const body = `¡Hola! Soy ${teacher.firstName || 'Tu Profesor'}, bienvenido/a al curso ${training.title}. Te doy la bienvenida personalmente.`;
+        messagesToInsert.push({
+          sender: teacher._id,
+          recipient: sid,
+          subject,
+          message: body,
+          isRead: false,
+          folder: 'inbox',
+          status: 'received',
+          trainingId: training._id,
+        });
+        messagesToInsert.push({
+          sender: teacher._id,
+          recipient: sid,
+          subject,
+          message: body,
+          isRead: true,
+          folder: 'sent',
+          status: 'sent',
+          trainingId: training._id,
+        });
+      }
+
+      // Mensaje de consulta de un alumno distinto por curso hacia el profe (si existe al menos uno)
       if (studentIds.length) {
-        messagesToInsert.push(
-          ...buildStudentInquiryDocs({ training, teacherId: teacher._id, studentId: studentIds[0] })
-        );
+        const sid = studentIds[0];
+        const inquiry = {
+          sender: sid,
+          recipient: teacher._id,
+          subject: `Consulta en ${training.title}`,
+          message: 'Profe, tengo una duda sobre el primer nivel.',
+          isRead: true,
+          folder: 'sent',
+          status: 'sent',
+          trainingId: training._id,
+        };
+        const inquiryInbox = { ...inquiry, isRead: false, folder: 'inbox', sender: sid, recipient: teacher._id };
+        messagesToInsert.push(inquiry);
+        messagesToInsert.push(inquiryInbox);
       }
     }
 
     if (messagesToInsert.length) {
       await PrivateMessage.insertMany(messagesToInsert);
-      console.log(`✅ Mensajes de ejemplo creados: ${messagesToInsert.length}`);
+      info(`✅ Mensajes de ejemplo creados: ${messagesToInsert.length}`);
     }
 
       
-    // VERIFICACIÓN FINAL
-    console.log('🔍 Verificando que todo esté correcto...');
-    
-    // Verificar usuario con cursos
-    const userWithTrainings = await User.findById(students[0]._id)
-      .populate('assignedTraining', 'title subtitle')
-      .exec();
-    
-    console.log('📋 Trainings assigned to Juan Pérez:');
-    userWithTrainings.assignedTraining.forEach(training => {
-      console.log(`   - ${training.title}: ${training.subtitle}`);
-    });
+  // VERIFICACIÓN FINAL
+    // (checks are run only in verbose mode)
+    info('🔍 Verificando que todo esté correcto...');
+    // Verificar un alumno y sus trainings (solo si verbose)
+    const oneStudent = await User.findOne({ role: 'Student' }).populate('assignedTraining', 'title subtitle').exec();
+    if (VERBOSE && oneStudent) {
+      console.log(`📋 Trainings assigned to ${oneStudent.firstName} ${oneStudent.lastName}:`);
+      (oneStudent.assignedTraining || []).forEach(training => {
+        console.log(`   - ${training.title}: ${training.subtitle}`);
+      });
+    }
 
-    // Verificar curso con niveles
+    // Verificar curso con niveles (solo si verbose)
     const trainingWithLevels = await Training.findById(createdTrainings[0]._id)
       .populate('levels', 'levelNumber title')
       .exec();
-    
-    console.log('🎯 Levels of the first training:');
-    trainingWithLevels.levels.forEach(level => {
-      console.log(`   - Level ${level.levelNumber}: ${level.title}`);
-    });
+    if (VERBOSE && trainingWithLevels) {
+      console.log('🎯 Levels of the first training:');
+      trainingWithLevels.levels.forEach(level => {
+        console.log(`   - Level ${level.levelNumber}: ${level.title}`);
+      });
+    }
 
-    console.log('✅ Base de datos inicializada exitosamente!');
-    console.log('\n📊 RESUMEN:');
-    console.log(`   Usuarios totales: ${createdUsers.length}`);
-    console.log(`   - Administradores: ${admins.length}`);
-    console.log(`   - Managers: ${managers.length}`);
-    console.log(`   - Trainers: ${trainers.length}`);
-    console.log(`   - Alumnos: ${students.length}`);
-    console.log(`   Trainings: ${createdTrainings.length}`);
-    console.log(`   Niveles: ${createdLevels.length}`);
-  console.log(`   Mensajes: ${(await PrivateMessage.countDocuments())}`); 
+  // Resumen usando conteos reales
+  const totalUsers = await User.countDocuments();
+  const totalAdmins = await User.countDocuments({ role: 'Administrator' });
+  const totalManagers = await User.countDocuments({ role: 'Manager' });
+  const totalTrainers = await User.countDocuments({ role: 'Trainer' });
+  const totalStudents = await User.countDocuments({ role: 'Student' });
+  info('✅ Base de datos inicializada exitosamente!');
+  info('\n📊 RESUMEN:');
+  info(`   Usuarios totales: ${totalUsers}`);
+  info(`   - Administradores: ${totalAdmins}`);
+  info(`   - Managers: ${totalManagers}`);
+  info(`   - Trainers: ${totalTrainers}`);
+  info(`   - Alumnos: ${totalStudents}`);
+  info(`   Trainings: ${createdTrainings.length}`);
+  info(`   Niveles: ${createdLevels.length}`);
+  info(`   Mensajes: ${(await PrivateMessage.countDocuments())}`);
     
-    console.log('\n🔑 Credenciales de acceso:');
-    console.log('   Admin: admin@sicapsi.com / password123');
-    console.log('   Alumno 1: juan.perez@email.com / alumno123');
-    console.log('   Alumno 2: maria.gonzalez@email.com / alumno123');
+  console.log('\n🔑 Credenciales de acceso (email / password):');
+    // Agrupar por rol para una mejor lectura
+    const byRole = credentialsList.reduce((acc, c) => {
+      acc[c.role] = acc[c.role] || [];
+      acc[c.role].push(c);
+      return acc;
+    }, {});
+    Object.keys(byRole).forEach(role => {
+      console.log(`\n   --- ${role} ---`);
+      byRole[role].forEach(c => {
+        console.log(`     ${c.email}  /  ${c.password}`);
+      });
+    });
     
     console.log('\n🚀 La base de datos SICAPSI está lista para usar!');
 

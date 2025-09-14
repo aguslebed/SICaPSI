@@ -41,7 +41,10 @@ const LevelSchema = new mongoose.Schema(
 );
 
 // Indexes
-LevelSchema.index({ trainingId: 1, levelNumber: 1 });
+// Ensure a training cannot have duplicate level numbers
+LevelSchema.index({ trainingId: 1, levelNumber: 1 }, { unique: true });
+// Optionally ensure a training cannot have duplicate level titles
+LevelSchema.index({ trainingId: 1, title: 1 }, { unique: true, sparse: true });
 LevelSchema.index({ isActive: 1 });
 
 export default mongoose.model("Level", LevelSchema);

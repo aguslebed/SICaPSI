@@ -17,8 +17,10 @@ const TrainingSchema = new mongoose.Schema({
   totalLevels: {type: Number, default: 0},
   report: [{
     level: { type: Number },
-    score: [{ type: String }],
-    errorsCount: { type: String },
+    // score is a single numeric value (not an array)
+    score: { type: Number },
+    // errorsCount should be a numeric value
+    errorsCount: { type: Number },
     videoUrl: { type: String },
     description: { type: String }
   }],
@@ -30,5 +32,7 @@ const TrainingSchema = new mongoose.Schema({
 // Índices para mejor performance
 TrainingSchema.index({ createdBy: 1 });
 TrainingSchema.index({ isActive: 1 });
+// Ensure training titles are unique
+TrainingSchema.index({ title: 1 }, { unique: true, sparse: true });
 
 export default mongoose.model("Training", TrainingSchema);

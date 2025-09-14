@@ -16,15 +16,15 @@ export const sampleCourses = [
     report: [
       {
         level: 1,
-        score: ["8.5", "9.0"],
-        errorsCount: "2",
+        score: 8.5,
+        errorsCount: 2,
         videoUrl: "https://example.com/report1.mp4",
         description: "Buen desempeño en fundamentos de HTML y CSS."
       },
       {
         level: 2,
-        score: ["7.5"],
-        errorsCount: "4",
+        score: 7.5,
+        errorsCount: 4,
         videoUrl: "https://example.com/report2.mp4",
         description: "Necesita mejorar en JavaScript intermedio."
       }
@@ -48,8 +48,8 @@ export const sampleCourses = [
     report: [
       {
         level: 1,
-        score: ["6.0", "6.5"],
-        errorsCount: "5",
+        score: 6.0,
+        errorsCount: 5,
         videoUrl: "https://example.com/ml-report1.mp4",
         description: "Le cuesta la interpretación de regresiones simples."
       }
@@ -73,8 +73,8 @@ export const sampleCourses = [
     report: [
       {
         level: 1,
-        score: ["9.0"],
-        errorsCount: "1",
+        score: 9.0,
+        errorsCount: 1,
         videoUrl: "https://example.com/programacion-report1.mp4",
         description: "Excelente comprensión de la lógica de programación."
       }
@@ -98,8 +98,8 @@ export const sampleCourses = [
     report: [
       {
         level: 1,
-        score: ["7.8"],
-        errorsCount: "3",
+        score: 7.8,
+        errorsCount: 3,
         videoUrl: "https://example.com/sql-report1.mp4",
         description: "Buen manejo de consultas básicas en SQL."
       }
@@ -123,8 +123,8 @@ export const sampleCourses = [
     report: [
       {
         level: 1,
-        score: ["8.0"],
-        errorsCount: "2",
+        score: 8.0,
+        errorsCount: 2,
         videoUrl: "https://example.com/movil-report1.mp4",
         description: "Buen progreso en interfaces móviles."
       }
