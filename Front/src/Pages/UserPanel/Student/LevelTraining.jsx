@@ -23,19 +23,23 @@ const LevelTraining = () => {
       <div className="min-h-screen bg-gray-100">
         <div className="max-w-screen-xl w-full mx-auto flex px-4 sm:px-6 md:px-8">
           <main className="flex-1 min-w-0 py-6 md:py-8">
-          <div className="bg-gradient-to-br from-blue-50 via-white to-blue-100 p-8 rounded-2xl shadow-xl border border-blue-200 max-w-3xl mx-auto flex flex-col gap-6">
+          <div className="bg-gradient-to-br from-blue-50 via-white to-blue-100 p-6 sm:p-8 rounded-2xl shadow-xl border border-blue-200 max-w-3xl mx-auto flex flex-col gap-6">
             <h1 className="text-3xl font-bold text-blue-700 mb-2">{nivel.title}</h1>
             <h2 className="text-lg text-gray-600 mb-4">{nivel.description}</h2>
             {/* Video */}
             {training.videoUrl && (
-              <div className="rounded-lg overflow-hidden shadow-md mb-6 flex justify-center">
-                <iframe
-                  src={training.videoUrl}
-                  title="Video de capacitación"
-                  className="w-full h-72 max-w-2xl border-2 border-blue-200 rounded-xl"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                ></iframe>
+              <div className="rounded-lg overflow-hidden shadow-md mb-6">
+                <div className="w-full max-w-2xl mx-auto border-2 border-blue-200 rounded-xl overflow-hidden">
+                  <div className="aspect-video">
+                    <iframe
+                      src={training.videoUrl}
+                      title="Video de capacitación"
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    ></iframe>
+                  </div>
+                </div>
               </div>
             )}
             {/* Descripción */}

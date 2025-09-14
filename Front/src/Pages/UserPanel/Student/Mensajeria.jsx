@@ -9,6 +9,7 @@ import SucessModal from "../../../Components/Modals/SucessModal";
 import { sendMessage, getMe } from "../../../API/Request";
 import { useUser } from "../../../context/UserContext";
 import { MailPlus } from "lucide-react";
+import SideBar from "../../../Components/Student/SideBar";
 
 export default function Mensajeria() {
   const { idTraining } = useParams();
@@ -42,14 +43,17 @@ export default function Mensajeria() {
           {/* Sidebar (same rendering as other pages) */}
           {/* Main content */}
           <main className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-4">
-              <h1 className="text-3xl font-bold text-gray-800">Mensajería</h1>
-              <button
-                className="lg:hidden px-3 py-2 text-sm border rounded cursor-pointer"
-                onClick={() => setSidebarOpen(true)}
-              >
-                Menú
-              </button>
+            <div className="mb-4">
+              <div className="flex items-center justify-between">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Mensajería</h1>
+                <button
+                  className="lg:hidden ml-3 px-3 py-2 text-sm border rounded cursor-pointer"
+                  onClick={() => setSidebarOpen(true)}
+                  title="Abrir menú"
+                >
+                  Menú
+                </button>
+              </div>
             </div>
 
             <div className="bg-white rounded-xl shadow p-3 sm:p-4">

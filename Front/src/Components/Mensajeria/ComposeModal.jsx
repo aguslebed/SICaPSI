@@ -60,6 +60,15 @@ export default function ComposeModal({ open, onClose, onSend, onSuccess, initial
     queueMicrotask?.(() => bodyRef.current?.focus());
   }, [open, initialTo, initialSubject, initialBody, users]);
 
+  // Auto-resize textarea to avoid inner scrollbars
+  const autoResizeBody = () => {
+    const el = bodyRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 800) + 'px';
+  };
+  useEffect(() => { autoResizeBody(); }, [body]);
+
   const filteredUsers = useMemo(() => {
     const q = (recipientQuery || '').toLowerCase();
     let list = users;
@@ -214,7 +223,7 @@ export default function ComposeModal({ open, onClose, onSend, onSuccess, initial
 
   return (
     <ModalWrapper onClose={onClose} showCloseButton={false} panelClassName="max-w-[92vw] sm:max-w-[720px]">
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+      <div className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col max-h-[85vh]">
   <div className="flex items-center justify-between px-5 py-3 border-b bg-gradient-to-r from-[#007BFF] to-[#0056D6] text-white">
           <div className="flex items-center gap-3">
             <div className="text-xl font-semibold">Redactar mensaje</div>
@@ -228,8 +237,8 @@ export default function ComposeModal({ open, onClose, onSend, onSuccess, initial
         </div>
 
   <style>{`.compose-scroll::-webkit-scrollbar{width:10px}.compose-scroll::-webkit-scrollbar-track{background:#f3f4f6;border-radius:9999px}.compose-scroll::-webkit-scrollbar-thumb{background:#007BFF;border-radius:9999px}.compose-scroll::-webkit-scrollbar-thumb:hover{background:#0056D6}.compose-scroll{scrollbar-width:thin;scrollbar-color:#007BFF #f3f4f6;}`}</style>
-        <div className="p-5">
-          <div className="space-y-4 max-h-[60vh] overflow-auto compose-scroll">
+        <div className="p-5 flex-1 overflow-y-auto pr-3 sm:pr-4 compose-scroll">
+          <div className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Para</label>
             <div className="relative">
@@ -353,7 +362,14 @@ export default function ComposeModal({ open, onClose, onSend, onSuccess, initial
                 </div>
               )}
             </div>
-            <textarea ref={bodyRef} rows={8} value={body} onChange={(e) => setBody(e.target.value)} className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" placeholder="Escribe tu mensaje aquí... (Ctrl+Enter para enviar)" />
+            <textarea
+              ref={bodyRef}
+              rows={8}
+              value={body}
+              onChange={(e) => { setBody(e.target.value); queueMicrotask?.(autoResizeBody); }}
+              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none overflow-hidden min-h-40"
+              placeholder="Escribe tu mensaje aquí... (Ctrl+Enter para enviar)"
+            />
             {attachments.length > 0 && (
               <div className="mt-3 border rounded p-2 bg-gray-50">
                 <div className="font-medium text-sm mb-2">Adjuntos</div>
@@ -378,7 +394,7 @@ export default function ComposeModal({ open, onClose, onSend, onSuccess, initial
         </div>
         </div>
 
-        <div className="flex items-center justify-between gap-3 px-5 py-3 border-t bg-gray-50">
+  <div className="flex items-center justify-between gap-3 px-5 py-3 border-t bg-gray-50">
           <div className="text-sm text-gray-100">Destinatarios: {(toInput ? toInput.split(',').map(s=>s.trim()).filter(Boolean).length : 0) + selectedRecipients.length}</div>
           <div className="flex items-center gap-2">
             <button

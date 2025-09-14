@@ -4,20 +4,16 @@ import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
 import { useUser } from "../../../context/UserContext";
 
 const LevelTest = () => {
-  // Tamaño fijo para los botones de opciones
+  // Botón base: mantenemos cursor-pointer y legibilidad, pero adaptativo
   const buttonStyle = {
-    minWidth: '200px',
-    maxWidth: '200px',
-    minHeight: '56px',
-    maxHeight: '56px',
     whiteSpace: 'normal',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     textAlign: 'center',
-    fontSize: '0.80rem',
-    fontWeight: 'normal',
-    padding: '0 8px',
+    fontSize: '0.90rem',
+    fontWeight: '600',
+    padding: '0.75rem 1rem',
     border: '2px solid #009fe3',
     boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
     transition: 'background 0.2s, border 0.2s',
@@ -59,47 +55,37 @@ const LevelTest = () => {
     <>
       {/* Modal bloqueante para el examen */}
       {sceneIndex !== null ? (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          background: 'rgba(255,255,255,0)',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
-          zIndex: 9999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}>
-          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-3xl w-full flex flex-col items-center" style={{ minHeight: 500 }}>
+        <div className="fixed inset-0 z-[9999] bg-white/0 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 md:p-8 w-[95vw] max-w-3xl flex flex-col items-center">
             {/* Debug info: escena y ruta de video */}
             <div style={{marginBottom: '10px', color: '#888', fontSize: '0.95em'}}>
               <strong>Escena:</strong> {tests[sceneIndex]?.idScene} &nbsp;|&nbsp; <strong>Ruta video:</strong> {tests[sceneIndex]?.videoUrl}
             </div>
             {/* Video de la escena */}
             {tests[sceneIndex].videoUrl && (
-              <video
-                key={tests[sceneIndex].videoUrl}
-                src={tests[sceneIndex].videoUrl}
-                autoPlay
-                controls={false}
-                disablePictureInPicture
-                controlsList="nodownload nofullscreen noremoteplayback noautoplay"
-                className="rounded-2xl w-full mb-6"
-                style={{ maxHeight: 350, minHeight: 350, background: "#222" }}
-              />
+              <div className="w-full mb-4 sm:mb-6">
+                <div className="aspect-video w-full rounded-2xl overflow-hidden bg-[#222]">
+                  <video
+                    key={tests[sceneIndex].videoUrl}
+                    src={tests[sceneIndex].videoUrl}
+                    autoPlay
+                    controls={false}
+                    disablePictureInPicture
+                    controlsList="nodownload nofullscreen noremoteplayback noautoplay"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              </div>
             )}
             {/* Descripción */}
-            <h2 className="text-xl font-bold mb-4 text-center" style={{ minHeight: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{tests[sceneIndex].description}</h2>
+            <h2 className="text-lg sm:text-xl font-bold mb-4 text-center min-h-12 flex items-center justify-center">{tests[sceneIndex].description}</h2>
             {/* Opciones */}
-            <div className="flex gap-8 justify-center w-full">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-6 md:gap-8 justify-center w-full">
               {Array.isArray(tests[sceneIndex].options) &&
                 tests[sceneIndex].options.map((opt, idx) => (
                   <button
                     key={idx}
-                    className="bg-[#009fe3] text-white font-bold rounded-lg hover:bg-[#0077b6] transition cursor-pointer"
+                    className="bg-[#009fe3] text-white font-bold rounded-lg hover:bg-[#0077b6] transition cursor-pointer w-full sm:w-auto min-h-12 px-4"
                     style={buttonStyle}
                     onClick={() => handleOption(opt.next)}
                   >
@@ -109,7 +95,7 @@ const LevelTest = () => {
             </div>
             {/* Botón para reiniciar */}
             <button
-              className="mt-8 bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition cursor-pointer"
+              className="mt-6 sm:mt-8 bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition cursor-pointer"
               onClick={handleRestart}
             >
               Finalizar Simulación
@@ -121,23 +107,22 @@ const LevelTest = () => {
           <div className="min-h-screen bg-gray-100">
             <div className="max-w-screen-xl w-full mx-auto flex px-4 sm:px-6 md:px-8">
               <main className="flex-1 min-w-0 py-6 md:py-8 flex justify-center items-center">
-              <div className="bg-white rounded-2xl shadow-xl p-8 max-w-3xl w-full flex flex-col items-center" style={{ minHeight: 500 }}>
+              <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 md:p-8 max-w-3xl w-full flex flex-col items-center">
                 {/* Imagen/video inicial */}
                 <img
                   src={training?.image}
                   alt={training?.title}
-                  className="rounded-2xl w-full object-cover mb-8"
-                  style={{ maxHeight: 350 }}
+                  className="rounded-2xl w-full object-cover mb-6 sm:mb-8 max-h-[50vh]"
                 />
-                <div className="flex gap-8 justify-center">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-6 md:gap-8 justify-center w-full">
                   <button
-                    className="bg-[#009fe3] text-white font-bold px-8 py-4 rounded-lg text-xl hover:bg-[#0077b6] transition cursor-pointer"
+                    className="bg-[#009fe3] text-white font-bold px-6 py-3 sm:px-8 sm:py-4 rounded-lg text-base sm:text-xl hover:bg-[#0077b6] transition cursor-pointer w-full sm:w-auto"
                     onClick={handleRestart}
                   >
                     Reiniciar video
                   </button>
                   <button
-                    className="bg-[#009fe3] text-white font-bold px-8 py-4 rounded-lg text-xl hover:bg-[#0077b6] transition cursor-pointer"
+                    className="bg-[#009fe3] text-white font-bold px-6 py-3 sm:px-8 sm:py-4 rounded-lg text-base sm:text-xl hover:bg-[#0077b6] transition cursor-pointer w-full sm:w-auto"
                     onClick={handleStart}
                   >
                     Iniciar Simulación

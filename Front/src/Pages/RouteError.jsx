@@ -15,11 +15,11 @@ export default function RouteError() {
         <div className="flex gap-3 justify-center">
           <button
             onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded"
+            className=" cursor-pointer px-4 py-2 bg-blue-600 text-white rounded"
           >
             Reintentar
           </button>
-          <Link to="/" className="px-4 py-2 border rounded">
+          <Link to="/" className="cursor-pointer px-4 py-2 border rounded">
             Ir al inicio
           </Link>
         </div>

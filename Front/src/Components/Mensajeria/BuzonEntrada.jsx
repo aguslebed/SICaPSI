@@ -293,8 +293,8 @@ export default function BuzonEntrada({ hideCompose = false, trainingId, sortBy =
       </div>
 
       {/* Paginación */}
-      <div className="flex items-center justify-between gap-3 text-sm mt-3">
-        <div className="text-gray-600">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 text-sm mt-3">
+        <div className="text-gray-600 order-2 sm:order-1">
           {totalItems > 0 ? (
             <span>
               Mostrando {startIdx + 1}-{Math.min(endIdx, totalItems)} de {totalItems}
@@ -303,7 +303,7 @@ export default function BuzonEntrada({ hideCompose = false, trainingId, sortBy =
             <span>Sin resultados</span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 order-1 sm:order-2 self-end sm:self-auto">
           <button
             className="px-3 py-1 border rounded cursor-pointer disabled:opacity-50"
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
@@ -311,7 +311,7 @@ export default function BuzonEntrada({ hideCompose = false, trainingId, sortBy =
           >
             Anterior
           </button>
-          <span className="px-2">Página {safePage} de {totalPages}</span>
+          <span className="px-2 whitespace-nowrap">Página {safePage} de {totalPages}</span>
           <button
             className="px-3 py-1 border rounded cursor-pointer disabled:opacity-50"
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}

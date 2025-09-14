@@ -10,7 +10,7 @@ function SideBar() {
   const { idTraining } = useParams();  
 
   return (
-    <nav className="flex flex-col gap-4 lg:gap-6 items-start w-56 lg:w-64 flex-shrink-0" aria-label="Menú lateral">
+    <nav className="flex flex-col gap-4 lg:gap-6 items-start w-full lg:w-64 flex-shrink-0" aria-label="Menú lateral">
       <button
         type="button"
         className="flex items-center gap-3 text-left text-blue-700 text-base lg:text-lg border-b border-blue-200 w-full pb-2 transition hover:bg-blue-50 hover:text-blue-800 cursor-pointer"

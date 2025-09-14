@@ -191,8 +191,8 @@ function Register() {
       ></div>
 
       {/* Contenedor */}
-      <main className="relative min-h-screen flex items-center justify-center p-6">
-        <section className="w-full max-w-2xl bg-white/95 shadow-2xl rounded-2xl p-8 md:p-10">
+      <main className="relative min-h-screen flex items-center justify-center px-4 sm:px-6 md:px-8 py-8">
+        <section className="w-full max-w-2xl bg-white/95 shadow-2xl rounded-2xl p-6 sm:p-8 md:p-10">
           {/* Logo */}
           <div className="w-full flex justify-center mb-6 select-none">
             <h1 className="text-4xl font-extrabold tracking-widest">
@@ -205,9 +205,9 @@ function Register() {
           </h2>
 
           {/* Formulario */}
-          <form className="space-y-4" onSubmit={handleSubmit}>
+          <form className="space-y-5" onSubmit={handleSubmit}>
             {/* firstName completo */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               <input
                 type="text"
                 placeholder="Nombre"
@@ -225,7 +225,7 @@ function Register() {
             </div>
 
             {/* DNI y Fecha de Nacimiento */}
-            <div className="grid grid-cols-3 gap-4 ">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 ">
               <select className="border rounded-lg px-3 py-2 w-full cursor-pointer" value={documentType} onChange={e => setdocumentType(e.target.value)} required>
                 <option value="">Tipo de documento</option>
                 <option value="DNI">DNI</option>
@@ -237,7 +237,7 @@ function Register() {
             </div>
 
             {/* Email y Código Postal */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               <input
                 type="email"
                 placeholder="e-mail"
@@ -255,7 +255,7 @@ function Register() {
             </div>
 
             {/* Dirección */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
               <input
                 type="text"
                 placeholder="Dirección"
@@ -280,7 +280,7 @@ function Register() {
             </div>
 
             {/* province y Ciudad */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               <select
                 className="border rounded-lg px-3 py-2 w-full max-h-48 overflow-y-auto cursor-pointer"
                 value={province}
@@ -307,7 +307,7 @@ function Register() {
             </div>
 
             {/* Teléfono */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               <input
                 type="text"
                 placeholder="Código de área"
@@ -325,7 +325,7 @@ function Register() {
             </div>
 
             {/* Contraseña */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               <input
                 type="password"
                 placeholder="Contraseña"

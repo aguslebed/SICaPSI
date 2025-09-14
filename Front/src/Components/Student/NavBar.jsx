@@ -20,7 +20,31 @@ const NavBar = () => {
     if (firstTrainingId) return firstTrainingId;
     return '';
   };
-  const unreadItems = useMemo(() => items.filter(m => m.folder === 'inbox' && !m.isRead), [items]);
+  // Helper to resolve and check if a training is active
+  const isTrainingActive = useMemo(() => {
+    const map = new Map();
+    (Array.isArray(trainings) ? trainings : []).forEach(t => {
+      if (t && typeof t === 'object' && t._id) {
+        map.set(t._id, t.isActive !== false);
+      } else if (typeof t === 'string') {
+        map.set(t, true);
+      }
+    });
+    return (id) => {
+      if (!id) return true; // mensajes generales
+      if (map.has(id)) return map.get(id);
+      return true; // por defecto permitir si se desconoce
+    };
+  }, [trainings]);
+
+  const unreadItemsRaw = useMemo(() => items.filter(m => m.folder === 'inbox' && !m.isRead), [items]);
+  const unreadItems = useMemo(
+    () => unreadItemsRaw.filter(m => {
+      const tid = (m?.trainingId && (m.trainingId._id || m.trainingId)) || undefined;
+      return isTrainingActive(tid);
+    }),
+    [unreadItemsRaw, isTrainingActive]
+  );
   const unreadCount = unreadItems.length;
   const handleLogout = async () => {
     try {
@@ -46,7 +70,7 @@ const NavBar = () => {
       </div>
 
       {/* Barra inferior con acciones (notificaciones / usuario) */}
-      <div className="w-full bg-[#0888c2]">
+      <div className="w-full bg-[#0888c2] overflow-x-clip">
         <div className="max-w-screen-xl mx-auto px-4 sm:px-6 md:px-8 h-14 md:h-16 flex items-center justify-end">
           <div className="flex items-center gap-3 sm:gap-5">
             {/* Notificaciones (campana) */}
@@ -64,8 +88,8 @@ const NavBar = () => {
                 )}
                 <span className="sr-only">Notificaciones</span>
               </Menu.Button>
-              <Menu.Items className="absolute right-0 mt-2 w-80 max-w-[95vw] rounded-lg bg-white text-gray-800 shadow-lg ring-1 ring-black/10 overflow-hidden z-50">
-                <div className="py-2 max-h-96 overflow-auto">
+              <Menu.Items className="fixed sm:absolute top-[104px] sm:top-auto left-0 right-0 sm:left-auto sm:right-2 mx-auto sm:mx-0 w-full sm:w-80 max-w-[92vw] sm:max-w-none rounded-lg bg-white text-gray-800 shadow-lg ring-1 ring-black/10 overflow-hidden z-50">
+                <div className="py-2 max-h-[60vh] overflow-auto overflow-x-hidden">
                   {unreadItems.length === 0 ? (
                     <div className="px-4 py-6 text-center text-sm text-gray-500">No hay mensajes nuevos</div>
                   ) : (
@@ -95,16 +119,19 @@ const NavBar = () => {
                                     await setMessageRead({ id: m._id, isRead: true });
                                   }
                                 } catch {}
-                                // Navegar a la bandeja del curso
-                                if (trainingId) navigate(`/userPanel/${trainingId}/messages`);
+                                // Navegar a la bandeja del curso solo si activo
+                                if (trainingId && isTrainingActive(trainingId)) navigate(`/userPanel/${trainingId}/messages`);
                                 else navigate('/userPanel');
                               }}
                               title="Ir a bandeja de entrada"
                             >
-                              <div className="font-semibold truncate">{m.subject || '(Sin asunto)'}</div>
-                              <div className="text-xs text-gray-600 truncate">De: {senderName || 'Desconocido'} · {date}</div>
-                              <div className="mt-1">
+                               <div className="font-semibold">{m.subject || '(Sin asunto)'}</div>
+                              <div className="text-xs text-gray-600">De: {senderName || 'Desconocido'} · {date}</div>
+                              <div className="mt-1 flex items-center gap-2">
                                 <span className="inline-block text-xs text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">{trainingTitle}</span>
+                                {trainingId && !isTrainingActive(trainingId) && (
+                                  <span className="inline-block text-[10px] text-red-700 bg-red-50 px-2 py-0.5 rounded">Curso inactivo</span>
+                                )}
                               </div>
                             </button>
                           )}
@@ -125,12 +152,13 @@ const NavBar = () => {
                 <span className="hidden sm:inline text-white font-medium max-w-[140px] truncate">
                   {userData?.user?.firstName || 'Usuario'}
                 </span>
-                <img
-                  src={resolveImageUrl(userData?.user?.profileImage) || "/images/alumno-avatar.png"}
-          
-                  alt={userData?.user?.firstname || "Usuario"}
-                  className="w-10 h-10 rounded-full border-2 border-white object-cover"
-                />
+                <div className="w-12 h-12 rounded-full border-2 border-white overflow-hidden shrink-0">
+                  <img
+                    src={resolveImageUrl(userData?.user?.profileImage) || "/images/alumno-avatar.png"}
+                    alt={userData?.user?.firstName || "Usuario"}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
               </Menu.Button>
               <Menu.Items className="absolute right-0 mt-2 w-56 rounded-lg bg-white text-gray-800 shadow-lg ring-1 ring-black/10 overflow-hidden z-50">
                 <div className="py-1">
