@@ -6,7 +6,6 @@ import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
 const TrainingIndex = () => {
   const { idTraining } = useParams();
   const { userData } = useUser();
-
   if (!userData || !Array.isArray(userData.training)) {
     return <LoadingOverlay label="Cargando datos de capacitación..." />;
   }

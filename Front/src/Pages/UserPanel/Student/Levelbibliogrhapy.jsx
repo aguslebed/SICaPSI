@@ -49,12 +49,12 @@ const Levelbibliogrhapy = () => {
                           {biblio.videoUrl.map((archivo, i) => (
                             <li key={i} className="flex items-center gap-3">
                               <a
-                                href={archivo.url || archivo}
+                                href={(typeof archivo === 'string') ? archivo : (archivo.url || archivo.href || '#')}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="px-3 py-1 bg-blue-100 rounded-lg text-blue-700 font-medium hover:bg-blue-200 transition"
                               >
-                                {archivo.nombre || archivo.name || archivo.title || archivo.url || archivo}
+                                {typeof archivo === 'string' ? archivo : (archivo.nombre || archivo.name || archivo.title || archivo.url || archivo.href || 'archivo')}
                               </a>
                             </li>
                           ))}

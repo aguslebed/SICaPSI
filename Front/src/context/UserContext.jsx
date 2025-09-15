@@ -1,5 +1,5 @@
 
-import { createContext, useState, useContext, useEffect, useRef } from "react";
+import { createContext, useState, useContext, useEffect, useRef, useMemo, useCallback } from "react";
 import { getMe } from "../API/Request";
 
 const UserContext = createContext();
@@ -20,11 +20,10 @@ export function UserProvider({ children }) {
     }
   }, [userData]);
 
-  // setUserData que también actualiza localStorage
-  const setUserData = (newData) => {
+  // setUserData memoizado; la persistencia la maneja el efecto de abajo
+  const setUserData = useCallback((newData) => {
     setUserDataState(newData);
-    // El efecto se encarga de persistir
-  };
+  }, []);
 
   // Polling: refrescar datos del usuario periódicamente para detectar nuevos mensajes
   const pollRef = useRef(null);
@@ -54,7 +53,7 @@ export function UserProvider({ children }) {
       }
     };
 
-    // Run immediate first poll after mount
+  // Run immediate first poll after mount (además del loader inicial)
     runOnce();
     pollRef.current = setInterval(runOnce, POLL_INTERVAL);
 
@@ -73,16 +72,18 @@ export function UserProvider({ children }) {
       if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [userData]);
+  }, [userData?.__proto__ === Object.prototype ? userData?._id : userData?._id]);
 
-  // Función para cerrar sesión y limpiar userData
-  const logoutUser = () => {
+  // Función para cerrar sesión y limpiar userData (memoizada)
+  const logoutUser = useCallback(() => {
     setUserDataState(null);
     localStorage.removeItem("userData");
-  };
+  }, []);
+
+  const contextValue = useMemo(() => ({ userData, setUserData, logoutUser }), [userData, setUserData, logoutUser]);
 
   return (
-    <UserContext.Provider value={{ userData, setUserData, logoutUser }}>
+    <UserContext.Provider value={contextValue}>
       {children}
     </UserContext.Provider>
   );

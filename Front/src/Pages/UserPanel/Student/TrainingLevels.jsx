@@ -9,8 +9,9 @@ const TrainingLevels = () => {
   const { idTraining, nivelId } = useParams();
   const { userData } = useUser();
   const navigate = useNavigate();
- 
-
+  
+  console.log(userData);
+  
   if (!userData || !Array.isArray(userData.training)) {
     return (
       <>
@@ -46,12 +47,14 @@ const TrainingLevels = () => {
           <main className="flex-1 min-w-0 py-6 md:py-8">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6">Niveles</h1>
           <div className="space-y-4">
-            {niveles.map((nivel) => (
+            {niveles.map((nivel) => {
+              const levelActive = (nivel?.isActive !== false); // default to active if field missing
+              return (
               <div key={nivel._id} className="border rounded-lg bg-white shadow">
                 {/* Encabezado nivel */}
                 <div
-                  className={`flex justify-between items-center px-6 py-3 cursor-pointer transition ${nivel.isActive ? "bg-blue-100" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}
-                  onClick={() => nivel.isActive && toggleNivel(nivel._id)}
+                  className={`flex justify-between items-center px-6 py-3 cursor-pointer transition ${levelActive ? "bg-blue-100" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}
+                  onClick={() => levelActive && toggleNivel(nivel._id)}
                 >
                   <span className="font-semibold">{nivel.title}</span>
                   <div className="flex items-center gap-2">
@@ -62,7 +65,7 @@ const TrainingLevels = () => {
                   </div>
                 </div>
                 {/* Contenido desplegable */}
-                {openLevel === nivel._id && nivel.isActive && (
+                {openLevel === nivel._id && levelActive && (
                   <div className="px-6 py-4 space-y-3 bg-blue-50">
                     <button className="w-full flex items-center gap-2 p-3 rounded-md bg-blue-200 hover:bg-blue-300 transition hover:cursor-pointer"
                       onClick={() => Linkbibliografia(nivel._id)}>
@@ -81,7 +84,7 @@ const TrainingLevels = () => {
                   </div>
                 )}
               </div>
-            ))}
+            );})}
           </div>
           </main>
         </div>

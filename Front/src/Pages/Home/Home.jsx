@@ -78,33 +78,37 @@ function Home() {
       {/* Hero Section */}
       <section 
         id="top"
-        className="min-h-screen flex flex-col justify-center text-white px-6 md:px-8 lg:px-12 pt-24 md:pt-28"
+        className="min-h-screen flex flex-col justify-center items-center md:items-start text-white px-6 md:px-8 lg:px-12 pt-24 md:pt-28"
         style={{
           backgroundImage: `url(${home})`,
           backgroundSize: "cover",
           backgroundPosition: "center top",
         }}
       >
-        <div className="max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl md:ml-auto mt-10 md:mt-0"> {/* desplaza APSEPBA a la derecha en pantallas grandes */}
-          <h3 
-            className="text-4xl md:text-5xl font-bold"
-            style={{ fontFamily: "'Inter', sans-serif" }}
-          >
-            APSEPBA
-          </h3>
-          <p 
-            className="mt-4 text-base md:text-xl"
-            style={{ fontFamily: "'Inter', sans-serif" }}
-          >
-            Asociación de Profesionales de Seguridad Privada de la Provincia de Buenos Aires.
-          </p>
-          <a
-            href="#nosotros"
-            className="mt-6 inline-block px-6 md:px-8 py-3 border border-white rounded-full text-sm md:text-lg font-semibold hover:bg-white hover:text-black transition"
-            style={{ fontFamily: "'Inter', sans-serif" }}
-          >
-            NOSOTROS
-          </a>
+        <div className="w-full">
+          <div className="max-w-screen-xl mx-auto px-4 md:px-8 lg:px-12 mt-10 md:mt-0 text-center md:text-left">
+            <h3 
+              className="text-4xl md:text-5xl font-bold"
+              style={{ fontFamily: "'Inter', sans-serif" }}
+            >
+              APSEPBA
+            </h3>
+            <p 
+              className="mt-4 text-base md:text-xl max-w-2xl leading-relaxed mx-auto md:mx-0"
+              style={{ fontFamily: "'Inter', sans-serif", textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}
+            >
+              Asociación de Profesionales de Seguridad Privada
+              <br />
+              de la Provincia de Buenos Aires.
+            </p>
+            <a
+              href="#nosotros"
+              className="mt-6 inline-block px-6 md:px-8 py-3 border border-white rounded-full text-sm md:text-lg font-semibold hover:bg-white hover:text-black transition"
+              style={{ fontFamily: "'Inter', sans-serif" }}
+            >
+              NOSOTROS
+            </a>
+          </div>
         </div>
       </section>
 
