@@ -4,20 +4,41 @@ import { Link } from "react-router-dom";
 import { useUser } from "../../context/UserContext";
 import { useNavigate } from 'react-router-dom';
 import LoadingOverlay from "../../Components/Shared/LoadingOverlay";
+import ValidationErrorModal from "../../Components/Modals/ValidationErrorModal";
+import AuthErrorModal from "../../Components/Modals/AuthErrorModal";
 
 function Login() {
-  const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [validationMessage, setValidationMessage] = useState("");
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const { setUserData } = useUser(); 
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
 
-    const email = e.target.email.value;
-    const password = e.target.password.value;
+    const email = e.target.email.value.trim();
+    const password = e.target.password.value.trim();
+
+    // Validar campos vacíos
+    if (!email && !password) {
+      setValidationMessage("Debe completar todos los campos");
+      setShowValidationModal(true);
+      return;
+    }
+    if (!email) {
+      setValidationMessage("Debe ingresar su correo electrónico");
+      setShowValidationModal(true);
+      return;
+    }
+    if (!password) {
+      setValidationMessage("Debe ingresar su contraseña");
+      setShowValidationModal(true);
+      return;
+    }
 
     try {
       setIsLoading(true);
@@ -30,8 +51,10 @@ function Login() {
 
       // Redirigir al dashboard
       navigate('/userPanel');
-    } catch (err) {
-      setError(err.message);
+    } catch {
+      // Mostrar modal de error para credenciales inválidas
+      setErrorMessage("Email o contraseña Inválidos");
+      setShowErrorModal(true);
     } finally {
       setIsLoading(false);
     }
@@ -39,6 +62,22 @@ function Login() {
 
   return (
     <>
+      {/* Modal de validación */}
+      {showValidationModal && (
+        <ValidationErrorModal
+          mensaje={validationMessage}
+          onClose={() => setShowValidationModal(false)}
+        />
+      )}
+
+      {/* Modal de error de autenticación */}
+      {showErrorModal && (
+        <AuthErrorModal
+          mensaje={errorMessage}
+          onClose={() => setShowErrorModal(false)}
+        />
+      )}
+
       {/* Fondo */}
       <div
         className="fixed inset-0 bg-[url('./assets/fondo.jpg')] bg-cover bg-center 
@@ -80,7 +119,6 @@ function Login() {
                 type="email"
                 className="w-full border-0 border-b-2 border-gray-300 focus:border-blue-500 outline-none py-2 transition-colors"
                 placeholder="usuario@empresa.com"
-                required
                 disabled={isLoading}
               />
             </div>
@@ -97,7 +135,6 @@ function Login() {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   className="w-full border-0 border-b-2 border-gray-300 focus:border-blue-500 outline-none py-2 transition-colors pr-10"
-                  required
                   disabled={isLoading}
                 />
                 <button
@@ -142,8 +179,6 @@ function Login() {
                 'Acceder'
               )}
             </button>
-
-            <p id="error" className="text-red-600 text-sm mt-2">{error}</p>
           </form>
 
           {/* Texto de registro */}

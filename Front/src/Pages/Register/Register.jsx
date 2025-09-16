@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { APIRegistro } from "../../API/Request";
 import ModalMensajeRegistro from "../../Components/Modals/RegisterModal";
+import ValidationErrorModal from "../../Components/Modals/ValidationErrorModal";
 
 function Register() {
   const navigate = useNavigate();
@@ -11,6 +12,10 @@ function Register() {
   const [modalCodigo, setModalCodigo] = useState(null);
   const [modalMensaje, setModalMensaje] = useState("");
 
+  // Estados para modal de validación
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [validationMessage, setValidationMessage] = useState("");
+
   const handleModalClose = () => {
     setModalOpen(false);
     if (modalCodigo >= 200 && modalCodigo < 400) {
@@ -18,8 +23,7 @@ function Register() {
     }
   };
 
-  //Estado de los errores
-  const [error, setError] = useState("");
+  //Estado de los errores - REMOVIDO, ahora usamos modal
   const [documentType, setdocumentType] = useState("");
   const [firstName, setfirstName] = useState("");
   const [lastName, setlastName] = useState("");
@@ -94,21 +98,23 @@ function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
 
     // Validar usando los estados
     if (!firstName || !lastName || !documentType || !documentNumber || !birthDate 
      || !email || !postalCode || !address || !addressNumber || !province || !ciudad || !areaCode || !phone || !password 
      || !rePassword) {
-      setError("Todos los campos son obligatorios.");
+      setValidationMessage("Debe completar todos los campos");
+      setShowValidationModal(true);
       return;
     }
     if (password !== rePassword) {
-      setError("Las contraseñas no coinciden.");
+      setValidationMessage("Las contraseñas no coinciden");
+      setShowValidationModal(true);
       return;
     }
     if (!aceptaTerminos) {
-      setError("Debes aceptar los términos y condiciones.");
+      setValidationMessage("Debe aceptar los términos y condiciones");
+      setShowValidationModal(true);
       return;
     }
 
@@ -130,7 +136,7 @@ function Register() {
         phone,
         password
       };
-      const data = await APIRegistro(usuario);
+      await APIRegistro(usuario);
 
       // Mostrar modal de éxito
       setModalCodigo(200);
@@ -172,7 +178,15 @@ function Register() {
 
   return (
     <>
-    {/* MODAL */}
+    {/* MODAL DE VALIDACIÓN */}
+      {showValidationModal && (
+        <ValidationErrorModal
+          mensaje={validationMessage}
+          onClose={() => setShowValidationModal(false)}
+        />
+      )}
+      
+    {/* MODAL DE REGISTRO */}
       {modalOpen && (
         <ModalMensajeRegistro
           codigo={modalCodigo}
@@ -226,14 +240,14 @@ function Register() {
 
             {/* DNI y Fecha de Nacimiento */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 ">
-              <select className="border rounded-lg px-3 py-2 w-full cursor-pointer" value={documentType} onChange={e => setdocumentType(e.target.value)} required>
+              <select className="border rounded-lg px-3 py-2 w-full cursor-pointer" value={documentType} onChange={e => setdocumentType(e.target.value)}>
                 <option value="">Tipo de documento</option>
                 <option value="DNI">DNI</option>
                 <option value="CUIL/CUIT">CUIL/CUIT</option>
                 <option value="Pasaporte">Pasaporte</option>
               </select>
-              <input type="text" placeholder="Número" className="border rounded-lg px-3 py-2 w-full" required value={documentNumber} onChange={e => setdocumentNumber(e.target.value)} />
-              <input type="date" className="border rounded-lg px-3 py-2 w-full" required value={birthDate} onChange={e => setbirthDate(e.target.value)} />
+              <input type="text" placeholder="Número" className="border rounded-lg px-3 py-2 w-full" value={documentNumber} onChange={e => setdocumentNumber(e.target.value)} />
+              <input type="date" className="border rounded-lg px-3 py-2 w-full" value={birthDate} onChange={e => setbirthDate(e.target.value)} />
             </div>
 
             {/* Email y Código Postal */}
@@ -285,7 +299,6 @@ function Register() {
                 className="border rounded-lg px-3 py-2 w-full max-h-48 overflow-y-auto cursor-pointer"
                 value={province}
                 onChange={handleprovinceChange}
-                required
               >
                 <option value="">Provincia</option>
                 {provincesArchivos.map(p => (
@@ -296,7 +309,6 @@ function Register() {
                 className="border rounded-lg px-3 py-2 w-full max-h-48 overflow-y-auto cursor-pointer"
                 value={ciudad}
                 onChange={e => setCiudad(e.target.value)}
-                required
                 disabled={!province}
               >
                 <option value="">Ciudad</option>
@@ -368,7 +380,6 @@ function Register() {
             >
               Registrarse
             </button>
-            <p className="text-red-600 text-sm mt-2">{error}</p>
           </form>
 
           {/* Volver a inicio de sesión */}

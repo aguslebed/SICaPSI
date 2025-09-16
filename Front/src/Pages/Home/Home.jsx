@@ -1,10 +1,30 @@
 import { Link } from "react-router-dom";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { FaWhatsapp } from "react-icons/fa";
 import home from "../../assets/home.jpg";
 
 function Home() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [loginDropdown, setLoginDropdown] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 70, right: 50 });
+  const loginButtonRef = useRef(null);
+
+  const handleLoginClick = () => {
+    console.log('LOGIN clickeado - estado antes:', loginDropdown);
+    
+    // Calcular posición del botón
+    if (loginButtonRef.current) {
+      const rect = loginButtonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 2, // Más pegado al botón
+        right: window.innerWidth - rect.right // Alineado al borde derecho del botón
+      });
+    }
+    
+    setLoginDropdown(!loginDropdown);
+    console.log('LOGIN clickeado - nuevo estado:', !loginDropdown);
+  };
+
   return (
     <>
       {/* Navbar */}
@@ -52,12 +72,84 @@ function Home() {
             <a href="#cursos" className="hover:text-orange-400">CURSOS</a>
             <a href="#novedades" className="hover:text-orange-400">NOVEDADES</a>
             <a href="#contactos" className="hover:text-orange-400">CONTACTOS</a>
-            <Link 
-              to="/login" 
-              className="text-orange-400 hover:underline"
-            >
-              LOGIN
-            </Link>
+            
+            {/* Dropdown LOGIN */}
+            <div className="relative inline-block">
+              <button
+                ref={loginButtonRef}
+                onClick={handleLoginClick}
+                className="text-orange-400 hover:underline flex items-center gap-1"
+                type="button"
+              >
+                LOGIN
+                <svg className={`w-4 h-4 transition-transform ${loginDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              
+              {/* Dropdown con diseño idéntico a la imagen */}
+              {loginDropdown && (
+                <div style={{
+                  position: 'fixed',
+                  top: `${dropdownPosition.top}px`,
+                  right: `${dropdownPosition.right}px`,
+                  width: '160px',
+                  backgroundColor: '#fb923c', // Color naranja exacto
+                  color: 'white',
+                  borderRadius: '6px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  zIndex: 99999,
+                  overflow: 'hidden',
+                  border: 'none'
+                }}>
+                  {/* Flecha triangular apuntando hacia arriba */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '-6px',
+                    right: '20px',
+                    width: '0',
+                    height: '0',
+                    borderLeft: '6px solid transparent',
+                    borderRight: '6px solid transparent',
+                    borderBottom: '6px solid #fb923c'
+                  }}></div>
+                  
+                  <Link
+                    to="/registrarse"
+                    style={{
+                      display: 'block',
+                      padding: '10px 16px',
+                      color: 'white',
+                      textDecoration: 'none',
+                      fontSize: '14px',
+                      fontWeight: '400',
+                      borderBottom: '1px solid rgba(255,255,255,0.1)'
+                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#ea580c'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                    onClick={() => setLoginDropdown(false)}
+                  >
+                    • Registrarse
+                  </Link>
+                  <Link
+                    to="/login"
+                    style={{
+                      display: 'block',
+                      padding: '10px 16px',
+                      color: 'white',
+                      textDecoration: 'none',
+                      fontSize: '14px',
+                      fontWeight: '400'
+                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#ea580c'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                    onClick={() => setLoginDropdown(false)}
+                  >
+                    • Ingresar
+                  </Link>
+                </div>
+              )}
+            </div>
           </nav>
 
           {/* Menu Mobile desplegable */}
@@ -68,7 +160,46 @@ function Home() {
                 <a href="#cursos" className="hover:text-orange-400 cursor-pointer" onClick={() => setMobileOpen(false)}>CURSOS</a>
                 <a href="#novedades" className="hover:text-orange-400 cursor-pointer" onClick={() => setMobileOpen(false)}>NOVEDADES</a>
                 <a href="#contactos" className="hover:text-orange-400 cursor-pointer" onClick={() => setMobileOpen(false)}>CONTACTOS</a>
-                <Link to="/login" className="text-orange-400 hover:underline cursor-pointer" onClick={() => setMobileOpen(false)}>LOGIN</Link>
+                
+                {/* LOGIN Dropdown Mobile */}
+                <div className="border-t pt-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLoginDropdown(!loginDropdown);
+                    }}
+                    className="text-orange-400 hover:underline cursor-pointer flex items-center gap-1 w-full text-left"
+                  >
+                    LOGIN
+                    <svg className={`w-4 h-4 transition-transform ${loginDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {loginDropdown && (
+                    <div className="ml-4 mt-1 space-y-1">
+                      <Link
+                        to="/registrarse"
+                        className="block text-orange-400 hover:underline cursor-pointer"
+                        onClick={() => {
+                          setMobileOpen(false);
+                          setLoginDropdown(false);
+                        }}
+                      >
+                        • Registrarse
+                      </Link>
+                      <Link
+                        to="/login"
+                        className="block text-orange-400 hover:underline cursor-pointer"
+                        onClick={() => {
+                          setMobileOpen(false);
+                          setLoginDropdown(false);
+                        }}
+                      >
+                        • Ingresar
+                      </Link>
+                    </div>
+                  )}
+                </div>
               </nav>
             </div>
           )}
