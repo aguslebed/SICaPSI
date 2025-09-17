@@ -125,10 +125,10 @@ const NavBar = () => {
                               }}
                               title="Ir a bandeja de entrada"
                             >
-                               <div className="font-semibold">{m.subject || '(Sin asunto)'}</div>
+                              <span className="inline-block text-xs text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">{trainingTitle}</span>
+                              <div className="font-semibold">{m.subject || '(Sin asunto)'}</div>
                               <div className="text-xs text-gray-600">De: {senderName || 'Desconocido'} · {date}</div>
                               <div className="mt-1 flex items-center gap-2">
-                                <span className="inline-block text-xs text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">{trainingTitle}</span>
                                 {trainingId && !isTrainingActive(trainingId) && (
                                   <span className="inline-block text-[10px] text-red-700 bg-red-50 px-2 py-0.5 rounded">Curso inactivo</span>
                                 )}

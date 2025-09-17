@@ -78,7 +78,7 @@ function Home() {
               <button
                 ref={loginButtonRef}
                 onClick={handleLoginClick}
-                className="text-orange-400 hover:underline flex items-center gap-1"
+                className="cursor-pointer text-orange-400 hover:underline flex items-center gap-1"
                 type="button"
               >
                 LOGIN
