@@ -2,6 +2,7 @@ import React from "react";
 import { useParams, Link } from "react-router-dom";
 import { useUser } from "../../../context/UserContext";
 import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
+import { resolveImageUrl } from "../../../API/Request";
 
 const TrainingIndex = () => {
   const { idTraining } = useParams();
@@ -21,7 +22,7 @@ const TrainingIndex = () => {
             {/* Imagen y título */}
             <div
               className="h-48 bg-black bg-center bg-cover flex flex-col justify-center text-white px-8"
-              style={{ backgroundImage: `url(${training.image})` }}
+              style={{ backgroundImage: `url(${resolveImageUrl(training.image)})` }}
             >
               <h1 className="text-3xl font-bold">{training.title}</h1>
               <p className="text-lg">{training.subtitle}</p>

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
 import { useUser } from "../../../context/UserContext";
+import { resolveImageUrl } from '../../../API/Request';
 
 const LevelTest = () => {
   // Botón base: mantenemos cursor-pointer y legibilidad, pero adaptativo
@@ -38,7 +39,7 @@ const LevelTest = () => {
   const tests = scenes; 
   const testTitle = level?.test?.title;
   console.log("Esta es la imagen:  ", level.test.imageUrl);
-  const testImage = level?.test?.imageUrl;
+  const testImage = resolveImageUrl(level?.test?.imageUrl);
   // Estado para la simulación
   const [sceneIndex, setSceneIndex] = useState(null);
 
@@ -71,12 +72,12 @@ const LevelTest = () => {
               <strong>Escena:</strong> {tests[sceneIndex]?.idScene} &nbsp;|&nbsp; <strong>Ruta video:</strong> {tests[sceneIndex]?.videoUrl}
             </div>
             {/* Video de la escena */}
-            {tests[sceneIndex].videoUrl && (
+              {tests[sceneIndex].videoUrl && (
               <div className="w-full mb-3 sm:mb-4">
                 <div className="aspect-video w-full max-h-[40vh] md:max-h-[42vh] lg:max-h-[45vh] rounded-2xl overflow-hidden bg-[#222]">
                   <video
                     key={tests[sceneIndex].videoUrl}
-                    src={tests[sceneIndex].videoUrl}
+                    src={resolveImageUrl(tests[sceneIndex].videoUrl)}
                     autoPlay
                     controls={false}
                     disablePictureInPicture

@@ -1,7 +1,7 @@
 export const sampleTest = {
     title: "Simulación: Control de Acceso en Garita",
     description: "Resuelve correctamente cada situación aplicando protocolo de control de acceso.",
-    imageUrl: "https://picsum.photos/seed/garita-seguridad/1200/600",
+    imageUrl: "/uploads/5.jpeg", 
     createdAt: new Date(),
     isActive: true,
     scenes: [

@@ -70,7 +70,7 @@ async function initializeDatabase() {
       ...training,
       createdBy: adminUser._id,
       // Marcar dos cursos como inactivos para simular desactualizados
-      isActive: idx === 1 || idx === 3 ? false : true
+      isActive: idx === 3 || idx === 4 ? false : true
     }));
 
     const createdTrainings = await Training.insertMany(coursesToCreate);

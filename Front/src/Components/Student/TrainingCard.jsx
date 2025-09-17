@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from 'react-router-dom';
+import { resolveImageUrl } from '../../API/Request';
 
 const TrainingCard = ({ titulo, subtitulo, porcentaje, estado, link, imagen }) => {
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ const TrainingCard = ({ titulo, subtitulo, porcentaje, estado, link, imagen }) =
         className={`absolute inset-0 bg-cover bg-center ${
           estado === "activo" ? "" : "grayscale"
         }`}
-        style={{ backgroundImage: `url(${imagen})` }}
+        style={{ backgroundImage: `url(${resolveImageUrl(imagen)})` }}
       />
 
       {/* Overlay verde solo si está activo */}
