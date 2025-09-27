@@ -12,6 +12,8 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from 'url';
 import trainingRoutes from "./routes/trainingRoutes.js";
+import enrollmentRoutes from "./routes/enrollmentRoutes.js";
+
 
 // __dirname equivalent for ES Modules
 const __filename = fileURLToPath(import.meta.url);
@@ -68,6 +70,7 @@ class AppConfig {
     this.app.use("/auth", authRoutes);
     this.app.use("/messages", messageRoutes);
     this.app.use("/training", trainingRoutes);
+    this.app.use("/enrollment", enrollmentRoutes);
   } 
 
 

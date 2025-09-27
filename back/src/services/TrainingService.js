@@ -31,7 +31,8 @@ export class TrainingService extends ITrainingService {
   //Esta funcion crea una capacitacion nueva
   async createTraining(trainingData) {
    const training = await this.Training.findOne({ title: trainingData.title });
-   
+
+   // Por ahora es la unica restriccion.
    if (training) {
      throw new Error("El título de la capacitación ya existe");
    }
