@@ -42,15 +42,19 @@ function Login() {
 
     try {
       setIsLoading(true);
-      const data = await login(email, password);
-      
-      setUserData(data);
+  const data = await login(email, password);
+  setUserData(data);
 
       // Indicar que se debe mostrar el modal
       sessionStorage.setItem("showWelcomeModal", "true");
 
-      // Redirigir al dashboard
-      navigate('/userPanel');
+      // Redirigir según rol
+      const role = data?.user?.role;
+      if (role === 'Administrator') {
+        navigate('/adminPanel');
+      } else {
+        navigate('/userPanel');
+      }
     } catch {
       // Mostrar modal de error para credenciales inválidas
       setErrorMessage("Email o contraseña Inválidos");
