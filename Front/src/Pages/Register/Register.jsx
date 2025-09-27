@@ -1,11 +1,17 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { APIRegistro } from "../../API/Request";
 import ModalMensajeRegistro from "../../Components/Modals/RegisterModal";
 import ValidationErrorModal from "../../Components/Modals/ValidationErrorModal";
+import { useUser } from "../../context/UserContext";
+import NavBar from '../../Components/Student/NavBar';
 
 function Register() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { userData } = useUser();
+  const isAdmin = userData?.user?.role === "Administrator";
+  const isAdminCreateRoute = isAdmin && location?.pathname?.startsWith("/adminPanel/gestionUsuario/crearUsuario");
 
   //Estados MODAL
   const [modalOpen, setModalOpen] = useState(false);
@@ -40,6 +46,15 @@ function Register() {
   const [rePassword, setrePassword] = useState("");
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
 
+  // Rol (solo visible para administradores)
+  const [selectedRole, setSelectedRole] = useState(null);
+  const ROLE_OPTIONS = [
+    { value: "Trainer", label: "Capacitador" },
+    { value: "Student", label: "Guardia" },
+    { value: "Administrator", label: "Administrador" },
+    { value: "Manager", label: "Directivo" },
+  ];
+  
   
   // Estados de las provinces y ciudades
   const [province, setprovince] = useState("");
@@ -134,7 +149,9 @@ function Register() {
         city: ciudad,
         areaCode,
         phone,
-        password
+        password,
+        // Solo los administradores en la ruta de creación de usuario pueden establecer el rol explícitamente
+        ...(isAdminCreateRoute && selectedRole ? { role: selectedRole } : {})
       };
       await APIRegistro(usuario);
 
@@ -161,7 +178,8 @@ function Register() {
       setPassword("");
       setrePassword("");
       setAceptaTerminos(false);
-      setCiudades([]);
+    setCiudades([]);
+    setSelectedRole(null);
 
       // Redirigir o mostrar mensaje de éxito
     } catch (err) {
@@ -194,15 +212,20 @@ function Register() {
           onClose={handleModalClose}
         />
       )}
-      {/* Fondo */}
-      <div
-        className="fixed inset-0 bg-[url('./assets/fondo.jpg')] bg-cover bg-center 
-        before:content-[''] before:absolute before:inset-0 
-        before:bg-[radial-gradient(1000px_600px_at_35%_35%,rgba(0,0,0,.08),transparent_40%)] 
-        after:content-[''] after:absolute after:inset-0 
-        after:bg-gradient-to-r after:from-[#10151b]/15 after:to-[#10151b]/35"
-        aria-hidden="true"
-      ></div>
+      {/* NavBar solo en ruta de creación desde Admin Panel */}
+      {isAdminCreateRoute && <NavBar />}
+
+      {/* Fondo: oculto en modo Admin crear usuario */}
+      {!isAdminCreateRoute && (
+        <div
+          className="fixed inset-0 bg-[url('./assets/fondo.jpg')] bg-cover bg-center 
+          before:content-[''] before:absolute before:inset-0 
+          before:bg-[radial-gradient(1000px_600px_at_35%_35%,rgba(0,0,0,.08),transparent_40%)] 
+          after:content-[''] after:absolute after:inset-0 
+          after:bg-gradient-to-r after:from-[#10151b]/15 after:to-[#10151b]/35"
+          aria-hidden="true"
+        ></div>
+      )}
 
       {/* Contenedor */}
       <main className="relative min-h-screen flex items-center justify-center px-4 sm:px-6 md:px-8 py-8">
@@ -353,6 +376,32 @@ function Register() {
                 onChange={e => setrePassword(e.target.value)}
               />
             </div>
+
+            {/* Rol (solo visible para administradores) */}
+            {isAdminCreateRoute && (
+              <div className="space-y-2">
+                <span className="block text-sm font-medium text-gray-700">Rol del usuario</span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {ROLE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      className={
+                        "px-3 py-2 rounded-lg border transition cursor-pointer " +
+                        (selectedRole === opt.value
+                          ? "bg-sky-500 text-white border-sky-500"
+                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50")
+                      }
+                      onClick={() => setSelectedRole(opt.value)}
+                      aria-pressed={selectedRole === opt.value}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500">Solo los administradores pueden asignar roles distintos a Guardia.</p>
+              </div>
+            )}
 
             {/* Aceptación de términos */}
             <div className="flex items-center">

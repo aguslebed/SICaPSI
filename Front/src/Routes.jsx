@@ -19,6 +19,13 @@ const NivelBibliografia = lazy(() => import('./Pages/UserPanel/Student/Levelbibl
 const NivelCapacitacion = lazy(() => import('./Pages/UserPanel/Student/LevelTraining'));
 const LevelTest = lazy(() => import('./Pages/UserPanel/Student/LevelTest'));
 
+// Admin pages (placeholders)
+const AdminHome = lazy(() => import('./Pages/AdminPanel/Index'));
+const AdmisionUsuario = lazy(() => import('./Pages/AdminPanel/AdmisionUsuario'));
+const GestionUsuario = lazy(() => import('./Pages/AdminPanel/GestionUsuario'));
+const GestionCursos = lazy(() => import('./Pages/AdminPanel/GestionCursos'));
+const GestionProfesores = lazy(() => import('./Pages/AdminPanel/GestionProfesores'));
+
 async function authLoader() {
   try {
     await checkAuth();
@@ -29,10 +36,42 @@ async function authLoader() {
   return { me };
 }
 
+async function adminLoader() {
+  // Verifica sesión y rol de administrador; si no, redirige a /userPanel
+  try {
+    await checkAuth();
+  } catch {
+    throw redirect('/login');
+  }
+  const me = await getMe();
+  const role = me?.user?.role;
+  if (role !== 'Administrator') {
+    throw redirect('/userPanel');
+  }
+  return { me };
+}
+
 export const router = createBrowserRouter([
   { path: '/', element: <Home /> },
   { path: '/login', element: <InicioDeSesion /> },
   { path: '/registrarse', element: <Registrarse /> },
+  {
+    path: '/adminPanel',
+    element: <ProtectedLayout />,
+    loader: adminLoader,
+    errorElement: <RouteError />,
+    children: [
+      // Página principal del panel admin
+      { index: true, element: <AdminHome /> },
+      // Secciones solicitadas
+      { path: 'admisionUsuario', element: <AdmisionUsuario /> },
+      { path: 'gestionUsuario', element: <GestionUsuario /> },
+      { path: 'gestionCursos', element: <GestionCursos /> },
+      { path: 'gestionProfesores', element: <GestionProfesores /> },
+      // Crear Usuario: debe renderizar el Register.jsx
+      { path: 'gestionUsuario/crearUsuario', element: <Registrarse /> }
+    ]
+  },
   {
     path: '/userPanel',
     element: <ProtectedLayout />,
