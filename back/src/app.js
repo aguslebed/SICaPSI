@@ -11,6 +11,7 @@ import cookieParser from "cookie-parser";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from 'url';
+import trainingRoutes from "./routes/trainingRoutes.js";
 
 // __dirname equivalent for ES Modules
 const __filename = fileURLToPath(import.meta.url);
@@ -66,6 +67,7 @@ class AppConfig {
     this.app.use("/users", userRoutes);
     this.app.use("/auth", authRoutes);
     this.app.use("/messages", messageRoutes);
+    this.app.use("/training", trainingRoutes);
   } 
 
 

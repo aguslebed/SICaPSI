@@ -1,6 +1,7 @@
 // Servicio concreto para cursos
 import { ITrainingService } from '../interfaces/ITrainingService.js';
 
+
 export class TrainingService extends ITrainingService {
   constructor({ UserModel, LevelModel, TrainingModel }) {
     super();
@@ -11,6 +12,7 @@ export class TrainingService extends ITrainingService {
 
   async getCoursesForUser(userId) {
     const user = await this.User.findById(userId)
+   
       .populate({
         path: 'assignedTraining',
         select: 'title subtitle description image isActive totalLevels introduction levels createdBy report progressPercentage',
@@ -23,6 +25,22 @@ export class TrainingService extends ITrainingService {
       .exec();
     return user ? user.assignedTraining : [];
   }
+
+
+  
+  //Esta funcion crea una capacitacion nueva
+  async createTraining(trainingData) {
+   const training = await this.Training.findOne({ title: trainingData.title });
+   
+   if (training) {
+     throw new Error("El título de la capacitación ya existe");
+   }
+
+   const newTraining = new this.Training(trainingData);
+   await newTraining.save();
+   return newTraining;
+ }
+
 }
  
 export default TrainingService;
