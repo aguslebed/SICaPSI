@@ -5,7 +5,7 @@ export class EnrollmentService {
     this.user = UserModel;
     this.training = TrainingModel;
   }
-
+ //Inscribir alumno en la capacitacion
   async enrollUserToTraining(userId, trainingId) {
     const user = await this.user.findById(userId);
 
@@ -24,7 +24,7 @@ export class EnrollmentService {
     return { message: "Inscripción exitosa", training };
   }
 
-
+ //Desinscribir alumno de capacitacion
   async unenrollUserToTraining(userId, trainingId) {
     const user = await this.user.findById(userId);
 
@@ -67,9 +67,18 @@ export class EnrollmentService {
 
   //Devuelve todos los alumnos que estan anotados en una capacitacion
   async getUsersEnrolledInTraining(trainingId) {
+
+    const training = await this.training.findById(trainingId);
+    if (!training) throw new Error("Capacitacion no encontrado");
+
     const users = await this.user.find({
       role: "Student",
       assignedTraining: trainingId
     }).exec();
+
+    if (!users || users.length === 0) {
+      throw new Error("No hay usuarios inscritos en esta capacitación");
+    }
+
     return users;
   }}
