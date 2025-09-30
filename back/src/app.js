@@ -13,6 +13,7 @@ import fs from "fs";
 import { fileURLToPath } from 'url';
 import trainingRoutes from "./routes/trainingRoutes.js";
 import enrollmentRoutes from "./routes/enrollmentRoutes.js";
+import levelRoutes from "./routes/levelRoutes.js";
 
 
 // __dirname equivalent for ES Modules
@@ -71,6 +72,7 @@ class AppConfig {
     this.app.use("/messages", messageRoutes);
     this.app.use("/training", trainingRoutes);
     this.app.use("/enrollment", enrollmentRoutes);
+    this.app.use("/level", levelRoutes);
   } 
 
 

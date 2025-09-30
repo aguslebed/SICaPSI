@@ -1,7 +1,8 @@
+import { IEnrollmentService } from "../interfaces/IEnrollmentService.js";
 
-
-export class EnrollmentService {
+export class EnrollmentService extends IEnrollmentService {
   constructor({ UserModel, TrainingModel }) {
+    super();
     this.user = UserModel;
     this.training = TrainingModel;
   }
