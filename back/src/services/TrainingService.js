@@ -51,6 +51,7 @@ export class TrainingService extends ITrainingService {
    return trainings;
  }
 
+
+
 }
- 
 export default TrainingService;

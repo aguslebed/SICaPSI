@@ -46,6 +46,15 @@ export class EnrollmentService {
     return { message: "Alumno desinscripto correctamente", training };
   }
 
+  async getUsersNotEnrolledInTraining(trainingId) {
+  const users = await this.user.find({
+    role: "Student", 
+    assignedTraining: { $ne: trainingId } 
+  }).exec();
+
+  return users;
+}
+
 
   //Busca si un usuario esta inscrito en una capacitacion. (Podria ser estudiante o capacitador)
   async getUserEnrollments(userId) {

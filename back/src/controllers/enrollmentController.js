@@ -52,8 +52,17 @@ export function makeEnrollmentController({ enrollmentService }) {
       } catch (err) {
         next(err);
       }
-    }
+    },
 
-
-  };
+    async getUsersNotEnrolledInTraining(req, res, next) {
+      try {
+        const { trainingId } = req.body;
+        console.log("EnrollmentController - getUsersNotEnrolledInTraining");
+        const users = await enrollmentService.getUsersNotEnrolledInTraining(trainingId);
+        res.status(200).json(users);
+      } catch (err) {
+        next(err);
+      }
+    },
+}
 }

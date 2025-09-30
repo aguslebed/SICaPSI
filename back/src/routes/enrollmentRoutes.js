@@ -26,6 +26,7 @@ const controller = makeEnrollmentController({
 
 router.post("/enrollStudent", controller.enrollStudent)
 router.patch("/unenrollStudent", controller.unenrollStudent)
+router.get("/getUsersNotEnrolledInTraining", controller.getUsersNotEnrolledInTraining)
 
 
 export default router;
