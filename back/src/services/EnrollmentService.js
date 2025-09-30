@@ -46,6 +46,7 @@ export class EnrollmentService {
     return { message: "Alumno desinscripto correctamente", training };
   }
 
+  //Devuelve todos los alumnos que NO estan anotados en una capacitacion
   async getUsersNotEnrolledInTraining(trainingId) {
   const users = await this.user.find({
     role: "Student", 
@@ -63,4 +64,12 @@ export class EnrollmentService {
 
     return user.assignedTraining;
   }
-}
+
+  //Devuelve todos los alumnos que estan anotados en una capacitacion
+  async getUsersEnrolledInTraining(trainingId) {
+    const users = await this.user.find({
+      role: "Student",
+      assignedTraining: trainingId
+    }).exec();
+    return users;
+  }}

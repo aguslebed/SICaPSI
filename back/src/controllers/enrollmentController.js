@@ -57,12 +57,23 @@ export function makeEnrollmentController({ enrollmentService }) {
     async getUsersNotEnrolledInTraining(req, res, next) {
       try {
         const { trainingId } = req.body;
-        console.log("EnrollmentController - getUsersNotEnrolledInTraining");
+      
         const users = await enrollmentService.getUsersNotEnrolledInTraining(trainingId);
         res.status(200).json(users);
       } catch (err) {
         next(err);
       }
     },
+
+    async getUsersEnrolledInTraining(req, res, next) {
+      try {
+        const { trainingId } = req.body;
+  
+        const users = await enrollmentService.getUsersEnrolledInTraining(trainingId);
+        res.status(200).json(users);
+      } catch (err) {
+        next(err);
+      }     
+}
 }
 }
