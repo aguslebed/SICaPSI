@@ -30,5 +30,6 @@ const controller = makeTrainingController({
 
 
 router.post("/createTraining", controller.createTraining)
+router.get("/getAllActiveTrainings", controller.getAllActiveTrainings)
 
 export default router;

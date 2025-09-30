@@ -42,6 +42,15 @@ export class TrainingService extends ITrainingService {
    return newTraining;
  }
 
+ //Devuelve todos las capacitaciones activas
+ async getAllActiveTrainings() {
+   const trainings = await this.Training.find({ isActive: true })
+     .populate({ path: 'createdBy', select: 'firstName lastName email', model: this.User })
+     .populate({ path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level })
+     .exec();
+   return trainings;
+ }
+
 }
  
 export default TrainingService;

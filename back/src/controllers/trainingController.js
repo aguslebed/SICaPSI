@@ -14,6 +14,15 @@ export function makeTrainingController({ trainingService, trainingValidator }) {
       } catch (err) {
         next(err);
       }
-    }
+    },
+
+    async getAllActiveTrainings(req, res, next) {
+      try {
+        const trainings = await trainingService.getAllActiveTrainings();
+        res.status(200).json(trainings);
+      } catch (err) {
+        next(err);
+      } 
+    },
   };
 }
