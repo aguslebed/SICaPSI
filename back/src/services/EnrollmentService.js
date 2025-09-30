@@ -81,4 +81,36 @@ export class EnrollmentService {
     }
 
     return users;
+  }
+
+  async enrollTrainerToTraining(userId, trainingId) {
+    const user = await this.user.findById(userId);
+
+    if (!user) throw new Error("Usuario no encontrado");
+
+    const training = await this.training.findById(trainingId);
+    if (!training) throw new Error("Capacitacion no encontrado");
+
+    if (training.role !== "Trainer") {
+      throw new Error("El id no es de un capacitador");
+    }
+
+    if (user.assignedTraining.includes(trainingId)) {
+      throw new Error("El capacitador ya está inscrito en la capacitacion");
+    }
+
+    user.assignedTraining.push(trainingId);
+    await user.save(trainingId);
+
+    return { message: "Inscripción exitosa", training };
+  }
+
+
+  async getTrainersNotEnrolledInTraining(trainingId) {
+    const users = await this.user.find({
+      role: "Trainer", 
+      assignedTraining: { $ne: trainingId } 
+    }).exec();
+
+    return users;
   }}
