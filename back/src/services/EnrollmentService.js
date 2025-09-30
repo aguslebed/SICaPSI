@@ -84,6 +84,7 @@ export class EnrollmentService extends IEnrollmentService {
     return users;
   }
 
+  //Inscribir capacitador en la capacitacion
   async enrollTrainerToTraining(userId, trainingId) {
     const user = await this.user.findById(userId);
 
@@ -107,6 +108,7 @@ export class EnrollmentService extends IEnrollmentService {
   }
 
 
+  //Devuelve todos los capacitadores que NO estan anotados en una capacitacion en especifico
   async getTrainersNotEnrolledInTraining(trainingId) {
     const users = await this.user.find({
       role: "Trainer", 
@@ -114,4 +116,5 @@ export class EnrollmentService extends IEnrollmentService {
     }).exec();
 
     return users;
-  }}
+  }
+}
