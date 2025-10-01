@@ -329,3 +329,15 @@ export async function uploadMessageAttachments(files) {
     }
   }
 }
+
+// Listar profesores 
+export async function listTeachers() {
+  const { data } = await api.get('/admin/teachers');
+  return Array.isArray(data) ? data : (data?.items || []);
+}
+
+// Cambiar estado (bloquear/habilitar)
+export async function setTeacherStatus(id, status) {
+  const { data } = await api.patch(`/admin/teachers/${id}/status`, { status });
+  return data;
+}
