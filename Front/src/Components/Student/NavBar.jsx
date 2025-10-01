@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { logout, resolveImageUrl, setMessageRead } from '../../API/Request';
 import { useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { Bell } from "lucide-react"; // íconos
 import { Menu } from "@headlessui/react"; // dropdown accesible
 import { useUser } from "../../context/UserContext";
@@ -71,7 +72,23 @@ const NavBar = () => {
 
       {/* Barra inferior con acciones (notificaciones / usuario) */}
       <div className="w-full bg-[#0888c2] overflow-x-clip">
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 md:px-8 h-14 md:h-16 flex items-center justify-end">
+        { /* Show back button only on GestionCursos route */ }
+        <div className={`max-w-screen-xl mx-auto px-4 sm:px-6 md:px-8 h-14 md:h-16 flex items-center ${window?.location?.pathname?.startsWith('/adminPanel/gestionCursos') ? 'justify-between' : 'justify-end'}`}>
+          {/* Left: Volver (render only on gestion cursos) */}
+          {window?.location?.pathname?.startsWith('/adminPanel/gestionCursos') && (
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => navigate('/adminPanel')}
+                aria-label="Volver"
+                className="flex items-center gap-2 bg-sky-500 hover:bg-sky-600 text-white px-3 py-1 rounded-full text-sm"
+              >
+                <span className="hidden sm:inline">Volver</span>
+                <span className="sm:hidden">←</span>
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center gap-3 sm:gap-5">
             {/* Notificaciones (campana) */}
             <Menu as="div" className="relative">
