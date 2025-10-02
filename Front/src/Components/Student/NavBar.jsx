@@ -52,6 +52,7 @@ const NavBar = () => {
   const allowedRoutes = [
     '/adminPanel/gestionUsuario/crearUsuario',
     '/adminPanel/gestionUsuario/modificarUsuario',
+    '/adminPanel/admisionUsuario',
     '/adminPanel/gestionUsuario',
     '/adminPanel/gestionCursos',
     '/adminPanel/gestionProfesores'
