@@ -39,9 +39,8 @@ export default function AdminPanel() {
   return (
     <>
       <NavBar />
-      <main className="min-h-screen bg-[#f6f8fa] p-0">
-        {/* Header azul superior eliminado y barra de administrador removida */}
-        <section className="px-8 pt-8">
+      <main className="min-h-screen bg-[#f6f8fa] w-full">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 md:px-8 py-8">
           <h2 className="text-3xl font-semibold mb-8 text-gray-800">Panel de Administrador</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
             {options.map((option, index) => {
@@ -87,7 +86,7 @@ export default function AdminPanel() {
               );
             })}
           </div>
-        </section>
+        </div>
       </main>
     </>
   );
