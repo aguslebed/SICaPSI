@@ -4,20 +4,43 @@ import { Link, Outlet } from 'react-router-dom';
 import NavBar from '../../Components/Student/NavBar';
 import OpenCohortModal from '../../Components/Modals/OpenCohortModal';
 import CreateTrainingModal from '../../Components/Modals/CreateTrainingModal';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getAllActiveTrainings } from '../../API/Request';
+import LoadingOverlay from '../../Components/Shared/LoadingOverlay';
 
 export default function GestionCursos() {
   const [openCohorte, setOpenCohorte] = useState(false);
+  const [trainings, setTrainings] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // sample data placeholders (will come from API later)
-  const sampleCursos = [
-    { _id: 'c1', title: 'Capacitación 1 - Edificio de departamentos' },
-    { _id: 'c2', title: 'Capacitación 2 - Barrio privado chico' },
-  ];
+  // sample profesores placeholder (could come from API later)
   const sampleProfesores = [
     { _id: 'p1', displayName: 'Juan Perez (Disponible)' },
     { _id: 'p2', displayName: 'Pedro Pascal' },
   ];
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchTrainings = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await getAllActiveTrainings();
+        // backend may return an array or { items: [] }
+        const items = Array.isArray(data) ? data : (data?.items || []);
+        if (mounted) setTrainings(items);
+      } catch (err) {
+        console.error('Error fetching trainings', err);
+        if (mounted) setError(err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    fetchTrainings();
+    return () => { mounted = false; };
+  }, []);
   const [openCreateTraining, setOpenCreateTraining] = useState(false);
   return (
     <>
@@ -71,6 +94,7 @@ export default function GestionCursos() {
 
         <section className="mt-6">
           <div className="overflow-hidden bg-white rounded shadow-sm">
+            {loading && <LoadingOverlay label="Cargando capacitaciones..." />}
             <table className="min-w-full">
               <thead>
                 <tr className="bg-[#0888c2] text-white">
@@ -83,12 +107,38 @@ export default function GestionCursos() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y">
-                {/* Datos vendrán desde la base -> por ahora estado vacío */}
-                <tr>
-                  <td className="px-6 py-8 text-sm text-gray-600" colSpan={6}>
-                    No hay cursos para mostrar.
-                  </td>
-                </tr>
+                {(!trainings || trainings.length === 0) && !loading ? (
+                  <tr>
+                    <td className="px-6 py-8 text-sm text-gray-600" colSpan={6}>
+                      No hay cursos para mostrar.
+                    </td>
+                  </tr>
+                ) : (
+                  trainings.map((t) => {
+                    const firstLevel = t.levels && t.levels.length ? (t.levels[0].levelNumber || t.levels[0].levelNumber) : null;
+                    const nivelLabel = firstLevel ? `Nivel ${firstLevel}` : (t.totalLevels ? `Nivel 1` : '—');
+                    const profesor = t.createdBy ? `${t.createdBy.firstName || ''} ${t.createdBy.lastName || ''}`.trim() : '-';
+                    const estado = t.createdBy ? 'Asignado' : 'Sin asignar';
+                    return (
+                      <tr key={t._id}>
+                        <td className="px-6 py-6">
+                          <div className="font-semibold">{t.title}</div>
+                          <div className="text-sm text-gray-600">{t.subtitle}</div>
+                        </td>
+                        <td className="px-6 py-6">{nivelLabel}</td>
+                        <td className="px-6 py-6">{profesor || '-'}</td>
+                        <td className="px-6 py-6">-</td>
+                        <td className={`px-6 py-6 ${estado === 'Asignado' ? 'text-green-600' : 'text-red-500'}`}>{estado}</td>
+                        <td className="px-6 py-6">
+                          <div className="flex gap-2">
+                            <button className="px-3 py-1 bg-yellow-400 hover:bg-yellow-500 text-white rounded text-sm">Editar</button>
+                            <button className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm">Eliminar</button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -99,7 +149,7 @@ export default function GestionCursos() {
       <OpenCohortModal
         open={openCohorte}
         onClose={() => setOpenCohorte(false)}
-        cursos={sampleCursos}
+        cursos={trainings}
         profesores={sampleProfesores}
         onSave={(payload) => console.log('Guardar cohorte', payload)} //Por ahora asi 
       />

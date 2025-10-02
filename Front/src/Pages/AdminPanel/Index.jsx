@@ -3,10 +3,12 @@ import admisionImg from "../../assets/admision2.png";
 import profesorImg from "../../assets/profesor.png";
 import cursoImg from "../../assets/curso.png";
 import usuarioImg from "../../assets/usuario.png";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import NavBar from "../../Components/Student/NavBar";
+import { getAllActiveTrainings } from '../../API/Request';
 
 export default function AdminPanel() {
+  const navigate = useNavigate();
   const options = [
     {
       title: "Admision de Usuarios",
@@ -45,11 +47,31 @@ export default function AdminPanel() {
             {options.map((option, index) => {
               const isImageBox = option.isImage;
               return (
-                <Link
+                <div
                   key={index}
-                  to={option.link}
-                  className={"transition-all duration-300 ease-in-out rounded-2xl p-8 flex flex-col items-center justify-center border min-h-[180px] hover:scale-105 hover:shadow-lg hover:bg-blue-100 hover:border-blue-300 active:scale-95 active:shadow-md transform"}
+                  className={"transition-all duration-300 ease-in-out rounded-2xl p-8 flex flex-col items-center justify-center border min-h-[180px] hover:scale-105 hover:shadow-lg hover:bg-blue-100 hover:border-blue-300 active:scale-95 active:shadow-md transform cursor-pointer"}
                   style={{ minWidth: 180, background: '#dedede', borderColor: '#dedede' }}
+                  onClick={async () => {
+                    try {
+                      // If this is the Gestion Cursos card, fetch active trainings first
+                      if (option.link.includes('gestionCursos')) {
+                        await getAllActiveTrainings();
+                        navigate('/adminPanel/gestionCursos');
+                        return;
+                      }
+                      // otherwise navigate to the configured link
+                      navigate(option.link.startsWith('/') ? option.link : `/${option.link}`);
+                    } catch (err) {
+                      // If unauthorized, redirect to login
+                      if (err?.response?.status === 401) {
+                        navigate('/login');
+                        return;
+                      }
+                      // otherwise still navigate (or show an alert)
+                      console.error('Error loading trainings', err);
+                      navigate(option.link.startsWith('/') ? option.link : `/${option.link}`);
+                    }
+                  }}
                 >
                   {isImageBox ? (
                     <img
@@ -61,7 +83,7 @@ export default function AdminPanel() {
                     <div className="mb-6">{option.icon}</div>
                   )}
                   <p className="text-center text-black font-semibold text-lg">{option.title}</p>
-                </Link>
+                </div>
               );
             })}
           </div>
