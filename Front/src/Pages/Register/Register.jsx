@@ -25,7 +25,13 @@ function Register() {
   const handleModalClose = () => {
     setModalOpen(false);
     if (modalCodigo >= 200 && modalCodigo < 400) {
-      navigate("/login");
+      if (isAdminCreateRoute) {
+        // Si es administrador creando un usuario, volver a la gestión de usuarios
+        navigate("/adminPanel/gestionUsuario");
+      } else {
+        // Si es un registro normal, ir al login
+        navigate("/login");
+      }
     }
   };
 
@@ -103,7 +109,7 @@ function Register() {
       try {
         const data = await import(`../../Components/Localidades/${prov}.json`);
         setCiudades(data.default.localidades || []);
-      } catch (err) {
+      } catch {
         setCiudades([]);
       }
     } else {
@@ -127,7 +133,7 @@ function Register() {
       setShowValidationModal(true);
       return;
     }
-    if (!aceptaTerminos) {
+    if (!isAdminCreateRoute && !aceptaTerminos) {
       setValidationMessage("Debe aceptar los términos y condiciones");
       setShowValidationModal(true);
       return;
@@ -238,7 +244,7 @@ function Register() {
           </div>
 
           <h2 className="text-gray-900 text-2xl font-bold text-center mb-6">
-            Formulario de Inscripción
+            {isAdminCreateRoute ? "Crear Usuario" : "Formulario de Inscripción"}
           </h2>
 
           {/* Formulario */}
@@ -403,47 +409,51 @@ function Register() {
               </div>
             )}
 
-            {/* Aceptación de términos */}
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                className="h-5 w-5 text-sky-500 border-gray-300 rounded focus:ring-sky-500 cursor-pointer"
-                checked={aceptaTerminos}
-                onChange={e => setAceptaTerminos(e.target.checked)}
-              />
-              <label className="ml-2 text-gray-700">
-                Acepto los{" "}
-                <a
-                  href="#"
-                  className="text-sky-600 hover:underline font-semibold"
-                >
-                  términos y condiciones
-                </a>
-              </label>
-            </div>
+            {/* Aceptación de términos - solo visible para no administradores */}
+            {!isAdminCreateRoute && (
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  className="h-5 w-5 text-sky-500 border-gray-300 rounded focus:ring-sky-500 cursor-pointer"
+                  checked={aceptaTerminos}
+                  onChange={e => setAceptaTerminos(e.target.checked)}
+                />
+                <label className="ml-2 text-gray-700">
+                  Acepto los{" "}
+                  <a
+                    href="#"
+                    className="text-sky-600 hover:underline font-semibold"
+                  >
+                    términos y condiciones
+                  </a>
+                </label>
+              </div>
+            )}
 
             {/* Botón de registro */}
             <button
               type="submit"
               className="w-full h-12 rounded-lg bg-sky-500 text-white font-semibold hover:bg-sky-600 transition cursor-pointer"
             >
-              Registrarse
+              {isAdminCreateRoute ? "Crear Usuario" : "Registrarse"}
             </button>
           </form>
 
-          {/* Volver a inicio de sesión */}
-          <div className="mt-6 text-center">
-            <span className="text-xs text-gray-600">
-              ¿Ya tienes cuenta?{" "}
-              <a
-                href="/"
-                className="text-sky-600 hover:underline font-semibold"
-                style={{ fontSize: "0.95em" }}
-              >
-                Inicia sesión
-              </a>
-            </span>
-          </div>
+          {/* Volver a inicio de sesión - solo visible para no administradores */}
+          {!isAdminCreateRoute && (
+            <div className="mt-6 text-center">
+              <span className="text-xs text-gray-600">
+                ¿Ya tienes cuenta?{" "}
+                <a
+                  href="/"
+                  className="text-sky-600 hover:underline font-semibold"
+                  style={{ fontSize: "0.95em" }}
+                >
+                  Inicia sesión
+                </a>
+              </span>
+            </div>
+          )}
         </section>
       </main>
     </>

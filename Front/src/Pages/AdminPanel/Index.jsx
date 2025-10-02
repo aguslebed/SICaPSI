@@ -14,9 +14,6 @@ export default function AdminIndex() {
             <Link to="/adminPanel/gestionCursos" className="border rounded-lg p-4 hover:bg-gray-50">Gestión Cursos</Link>
             <Link to="/adminPanel/gestionProfesores" className="border rounded-lg p-4 hover:bg-gray-50">Gestión Profesores</Link>
         </div>
-        <div className="mt-6">
-            <Link to="/adminPanel/gestionUsuario/crearUsuario" className="inline-block bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg">Crear Usuario</Link>
-        </div>
         </main>
     </>
   );

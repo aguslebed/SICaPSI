@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { logout, resolveImageUrl, setMessageRead } from '../../API/Request';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Bell } from "lucide-react"; // íconos
 import { Menu } from "@headlessui/react"; // dropdown accesible
 import { useUser } from "../../context/UserContext";
@@ -8,6 +8,7 @@ import ProfilePreferencesModal from "../Modals/ProfilePreferencesModal";
 
 const NavBar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { logoutUser } = useUser();
   const { userData, setUserData } = useUser();
   const [openProfile, setOpenProfile] = useState(false); 
@@ -51,8 +52,8 @@ const NavBar = () => {
       await logout();
       logoutUser(); // Limpia contexto y localStorage
       navigate('/');
-    } catch (err) {
-      alert('Error al cerrar sesión');
+    } catch (e) {
+      alert('Error al cerrar sesión', e);
     }
   };
 
@@ -71,7 +72,17 @@ const NavBar = () => {
 
       {/* Barra inferior con acciones (notificaciones / usuario) */}
       <div className="w-full bg-[#0888c2] overflow-x-clip">
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 md:px-8 h-14 md:h-16 flex items-center justify-end">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 md:px-8 h-14 md:h-16 flex items-center justify-between">
+          {/* Botón Volver para la ruta de crear usuario */}
+          {location.pathname.includes('/adminPanel/gestionUsuario/crearUsuario') && (
+            <button
+              onClick={() => navigate('/adminPanel/gestionUsuario')}
+              className="flex items-center text-white bg-sky-400 hover:bg-sky-500 px-4 py-2 rounded-lg transition-colors"
+            >
+              <span className="mr-2">←</span>
+              Volver
+            </button>
+          )}
           <div className="flex items-center gap-3 sm:gap-5">
             {/* Notificaciones (campana) */}
             <Menu as="div" className="relative">
@@ -118,7 +129,7 @@ const NavBar = () => {
                                     // Backend
                                     await setMessageRead({ id: m._id, isRead: true });
                                   }
-                                } catch {}
+                                } catch {<></>}
                                 // Navegar a la bandeja del curso solo si activo
                                 if (trainingId && isTrainingActive(trainingId)) navigate(`/userPanel/${trainingId}/messages`);
                                 else navigate('/userPanel');
