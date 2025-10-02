@@ -45,8 +45,9 @@ export default function GestionCursos() {
   return (
     <>
       <NavBar />
-      <main className="p-6">
-        <h1 className="text-3xl font-semibold mb-2">Gestión de cursos</h1>
+      <main className="w-full">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 md:px-8 py-6">
+          <h1 className="text-3xl font-semibold mb-2">Gestión de cursos</h1>
         <hr className="border-gray-300 mb-6" />
 
         <div className="bg-white shadow-sm rounded p-6">
@@ -59,12 +60,12 @@ export default function GestionCursos() {
                   placeholder="Buscar curso"
                   className="w-full max-w-md border rounded-full px-4 py-2 text-sm focus:outline-none"
                 />
-                <button className="w-10 h-10 rounded bg-sky-500 flex items-center justify-center text-white">🔍</button>
+                <button className="w-10 h-10 rounded bg-sky-500 flex items-center justify-center text-white cursor-pointer">🔍</button>
               </div>
 
               <div className="mt-4 flex flex-wrap items-center gap-3">
-                <button className="bg-sky-500 text-white px-3 py-1 rounded text-sm">Aplicar Filtros</button>
-                <button className="bg-gray-200 text-gray-700 px-3 py-1 rounded text-sm">Limpiar Filtros</button>
+                <button className="bg-sky-500 text-white px-3 py-1 rounded text-sm cursor-pointer">Aplicar Filtros</button>
+                <button className="bg-gray-200 text-gray-700 px-3 py-1 rounded text-sm cursor-pointer">Limpiar Filtros</button>
               </div>
             </div>
 
@@ -86,8 +87,8 @@ export default function GestionCursos() {
 
             {/* Right: acciones */}
             <div className="flex items-center gap-3 ml-auto">
-              <button onClick={() => setOpenCohorte(true)} className="bg-sky-400 hover:bg-sky-500 text-white px-4 py-2 rounded-lg">Abrir Cohorte</button>
-              <button onClick={() => setOpenCreateTraining(true)} className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg">Crear Capacitación</button>
+              <button onClick={() => setOpenCohorte(true)} className="bg-sky-400 hover:bg-sky-500 text-white px-4 py-2 rounded-lg cursor-pointer">Abrir Cohorte</button>
+              <button onClick={() => setOpenCreateTraining(true)} className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg cursor-pointer">Crear Capacitación</button>
             </div>
           </div>
         </div>
@@ -145,6 +146,7 @@ export default function GestionCursos() {
         </section>
 
         <Outlet />
+        </div>
       </main>
       <OpenCohortModal
         open={openCohorte}
