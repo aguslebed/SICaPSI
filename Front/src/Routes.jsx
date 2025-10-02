@@ -25,6 +25,7 @@ const AdmisionUsuario = lazy(() => import('./Pages/AdminPanel/AdmisionUsuario'))
 const GestionUsuario = lazy(() => import('./Pages/AdminPanel/GestionUsuario'));
 const GestionCursos = lazy(() => import('./Pages/AdminPanel/GestionCursos'));
 const GestionProfesores = lazy(() => import('./Pages/AdminPanel/GestionProfesores'));
+const ProfesorEditar = lazy(() => import('./Pages/AdminPanel/ProfesorEditar'));
 
 async function authLoader() {
   try {
