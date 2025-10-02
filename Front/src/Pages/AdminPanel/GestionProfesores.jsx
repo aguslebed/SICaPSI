@@ -3,6 +3,7 @@ import "./gestionPanel.css";
 import NavBar from "../../Components/Student/NavBar";
 import { useNavigate } from "react-router-dom";
 import { listTeachers, setTeacherStatus } from "../../API/Request";
+import LoadingOverlay from "../../Components/Shared/LoadingOverlay";
 
 // Pill de estado
 function Chip({ estado }) {
@@ -27,6 +28,9 @@ export default function GestionProfesores() {
   // datos
   const [rowsRaw, setRowsRaw] = useState([]);
 
+  // loading
+  const [loading, setLoading] = useState(false);
+
   // paginado
   const [page, setPage] = useState(1);
   const size = 10;
@@ -34,6 +38,7 @@ export default function GestionProfesores() {
   // cargar desde backend
   useEffect(() => {
     let alive = true;
+    setLoading(true);
     (async () => {
       try {
         const data = await listTeachers(); // [] o {items:[]}
@@ -53,6 +58,8 @@ export default function GestionProfesores() {
       } catch {
         // Silenciar errores y mostrar vacío hasta que el back esté listo
         if (alive) setRowsRaw([]);
+      } finally {
+        if (alive) setLoading(false);
       }
     })();
     return () => { alive = false; };
@@ -114,6 +121,7 @@ export default function GestionProfesores() {
 
   return (
     <>
+      {loading && <LoadingOverlay label="Cargando profesores..." />}
       <NavBar />
 
       <div className="gp-wrap gp-afterHeader">
