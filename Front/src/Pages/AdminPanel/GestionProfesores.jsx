@@ -42,17 +42,19 @@ export default function GestionProfesores() {
     (async () => {
       try {
         const data = await listTeachers(); // [] o {items:[]}
+        // CAMBIO: Mapeo actualizado para usar los campos correctos del backend
+        // Ahora usa los campos estándar del modelo User actualizado
         const mapped = (data || []).map((r) => ({
-          id: r.id ?? r._id,
-          nombre: r.firstName ?? r.nombre,
-          apellido: r.lastName ?? r.apellido,
+          id: r._id || r.id, // Usar _id de MongoDB como principal
+          nombre: r.firstName, // Campo estándar del modelo
+          apellido: r.lastName, // Campo estándar del modelo
           email: r.email,
-          dni: r.dni,
-          estado: (r.status ?? r.estado) === "available" ? "disponible" : "deshabilitado",
-          creado: r.createdAt ?? r.creado,
-          curso: r.assignedCourse
-            ? [r.assignedCourse.title, r.assignedCourse.subtitle]
-            : ["–"],
+          dni: r.documentNumber, // Campo correcto del modelo User
+          estado: r.status === "available" ? "disponible" : "deshabilitado", // Mapear status del modelo
+          creado: r.createdAt, // Campo estándar de timestamps
+          curso: r.assignedTraining && r.assignedTraining.length > 0
+            ? r.assignedTraining.map(training => training.title || training.subtitle).filter(Boolean)
+            : ["–"], // Mapear cursos asignados
         }));
         if (alive) setRowsRaw(mapped);
       } catch {
@@ -238,11 +240,13 @@ export default function GestionProfesores() {
                       className="gp-iconBtn"
                       title={r.estado === "disponible" ? "Bloquear" : "Habilitar"}
                       onClick={async () => {
+                        // CAMBIO: Actualización de la lógica para usar los valores correctos del backend
                         const toStatus = r.estado === "disponible" ? "disabled" : "available";
                         const label = r.estado === "disponible" ? "bloquear" : "habilitar";
                         if (!window.confirm(`¿Seguro querés ${label} a ${r.nombre} ${r.apellido}?`)) return;
 
                         const prev = [...rowsRaw];
+                        // Actualizar el estado local optimistamente
                         const next = prev.map((it) =>
                           it.id === r.id
                             ? { ...it, estado: toStatus === "available" ? "disponible" : "deshabilitado" }
@@ -254,7 +258,7 @@ export default function GestionProfesores() {
                           await setTeacherStatus(r.id, toStatus);
                         } catch {
                           alert("No se pudo cambiar el estado. Se revierte.");
-                          setRowsRaw(prev);
+                          setRowsRaw(prev); // Revertir en caso de error
                         }
                       }}
                     >

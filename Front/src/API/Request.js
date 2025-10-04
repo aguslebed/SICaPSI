@@ -331,14 +331,22 @@ export async function uploadMessageAttachments(files) {
 }
 
 // Listar profesores 
+// CAMBIO: Ruta actualizada para usar el endpoint correcto en userRoutes
 export async function listTeachers() {
-  const { data } = await api.get('/admin/teachers');
-  return Array.isArray(data) ? data : (data?.items || []);
+  try {
+    const { data } = await api.get('/users/admin/teachers');
+    return Array.isArray(data) ? data : (data?.items || []);
+  } catch (error) {
+    console.error("❌ Error al obtener profesores:", error);
+    // Devolver array vacío en caso de error para evitar crasheos
+    return [];
+  }
 }
 
 // Cambiar estado (bloquear/habilitar)
+// CAMBIO: Ruta actualizada para usar el endpoint correcto en userRoutes
 export async function setTeacherStatus(id, status) {
-  const { data } = await api.patch(`/admin/teachers/${id}/status`, { status });
+  const { data } = await api.patch(`/users/admin/teachers/${id}/status`, { status });
   return data;
 }
 

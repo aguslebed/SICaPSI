@@ -24,6 +24,9 @@ const UserSchema = new mongoose.Schema({
   phone: { type: String, required: true },
   password: { type: String, required: true },
   role: { type: String, enum: ["Administrator", "Trainer", "Manager", "Student"], default: "Student", required: true },
+  // CAMBIO: Campo agregado para manejar el estado de disponibilidad de profesores
+  // Permite habilitar/deshabilitar profesores sin eliminar sus datos
+  status: { type: String, enum: ["available", "disabled"], default: "available" },
   lastLogin: { type: Date },
   institutionalID: { type: Number, index: true, unique: true, sparse: true },
   profileImage: { type: String, required: false, default: null },
