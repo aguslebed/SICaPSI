@@ -361,3 +361,14 @@ export async function getAllActiveTrainings() {
     throw error;
   }
 }
+
+// Obtener datos para la página de AdmisionUsuario
+export async function fetchAdmisionUsuarios() {
+  try {
+    const { data } = await api.get("/admision-usuarios");
+    return data;
+  } catch (error) {
+    console.error("Error fetching admision usuarios:", error);
+    throw error;
+  }
+}

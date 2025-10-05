@@ -1,17 +1,7 @@
 import React, { useState } from 'react';
 import { CheckCircle, XCircle, Search, Filter, Bold } from 'lucide-react';
 import NavBar from '../../Components/Student/NavBar';
-
-const usuariosEjemplo = [
-  { nombre: 'Juan', apellido: 'Juan', email: 'juan.juan@gmail.com', dni: '223334444', fecha: '12/07/2025', tipo: 'Capacitador', aprobado: true },
-  { nombre: 'Pedro', apellido: 'Pedro', email: 'pedro.pedro@hotmail.com', dni: '55566777', fecha: '20/08/3035', tipo: 'Guardia', aprobado: true },
-  { nombre: 'admin', apellido: 'admin', email: 'admin.admin@gmail.com', dni: '111111111', fecha: '11/08/2025', tipo: 'Administrador', aprobado: true },
-  { nombre: 'admin', apellido: 'admin', email: 'admin.admin@gmail.com', dni: '111111111', fecha: '11/08/2025', tipo: 'Administrador', aprobado: true },
-  { nombre: 'Agustina', apellido: 'Torres', email: 'agus.torres@gmail.com', dni: '5465675', fecha: '11/08/2025', tipo: 'Guardia', aprobado: true },
-  { nombre: 'admin', apellido: 'admin', email: 'admin.admin@gmail.com', dni: '111111111', fecha: '11/08/2025', tipo: 'Administrador', aprobado: true },
-  { nombre: 'Catalina', apellido: 'Gomez', email: 'cata.gomez@gmail.com', dni: '102746539', fecha: '11/08/2025', tipo: 'Capacitador', aprobado: true },
-
-];
+import { useLocation } from 'react-router-dom';
 
 const tipos = [
   { label: 'Capacitador', value: 'Capacitador' },
@@ -19,8 +9,10 @@ const tipos = [
   { label: 'Administrador', value: 'Administrador' },
 ];
 
-
 export default function AdmisionUsuario() {
+  const location = useLocation();
+  const data = location.state?.data || [];
+
   const [busqueda, setBusqueda] = useState('');
   const [tipo, setTipo] = useState([]);
   const [tipoMenu, setTipoMenu] = useState(false);
@@ -43,8 +35,7 @@ export default function AdmisionUsuario() {
     />
   );
 
-{/*  Filtros simulados (no funcionales, solo UI) */ }
-    return (
+  return (
     <>
       <NavBar />
       <main className="bg-[#f7f8fa] min-h-screen p-0 max-w-screen-xl mx-auto">
@@ -369,7 +360,7 @@ export default function AdmisionUsuario() {
                   </tr>
                 </thead>
                 <tbody style={{ backgroundColor: '#fff' }}>
-                  {usuariosEjemplo.map((u, idx) => (
+                  {data.map((u, idx) => (
                     <tr key={idx} style={{ borderTop: '1px solid #e5e7eb' }}>
                       <td style={{ padding: '18px' }}>{u.nombre}</td>
                       <td style={{ padding: '18px' }}>{u.apellido}</td>
