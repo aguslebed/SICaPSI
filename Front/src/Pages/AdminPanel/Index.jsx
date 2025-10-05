@@ -1,23 +1,93 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import NavBar from '../../Components/Student/NavBar'
+import React from "react";
+import admisionImg from "../../assets/admision2.png";
+import profesorImg from "../../assets/profesor.png";
+import cursoImg from "../../assets/curso.png";
+import usuarioImg from "../../assets/usuario.png";
+import { Link, useNavigate } from "react-router-dom";
+import NavBar from "../../Components/Student/NavBar";
+import { getAllActiveTrainings } from '../../API/Request';
 
-export default function AdminIndex() {
+export default function AdminPanel() {
+  const navigate = useNavigate();
+  const options = [
+    {
+      title: "Admision de Usuarios",
+      link: "adminPanel/admisionUsuario",
+      isImage: true,
+      image: admisionImg,
+    },
+    {
+      title: "Gestión de Usuarios",
+      link: "/adminPanel/gestionUsuario",
+      isImage: true,
+      image: usuarioImg,
+    },
+    {
+      title: "Gestión de Cursos",
+      link: "/adminPanel/gestionCursos",
+      isImage: true,
+      image: cursoImg,
+    },
+    {
+      title: "Gestión de Profesores",
+      link: "/adminPanel/gestionProfesores",
+      isImage: true,
+      image: profesorImg,
+    },
+  ];
+
   return (
     <>
-        <NavBar />
-        <main className="p-6">
-        <h1 className="text-2xl font-bold mb-4">Panel de Administración</h1>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Link to="/adminPanel/admisionUsuario" className="border rounded-lg p-4 hover:bg-gray-50">Admisión Usuario</Link>
-            <Link to="/adminPanel/gestionUsuario" className="border rounded-lg p-4 hover:bg-gray-50">Gestión Usuario</Link>
-            <Link to="/adminPanel/gestionCursos" className="border rounded-lg p-4 hover:bg-gray-50">Gestión Cursos</Link>
-            <Link to="/adminPanel/gestionProfesores" className="border rounded-lg p-4 hover:bg-gray-50">Gestión Profesores</Link>
+      <NavBar />
+      <main className="min-h-screen bg-[#f6f8fa] w-full">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 md:px-8 py-8">
+          <h2 className="text-3xl font-semibold mb-8 text-gray-800">Panel de Administrador</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
+            {options.map((option, index) => {
+              const isImageBox = option.isImage;
+              return (
+                <div
+                  key={index}
+                  className={"transition-all duration-300 ease-in-out rounded-2xl p-8 flex flex-col items-center justify-center border min-h-[180px] hover:scale-105 hover:shadow-lg hover:bg-blue-100 hover:border-blue-300 active:scale-95 active:shadow-md transform cursor-pointer"}
+                  style={{ minWidth: 180, background: '#dedede', borderColor: '#dedede' }}
+                  onClick={async () => {
+                    try {
+                      // If this is the Gestion Cursos card, fetch active trainings first
+                      if (option.link.includes('gestionCursos')) {
+                        await getAllActiveTrainings();
+                        navigate('/adminPanel/gestionCursos');
+                        return;
+                      }
+                      // otherwise navigate to the configured link
+                      navigate(option.link.startsWith('/') ? option.link : `/${option.link}`);
+                    } catch (err) {
+                      // If unauthorized, redirect to login
+                      if (err?.response?.status === 401) {
+                        navigate('/login');
+                        return;
+                      }
+                      // otherwise still navigate (or show an alert)
+                      console.error('Error loading trainings', err);
+                      navigate(option.link.startsWith('/') ? option.link : `/${option.link}`);
+                    }
+                  }}
+                >
+                  {isImageBox ? (
+                    <img
+                      src={option.image}
+                      alt={option.title}
+                      style={{ width: '100px', height: '100px', objectFit: 'contain', display: 'block', margin: '0 auto 18px auto', background: 'transparent', borderRadius: 0, boxShadow: 'none' }}
+                    />
+                  ) : (
+                    <div className="mb-6">{option.icon}</div>
+                  )}
+                  <p className="text-center text-black font-semibold text-lg">{option.title}</p>
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <div className="mt-6">
-            <Link to="/adminPanel/gestionUsuario/crearUsuario" className="inline-block bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg">Crear Usuario</Link>
-        </div>
-        </main>
+      </main>
     </>
   );
 }

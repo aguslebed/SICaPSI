@@ -47,41 +47,14 @@ export default function AdmisionUsuario() {
     return (
     <>
       <NavBar />
-      <main className="bg-[#f7f8fa] min-h-screen p-0">
+      <main className="bg-[#f7f8fa] min-h-screen p-0 max-w-screen-xl mx-auto">
         {/* Barra superior */}
           <div className="max-w-screen-xl mx-auto px-4 h-12 flex items-center justify-center">
             <div className="black-ops-one-regular">
             </div>
           </div>
         
-      <div className="w-full bg-[#0888c2]" style={{ marginTop: '-12px' }}>
-  <div className="max-w-screen-xl mx-auto flex items-center justify-between">
-
-{/*---------------------------------  Botón de volver ------------------------------*/ }
-    <button 
-      onClick={() => window.location.href = '/AdminPanel'} 
-      style={{ 
-        background: '#4dc3ff', 
-        color: '#fff', 
-        border: 'none', 
-        borderRadius: '20px', 
-        padding: '7px 14px', 
-        fontWeight: 500, 
-        boxShadow: '0 1px 2px rgba(0,0,0,0.03)', 
-        height: '36px', 
-        position: 'absolute', 
-        left: '20px',
-        top: '8%', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        cursor: 'pointer' // Added to change cursor to pointer on hover
-      }}
-    >
-      <span style={{padding: '2px', width: '27px', height: '28px', backgroundColor: '#4dc3ff', color: '#fff'}}>⬅</span> Volver
-    </button>
-  </div>
-</div>  
+ 
 
     <h1 style={{ fontSize: '45px', fontFamily: 'Inter, sans-serif', padding: '20px 40px', position: 'absolute', top: '150px', backgroundColor: 'transparent' }}>Admisión de usuarios</h1>
     <hr style={{ marginTop: '80px', border: '1px solid #e5e7eb', width: '96%', marginLeft: '40px' }} />

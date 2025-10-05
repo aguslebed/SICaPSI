@@ -329,3 +329,35 @@ export async function uploadMessageAttachments(files) {
     }
   }
 }
+
+// Listar profesores 
+// CAMBIO: Ruta actualizada para usar el endpoint correcto en userRoutes
+export async function listTeachers() {
+  try {
+    const { data } = await api.get('/users/admin/teachers');
+    return Array.isArray(data) ? data : (data?.items || []);
+  } catch (error) {
+    console.error("❌ Error al obtener profesores:", error);
+    // Devolver array vacío en caso de error para evitar crasheos
+    return [];
+  }
+}
+
+// Cambiar estado (bloquear/habilitar)
+// CAMBIO: Ruta actualizada para usar el endpoint correcto en userRoutes
+export async function setTeacherStatus(id, status) {
+  const { data } = await api.patch(`/users/admin/teachers/${id}/status`, { status });
+  return data;
+}
+
+// Listar capacitaciones activas
+export async function getAllActiveTrainings() {
+  try {
+    const { data } = await api.get('/training/getAllActiveTrainings');
+    console.log('Active trainings:', data);
+    return data;
+  } catch (error) {
+    // Re-lanzar error para que el caller lo maneje
+    throw error;
+  }
+}

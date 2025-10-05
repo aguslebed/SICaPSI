@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { logout, resolveImageUrl, setMessageRead } from '../../API/Request';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Bell } from "lucide-react"; // íconos
 import { Menu } from "@headlessui/react"; // dropdown accesible
 import { useUser } from "../../context/UserContext";
@@ -8,6 +8,7 @@ import ProfilePreferencesModal from "../Modals/ProfilePreferencesModal";
 
 const NavBar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { logoutUser } = useUser();
   const { userData, setUserData } = useUser();
   const [openProfile, setOpenProfile] = useState(false); 
@@ -46,13 +47,26 @@ const NavBar = () => {
     [unreadItemsRaw, isTrainingActive]
   );
   const unreadCount = unreadItems.length;
+  
+  // Rutas donde se debe mostrar el botón "Volver"
+  const allowedRoutes = [
+    '/adminPanel/gestionUsuario/crearUsuario',
+    '/adminPanel/gestionUsuario/modificarUsuario',
+    '/adminPanel/admisionUsuario',
+    '/adminPanel/gestionUsuario',
+    '/adminPanel/gestionCursos',
+    '/adminPanel/gestionProfesores'
+  ];
+  
+  const shouldShowBackButton = allowedRoutes.some(route => location.pathname.includes(route));
+  
   const handleLogout = async () => {
     try {
       await logout();
       logoutUser(); // Limpia contexto y localStorage
       navigate('/');
-    } catch (err) {
-      alert('Error al cerrar sesión');
+    } catch (e) {
+      alert('Error al cerrar sesión', e);
     }
   };
 
@@ -71,7 +85,24 @@ const NavBar = () => {
 
       {/* Barra inferior con acciones (notificaciones / usuario) */}
       <div className="w-full bg-[#0888c2] overflow-x-clip">
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 md:px-8 h-14 md:h-16 flex items-center justify-end">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 md:px-8 h-14 md:h-16 flex items-center">
+          {/* Botón Volver para rutas específicas del admin panel */}
+          {shouldShowBackButton && (
+            <button
+              onClick={() => {
+                // Navegar hacia atrás en el historial del navegador
+                window.history.back();
+              }}
+              className="flex items-center text-white bg-sky-400 hover:bg-sky-500 px-4 py-2 rounded-lg transition-colors cursor-pointer"
+            >
+              <span className="mr-2 cursor-pointer">←</span>
+              Volver
+            </button>
+          )}
+          
+          {/* Espaciador flexible para empujar elementos a la derecha */}
+          <div className="flex-1"></div>
+          
           <div className="flex items-center gap-3 sm:gap-5">
             {/* Notificaciones (campana) */}
             <Menu as="div" className="relative">
@@ -118,7 +149,7 @@ const NavBar = () => {
                                     // Backend
                                     await setMessageRead({ id: m._id, isRead: true });
                                   }
-                                } catch {}
+                                } catch {<></>}
                                 // Navegar a la bandeja del curso solo si activo
                                 if (trainingId && isTrainingActive(trainingId)) navigate(`/userPanel/${trainingId}/messages`);
                                 else navigate('/userPanel');

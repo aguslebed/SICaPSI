@@ -38,6 +38,7 @@ const toPublicOne = (userDoc) => {
     areaCode: clean.areaCode,
     phone: clean.phone,
     role: clean.role,
+    status: clean.status,
     lastLogin: clean.lastLogin,
     institutionalID: clean.institutionalID,
     profileImage: clean.profileImage,

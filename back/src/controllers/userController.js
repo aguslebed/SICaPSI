@@ -107,6 +107,79 @@ export function makeUserController({ userService, trainingService, messageServic
           }
         });
       } catch (err) { next(err); }
+    },
+
+    /**
+     * Método para listar todos los profesores/trainers
+     * Respeta SRP: Solo maneja la obtención y formateo de profesores
+     * Respeta DIP: Depende de abstracciones (userService, userFormatter)
+     */
+    async listTeachers(req, res, next) {
+      try {
+        const teachers = await userService.getTeachers();
+        res.json(userFormatter.toPublicList(teachers));
+      } catch (err) { 
+        next(err); 
+      }
+    },
+
+    /**
+     * Método para actualizar el estado de un profesor
+     * Respeta SRP: Solo maneja el cambio de estado de profesores
+     * Respeta OCP: Extiende funcionalidad sin modificar código existente
+     */
+    async updateTeacherStatus(req, res, next) {
+      try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        if (!id) {
+          throw new AppError('ID de profesor requerido', 400);
+        }
+
+        if (!status || !['available', 'disabled'].includes(status)) {
+          throw new AppError('Estado inválido. Use: available o disabled', 400);
+        }
+
+        const updatedTeacher = await userService.updateTeacherStatus(id, status);
+        
+        if (!updatedTeacher) {
+          throw new AppError('Profesor no encontrado', 404);
+        }
+
+        res.json({
+          message: 'Estado del profesor actualizado exitosamente',
+          teacher: userFormatter.toPublic(updatedTeacher)
+        });
+        
+      } catch (err) { 
+        next(err); 
+      }
+    },
+
+    /**
+     * Método para obtener un profesor específico
+     * Respeta SRP: Solo obtiene y formatea datos de un profesor
+     */
+    async getTeacherById(req, res, next) {
+      try {
+        const { id } = req.params;
+        
+        if (!id) {
+          throw new AppError('ID de profesor requerido', 400);
+        }
+
+        const teacher = await userService.getTeacherById(id);
+        
+        if (!teacher) {
+          throw new AppError('Profesor no encontrado', 404);
+        }
+
+        res.json(userFormatter.toPublic(teacher));
+        
+      } catch (err) { 
+        next(err); 
+      }
     }
   };
 }

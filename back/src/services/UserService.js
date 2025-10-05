@@ -100,6 +100,55 @@ export class UserService extends IUserService {
     await user.save();
     return user;
   }
+
+  /**
+   * CAMBIO: Método agregado para obtener todos los profesores/trainers del sistema
+   * Respeta SRP: Solo se encarga de obtener profesores desde la base de datos
+   * Respeta OCP: Extiende funcionalidad sin modificar métodos existentes
+   */
+  async getTeachers() {
+    return await this.User.find({ 
+      role: { $in: ['Trainer', 'Manager'] } 
+    })
+    .populate('assignedTraining', 'title subtitle')
+    .sort({ createdAt: -1 })
+    .exec();
+  }
+
+  /**
+   * CAMBIO: Método agregado para obtener un profesor específico por ID
+   * Respeta SRP: Solo obtiene datos de un profesor específico
+   */
+  async getTeacherById(id) {
+    const teacher = await this.User.findOne({ 
+      _id: id,
+      role: { $in: ['Trainer', 'Manager'] } 
+    })
+    .populate('assignedTraining', 'title subtitle')
+    .exec();
+    
+    return teacher;
+  }
+
+  /**
+   * CAMBIO: Método agregado para actualizar el estado de un profesor
+   * Respeta SRP: Solo maneja el cambio de estado en la base de datos
+   * Respeta ISP: Método específico para una tarea específica
+   */
+  async updateTeacherStatus(id, status) {
+    const teacher = await this.User.findOneAndUpdate(
+      { 
+        _id: id,
+        role: { $in: ['Trainer', 'Manager'] } 
+      },
+      { status: status },
+      { new: true }
+    )
+    .populate('assignedTraining', 'title subtitle')
+    .exec();
+    
+    return teacher;
+  }
 }
 
 export default UserService;

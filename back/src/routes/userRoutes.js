@@ -55,6 +55,18 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
+// CAMBIO: Middleware agregado para verificar permisos de administrador
+// Respeta SRP: Solo verifica permisos administrativos
+// Permite reutilización en múltiples rutas que requieren permisos de admin
+const adminMiddleware = (req, res, next) => {
+  if (!req.user || !['Administrator', 'Manager'].includes(req.user.role)) {
+    return res.status(403).json({ 
+      message: 'Acceso denegado. Se requieren permisos de administrador.' 
+    });
+  }
+  next();
+};
+
 const router = Router();
 router.post("/register", RegistrationValidator, userController.create);
 router.get("/", authMiddleware, userController.list);
@@ -64,6 +76,13 @@ router.get("/:id", authMiddleware, userController.getById);
 router.patch("/:id", authMiddleware, userController.update); 
 router.post("/:id/profile-image", authMiddleware, upload.single('image'), userController.uploadProfileImage); 
 router.post("/change-password", authMiddleware, userController.changePassword);
+
+// CAMBIO: Rutas agregadas para funcionalidad administrativa de profesores
+// Respeta RESTful API design y mantiene consistencia con rutas existentes
+// Todas requieren autenticación y permisos de administrador
+router.get("/admin/teachers", authMiddleware, adminMiddleware, userController.listTeachers);
+router.get("/admin/teachers/:id", authMiddleware, adminMiddleware, userController.getTeacherById);
+router.patch("/admin/teachers/:id/status", authMiddleware, adminMiddleware, userController.updateTeacherStatus);
 
 export default router;
   
