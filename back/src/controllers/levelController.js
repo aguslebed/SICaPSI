@@ -17,16 +17,20 @@ export function makeLevelController({ levelService }) {
 
     },
 
-    async addLevelToTraining(req, res, next) {
+    async addLevelsToTraining(req, res, next) {
       try {
-        const { trainingId, title, description } = req.body;
-        if (!trainingId || !title || !description) {
-          throw new AppError('Faltan datos obligatorios', 400);
+        const { trainingId, levels } = req.body;
+        if (!trainingId || !Array.isArray(levels) || levels.length === 0) {
+          throw new AppError('Faltan datos obligatorios o el arreglo de niveles está vacío', 400);
         }
-        const newLevel = await levelService.addLevelToTraining(req.body);
-        res.status(201).json(newLevel);
-      }
-      catch (err) {
+        // Validar que todos los niveles sean de la misma capacitación
+        const allSameTraining = levels.every(lvl => lvl.trainingId === trainingId);
+        if (!allSameTraining) {
+          throw new AppError('Todos los niveles deben pertenecer a la misma capacitación', 400);
+        }
+        const result = await levelService.addLevelsToTraining(trainingId, levels);
+        res.status(201).json(result);
+      } catch (err) {
         next(err);
       }
     }

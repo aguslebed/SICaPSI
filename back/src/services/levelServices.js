@@ -17,24 +17,24 @@ export class LevelService extends ILevelService {
         return levels;
     }
 
-    async addLevelToTraining(level) {
-        const training = await this.training.findById(level.trainingId);
+    async addLevelsToTraining(trainingId, levels) {
+        const training = await this.training.findById(trainingId);
         if (!training) {
             throw new Error("Capacitación no encontrada");
         }
 
-        const existingLevel = await this.levels.findOne({
-            trainingId: level.trainingId,
-            levelNumber: level.levelNumber
+        // Validar duplicados en la base de datos
+        const levelNumbers = levels.map(lvl => lvl.levelNumber);
+        const existingLevels = await this.levels.find({
+            trainingId: trainingId,
+            levelNumber: { $in: levelNumbers }
         });
-
-        if (existingLevel) {
-            throw new Error("El número de nivel ya existe en esta capacitación");
+        if (existingLevels.length > 0) {
+            throw new Error("Uno o más números de nivel ya existen en esta capacitación");
         }
 
-        const newLevel = new this.levels(level);
-        await newLevel.save(newLevel);
-        return newLevel;
-
+        // Crear los niveles
+        const newLevels = await this.levels.insertMany(levels);
+        return newLevels;
     }
 }
