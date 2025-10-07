@@ -5,7 +5,7 @@ import cursoImg from "../../assets/curso.png";
 import usuarioImg from "../../assets/usuario.png";
 import { Link, useNavigate } from "react-router-dom";
 import NavBar from "../../Components/Student/NavBar";
-import { getAllActiveTrainings, fetchAdmisionUsuarios } from '../../API/Request';
+import { getAllActiveTrainings, fetchAdmisionUsuarios, getAllUsers } from '../../API/Request';
 import LoadingOverlay from "../../Components/Shared/LoadingOverlay";
 
 export default function AdminPanel() {
@@ -35,6 +35,17 @@ export default function AdminPanel() {
       link: "/adminPanel/gestionUsuario",
       isImage: true,
       image: usuarioImg,
+       onClick: async () => {
+        setLoading(true);
+        try {
+          // const data = await getAllUsers();
+          navigate("/adminPanel/gestionUsuario");
+        } catch (error) {
+          console.error("Error fetching data for GestionUsuario:", error);
+        } finally {
+          setLoading(false);
+        }
+      },
     },
     {
       title: "Gestión de Cursos",
@@ -47,6 +58,16 @@ export default function AdminPanel() {
       link: "/adminPanel/gestionProfesores",
       isImage: true,
       image: profesorImg,
+        onClick: async () => {
+        setLoading(true);
+        try {
+          navigate("/adminPanel/gestionProfesores");
+        } catch (error) {
+          console.error("Error fetching data for GestionUsuario:", error);
+        } finally {
+          setLoading(false);
+        }
+      },
     },
   ];
 

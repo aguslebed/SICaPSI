@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { CheckCircle, XCircle, Search, Filter, Bold } from 'lucide-react';
 import NavBar from '../../Components/Student/NavBar';
 import { useLocation } from 'react-router-dom';

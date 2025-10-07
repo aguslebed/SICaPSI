@@ -6,6 +6,7 @@ import { getMe, checkAuth } from './API/Request';
 import RouteError from './Pages/RouteError';
 
 const Mensajeria = lazy(() => import('./Pages/UserPanel/Student/Mensajeria'));
+const AdminActualizarUsuario = lazy(() => import('./Pages/Register/ActualizarUsuario'));
 
 const Home = lazy(() => import('./Pages/Home/Home'));
 const InicioDeSesion = lazy(() => import('./Pages/Login/Login'));
@@ -70,7 +71,9 @@ export const router = createBrowserRouter([
       { path: 'gestionCursos', element: <GestionCursos /> },
       { path: 'gestionProfesores', element: <GestionProfesores /> },
       // Crear Usuario: debe renderizar el Register.jsx
-      { path: 'gestionUsuario/crearUsuario', element: <Registrarse /> }
+      { path: 'gestionUsuario/crearUsuario', element: <Registrarse /> },
+      { path: 'gestionUsuario/modificarUsuario', element: <AdminActualizarUsuario /> }
+
     ]
   },
   {
