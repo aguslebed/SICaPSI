@@ -149,6 +149,12 @@ export class UserService extends IUserService {
     
     return teacher;
   }
+
+  async delete(id) {
+    const user = await this.User.findById(id).exec();
+    if (!user) return null;
+    return await this.User.findByIdAndDelete(id).exec();
+  }
 }
 
 export default UserService;

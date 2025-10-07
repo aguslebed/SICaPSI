@@ -84,5 +84,8 @@ router.get("/admin/teachers", authMiddleware, adminMiddleware, userController.li
 router.get("/admin/teachers/:id", authMiddleware, adminMiddleware, userController.getTeacherById);
 router.patch("/admin/teachers/:id/status", authMiddleware, adminMiddleware, userController.updateTeacherStatus);
 
+// Gestion de Usuario
+router.delete("/:id", authMiddleware, adminMiddleware, userController.deleteUser);
+
 export default router;
   
