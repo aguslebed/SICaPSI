@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, Outlet } from 'react-router-dom';
 import NavBar from '../../Components/Student/NavBar';
 import { deleteUser as deleteUserApi, getAllUsers } from '../../API/Request';
+import LoadingOverlay from '../../Components/Shared/LoadingOverlay';
+
 
 function getEstadoLabel(status) {
   if (status === 'available') return { label: 'Habilitado', color: 'bg-green-500' };
@@ -41,15 +43,21 @@ export default function GestionUsuario() {
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [search, setSearch] = useState('');
   const [searchApplied, setSearchApplied] = useState(''); // Nuevo estado
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-  async function fetchUsers() {
-    const data = await getAllUsers();
-    setUsers(data.items);
-    console.log(data.items);
-  }
-  fetchUsers();
-}, []);
+    async function fetchUsers() {
+      setLoading(true);
+      try {
+        const data = await getAllUsers();
+        setUsers(data.items);
+        // console.log(data.items);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchUsers();
+  }, []);
 
   // Filtros
   useEffect(() => {
@@ -123,6 +131,7 @@ export default function GestionUsuario() {
 
   return (
     <>
+      {loading && <LoadingOverlay label="Cargando usuarios..." />}
       <NavBar />
       <main className="p-6 bg-[#f6f8fa] min-h-screen">
         <div className="max-w-6xl mx-auto">

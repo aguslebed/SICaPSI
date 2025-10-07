@@ -69,7 +69,8 @@ export const router = createBrowserRouter([
       { path: 'admisionUsuario', element: <AdmisionUsuario /> },
       { path: 'gestionUsuario', element: <GestionUsuario /> },
       { path: 'gestionCursos', element: <GestionCursos /> },
-      { path: 'gestionProfesores', element: <GestionProfesores /> },
+  { path: 'gestionProfesores', element: <GestionProfesores /> },
+  { path: 'profesorEditar/:id', element: <ProfesorEditar /> },
       // Crear Usuario: debe renderizar el Register.jsx
       { path: 'gestionUsuario/crearUsuario', element: <Registrarse /> },
       { path: 'gestionUsuario/modificarUsuario', element: <AdminActualizarUsuario /> }

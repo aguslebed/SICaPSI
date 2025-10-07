@@ -24,7 +24,7 @@
   gap: 18px;
   background: #fff;
   padding: 16px;
-  border-radius: 24px;
+  border-radius: 8px;
   border: 1px solid var(--border);
 }
 
@@ -67,7 +67,7 @@
 .gp-tableCard, .gu-tableCard {
   margin-top: 16px;
   background: #fff;
-  border-radius: 24px;
+  border-radius: 8px;
   overflow: hidden;
   border: 1px solid var(--border);
 }

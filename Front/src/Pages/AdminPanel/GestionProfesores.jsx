@@ -15,15 +15,18 @@ function Chip({ estado }) {
   );
 }
 
+
 export default function GestionProfesores() {
   const navigate = useNavigate();
 
   // filtros
   const [search, setSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [filtrarDisponible, setFD] = useState(true);
   const [filtrarDeshabilitado, setFDes] = useState(true);
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
+  const [appliedFilters, setAppliedFilters] = useState({ filtrarDisponible: true, filtrarDeshabilitado: true, desde: "", hasta: "" });
 
   // datos
   const [rowsRaw, setRowsRaw] = useState([]);
@@ -41,24 +44,21 @@ export default function GestionProfesores() {
     setLoading(true);
     (async () => {
       try {
-        const data = await listTeachers(); // [] o {items:[]}
-        // CAMBIO: Mapeo actualizado para usar los campos correctos del backend
-        // Ahora usa los campos estándar del modelo User actualizado
+        const data = await listTeachers();
         const mapped = (data || []).map((r) => ({
-          id: r._id || r.id, // Usar _id de MongoDB como principal
-          nombre: r.firstName, // Campo estándar del modelo
-          apellido: r.lastName, // Campo estándar del modelo
+          id: r._id || r.id,
+          nombre: r.firstName,
+          apellido: r.lastName,
           email: r.email,
-          dni: r.documentNumber, // Campo correcto del modelo User
-          estado: r.status === "available" ? "disponible" : "deshabilitado", // Mapear status del modelo
-          creado: r.createdAt, // Campo estándar de timestamps
+          dni: r.documentNumber,
+          estado: r.status === "available" ? "disponible" : "deshabilitado",
+          creado: r.createdAt,
           curso: r.assignedTraining && r.assignedTraining.length > 0
             ? r.assignedTraining.map(training => training.title || training.subtitle).filter(Boolean)
-            : ["–"], // Mapear cursos asignados
+            : ["–"],
         }));
         if (alive) setRowsRaw(mapped);
       } catch {
-        // Silenciar errores y mostrar vacío hasta que el back esté listo
         if (alive) setRowsRaw([]);
       } finally {
         if (alive) setLoading(false);
@@ -71,9 +71,9 @@ export default function GestionProfesores() {
   const filtrados = useMemo(() => {
     let rows = [...rowsRaw];
 
-    // texto
-    if (search.trim()) {
-      const q = search.toLowerCase();
+    // filtro de texto solo cuando se aplica
+    if (appliedSearch.trim()) {
+      const q = appliedSearch.toLowerCase();
       rows = rows.filter((r) =>
         [r.nombre, r.apellido, r.email, r.dni, ...(r.curso || [])]
           .join(" ")
@@ -82,25 +82,25 @@ export default function GestionProfesores() {
       );
     }
 
-    // estado
-    rows = rows.filter((r) => {
-      if (r.estado === "disponible" && !filtrarDisponible) return false;
-      if (r.estado === "deshabilitado" && !filtrarDeshabilitado) return false;
-      return true;
-    });
-
-    // fechas
-    if (desde || hasta) {
+    // filtros de estado y fechas solo cuando se aplican
+    if (!appliedFilters.filtrarDisponible || !appliedFilters.filtrarDeshabilitado) {
+      rows = rows.filter((r) => {
+        if (r.estado === "disponible" && !appliedFilters.filtrarDisponible) return false;
+        if (r.estado === "deshabilitado" && !appliedFilters.filtrarDeshabilitado) return false;
+        return true;
+      });
+    }
+    if (appliedFilters.desde || appliedFilters.hasta) {
       rows = rows.filter((r) => {
         const d = r.creado ? new Date(r.creado) : null;
         if (!d || isNaN(d)) return true;
-        if (desde && d < new Date(desde)) return false;
-        if (hasta && d > new Date(hasta)) return false;
+        if (appliedFilters.desde && d < new Date(appliedFilters.desde)) return false;
+        if (appliedFilters.hasta && d > new Date(appliedFilters.hasta)) return false;
         return true;
       });
     }
     return rows;
-  }, [rowsRaw, search, filtrarDisponible, filtrarDeshabilitado, desde, hasta]);
+  }, [rowsRaw, appliedSearch, appliedFilters]);
 
   const total = filtrados.length;
   const pages = Math.max(1, Math.ceil(total / size));
@@ -109,9 +109,10 @@ export default function GestionProfesores() {
     return filtrados.slice(start, start + size);
   }, [filtrados, page]);
 
+  // Resetear página al aplicar filtros
   useEffect(() => {
     setPage(1);
-  }, [search, filtrarDisponible, filtrarDeshabilitado, desde, hasta]);
+  }, [appliedSearch, appliedFilters]);
 
   function limpiar() {
     setSearch("");
@@ -119,6 +120,8 @@ export default function GestionProfesores() {
     setFDes(true);
     setDesde("");
     setHasta("");
+    setAppliedSearch("");
+    setAppliedFilters({ filtrarDisponible: true, filtrarDeshabilitado: true, desde: "", hasta: "" });
   }
 
   return (
@@ -140,11 +143,23 @@ export default function GestionProfesores() {
                 placeholder="Buscar"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') setAppliedSearch(search); }}
               />
-              <button className="gp-btn gp-btn--icon">🔎</button>
+              <button
+                className="gp-btn gp-btn--icon"
+                onClick={() => setAppliedSearch(search)}
+                title="Buscar"
+              >
+                🔎
+              </button>
             </div>
             <div className="gp-actions">
-              <button className="gp-btn gp-btn--primary">Aplicar Filtros</button>
+              <button
+                className="gp-btn gp-btn--primary"
+                onClick={() => setAppliedFilters({ filtrarDisponible, filtrarDeshabilitado, desde, hasta })}
+              >
+                Aplicar Filtros
+              </button>
               <button className="gp-btn" onClick={limpiar}>
                 Limpiar Filtros
               </button>
@@ -232,9 +247,9 @@ export default function GestionProfesores() {
                     <button
                       className="gp-iconBtn"
                       title="Editar"
-                      onClick={() => navigate(`/adminPanel/gestionProfesores/editar/${r.id}`)}
+                      onClick={() => navigate(`/adminPanel/profesorEditar/${r.id}`)}
                     >
-                      ✏️
+                      📝
                     </button>
 
                     <button
