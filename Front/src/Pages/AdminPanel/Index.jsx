@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import admisionImg from "../../assets/admision2.png";
 import profesorImg from "../../assets/profesor.png";
 import cursoImg from "../../assets/curso.png";
@@ -10,8 +10,6 @@ import LoadingOverlay from "../../Components/Shared/LoadingOverlay";
 
 export default function AdminPanel() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-
   const options = [
     {
       title: "Admision de Usuarios",
@@ -73,7 +71,6 @@ export default function AdminPanel() {
 
   return (
     <>
-      {loading && <LoadingOverlay />}
       <NavBar />
       <main className="min-h-screen bg-[#f6f8fa] w-full">
         <div className="max-w-screen-xl mx-auto px-4 sm:px-6 md:px-8 py-8">
@@ -86,7 +83,27 @@ export default function AdminPanel() {
                   key={index}
                   className={"transition-all duration-300 ease-in-out rounded-2xl p-8 flex flex-col items-center justify-center border min-h-[180px] hover:scale-105 hover:shadow-lg hover:bg-blue-100 hover:border-blue-300 active:scale-95 active:shadow-md transform cursor-pointer"}
                   style={{ minWidth: 180, background: '#dedede', borderColor: '#dedede' }}
-                  onClick={option.onClick}
+                  onClick={async () => {
+                    try {
+                      // If this is the Gestion Cursos card, fetch active trainings first
+                      if (option.link.includes('gestionCursos')) {
+                        await getAllActiveTrainings();
+                        navigate('/adminPanel/gestionCursos');
+                        return;
+                      }
+                      // otherwise navigate to the configured link
+                      navigate(option.link.startsWith('/') ? option.link : `/${option.link}`);
+                    } catch (err) {
+                      // If unauthorized, redirect to login
+                      if (err?.response?.status === 401) {
+                        navigate('/login');
+                        return;
+                      }
+                      // otherwise still navigate (or show an alert)
+                      console.error('Error loading trainings', err);
+                      navigate(option.link.startsWith('/') ? option.link : `/${option.link}`);
+                    }
+                  }}
                 >
                   {isImageBox ? (
                     <img

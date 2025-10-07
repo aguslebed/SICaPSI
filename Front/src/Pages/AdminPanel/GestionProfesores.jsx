@@ -125,7 +125,8 @@ export default function GestionProfesores() {
     <>
       {loading && <LoadingOverlay label="Cargando profesores..." />}
       <NavBar />
-
+      <main className="w-full">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 md:px-8 py-8">
       <div className="gp-wrap gp-afterHeader">
         <h1 className="gp-title">Gestión de Profesores</h1>
 
@@ -289,6 +290,8 @@ export default function GestionProfesores() {
           </div>
         </section>
       </div>
+        </div>
+      </main>
     </>
   );
 }
