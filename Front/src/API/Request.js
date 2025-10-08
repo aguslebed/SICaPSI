@@ -372,3 +372,29 @@ export async function fetchAdmisionUsuarios() {
     throw error;
   }
 }
+
+export async function getAllUsers() {
+  try {
+    const { data } = await api.get("/users");
+    return data;
+  } catch (error) {
+    console.error("Error fetching usuarios:", error);
+    throw error;
+  }
+}
+
+export async function deleteUser(userId) {
+  try {
+    const { data } = await api.delete(`/users/${userId}`);
+    return data;
+  } catch (error) {
+    console.error("Error eliminando usuario:", error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al eliminar usuario');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}

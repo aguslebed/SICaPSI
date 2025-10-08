@@ -59,7 +59,7 @@ const upload = multer({ storage });
 // Respeta SRP: Solo verifica permisos administrativos
 // Permite reutilización en múltiples rutas que requieren permisos de admin
 const adminMiddleware = (req, res, next) => {
-  if (!req.user || !['Administrator', 'Manager'].includes(req.user.role)) {
+  if (!req.user || !['Administrador', 'Directivo'].includes(req.user.role)) {
     return res.status(403).json({ 
       message: 'Acceso denegado. Se requieren permisos de administrador.' 
     });
@@ -83,6 +83,9 @@ router.post("/change-password", authMiddleware, userController.changePassword);
 router.get("/admin/teachers", authMiddleware, adminMiddleware, userController.listTeachers);
 router.get("/admin/teachers/:id", authMiddleware, adminMiddleware, userController.getTeacherById);
 router.patch("/admin/teachers/:id/status", authMiddleware, adminMiddleware, userController.updateTeacherStatus);
+
+// Gestion de Usuario
+router.delete("/:id", authMiddleware, adminMiddleware, userController.deleteUser);
 
 export default router;
   

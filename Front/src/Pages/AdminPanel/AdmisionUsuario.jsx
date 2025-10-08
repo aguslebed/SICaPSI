@@ -1,17 +1,22 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, Search, Filter, Bold } from 'lucide-react';
 import NavBar from '../../Components/Student/NavBar';
 import { useLocation } from 'react-router-dom';
+import { listUsers, updateUser } from '../../API/Request';
 
 const tipos = [
   { label: 'Capacitador', value: 'Capacitador' },
-  { label: 'Guardia', value: 'Guardia' },
+  { label: 'Directivo', value: 'Directivo' },
   { label: 'Administrador', value: 'Administrador' },
+  { label: 'Alumno', value: 'Alumno' },
 ];
 
 export default function AdmisionUsuario() {
   const location = useLocation();
-  const data = location.state?.data || [];
+  const [data, setData] = useState(location.state?.data || []);
+  const [filteredData, setFilteredData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const [busqueda, setBusqueda] = useState('');
   const [tipo, setTipo] = useState([]);
@@ -22,6 +27,184 @@ export default function AdmisionUsuario() {
   const [fecha, setFecha] = useState(new Date());
   const [fechaDesdeVisible, setFechaDesdeVisible] = useState(false);
   const [fechaHastaVisible, setFechaHastaVisible] = useState(false);
+
+  // Cargar usuarios al montar el componente
+  useEffect(() => {
+    const cargarUsuarios = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await listUsers();
+        
+        // La respuesta tiene la estructura { total, page, limit, items }
+        console.log('Respuesta de la API:', response);
+        
+        if (!response) {
+          setError('No se recibió respuesta del servidor');
+          return;
+        }
+        
+        const usuarios = response.items || [];
+        
+        if (!Array.isArray(usuarios)) {
+          console.error('usuarios no es un array:', usuarios);
+          setError('Formato de datos incorrecto recibido del servidor');
+          return;
+        }
+        
+        // Transformar los datos para que coincidan con la estructura esperada
+        const usuariosTransformados = usuarios.map(usuario => ({
+          nombre: usuario.firstName,
+          apellido: usuario.lastName,
+          email: usuario.email,
+          dni: usuario.documentNumber,
+          fecha: new Date(usuario.createdAt).toLocaleDateString(),
+          tipo: usuario.role,
+          estado: usuario.status,
+          id: usuario._id
+        }));
+        
+        setData(usuariosTransformados);
+      } catch (error) {
+        console.error('Error cargando usuarios:', error);
+        
+        // Manejo específico de diferentes tipos de errores
+        if (error.message && error.message.includes('No autorizado')) {
+          setError('No tienes permisos para ver esta información. Por favor, inicia sesión como administrador.');
+        } else if (error.message && error.message.includes('conexión')) {
+          setError('Error de conexión con el servidor. Verifica que el backend esté funcionando.');
+        } else {
+          setError(`Error al cargar los usuarios: ${error.message || 'Error desconocido'}`);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Solo cargar si no hay datos desde el estado de navegación
+    if (!location.state?.data || location.state.data.length === 0) {
+      cargarUsuarios();
+    }
+  }, [location.state?.data]);
+
+  // Efecto para filtrar datos cuando cambian los filtros o los datos
+  useEffect(() => {
+    let datosFiltrados = [...data];
+
+    // Filtro por búsqueda de texto
+    if (busqueda.trim()) {
+      const terminoBusqueda = busqueda.toLowerCase().trim();
+      datosFiltrados = datosFiltrados.filter(usuario =>
+        usuario.nombre.toLowerCase().includes(terminoBusqueda) ||
+        usuario.apellido.toLowerCase().includes(terminoBusqueda) ||
+        usuario.email.toLowerCase().includes(terminoBusqueda) ||
+        usuario.dni.includes(terminoBusqueda)
+      );
+    }
+
+    // Filtro por tipo de usuario
+    if (tipo.length > 0) {
+      datosFiltrados = datosFiltrados.filter(usuario =>
+        tipo.includes(usuario.tipo)
+      );
+    }
+
+    // Filtro por fecha desde
+    if (fechaDesde) {
+      const fechaDesdeObj = new Date(fechaDesde);
+      datosFiltrados = datosFiltrados.filter(usuario => {
+        const fechaUsuario = new Date(usuario.fecha.split('/').reverse().join('-'));
+        return fechaUsuario >= fechaDesdeObj;
+      });
+    }
+
+    // Filtro por fecha hasta
+    if (fechaHasta) {
+      const fechaHastaObj = new Date(fechaHasta);
+      datosFiltrados = datosFiltrados.filter(usuario => {
+        const fechaUsuario = new Date(usuario.fecha.split('/').reverse().join('-'));
+        return fechaUsuario <= fechaHastaObj;
+      });
+    }
+
+    setFilteredData(datosFiltrados);
+  }, [data, busqueda, tipo, fechaDesde, fechaHasta]);
+
+  // Función para aplicar filtros (ya se aplican automáticamente con useEffect)
+  const aplicarFiltros = () => {
+    console.log('Filtros aplicados:', { busqueda, tipo, fechaDesde, fechaHasta });
+  };
+
+  // Función para limpiar todos los filtros
+  const limpiarFiltros = () => {
+    setBusqueda('');
+    setTipo([]);
+    setFechaDesde('');
+    setFechaHasta('');
+    setFecha(new Date());
+  };
+
+  // Función para manejar cambios en los checkboxes de tipo
+  const handleTipoChange = (tipoValue) => {
+    setTipo(prev => {
+      if (prev.includes(tipoValue)) {
+        return prev.filter(t => t !== tipoValue);
+      } else {
+        return [...prev, tipoValue];
+      }
+    });
+  };
+
+  // Funciones para las acciones de aprobar/rechazar
+  const aprobarUsuario = async (usuario) => {
+    try {
+      // Confirmación antes de aprobar
+      if (!window.confirm(`¿Estás seguro de que deseas aprobar al usuario ${usuario.nombre} ${usuario.apellido}?`)) {
+        return;
+      }
+
+      console.log('Aprobando usuario:', usuario);
+      
+      // Actualizar el status del usuario a 'available' si está deshabilitado
+      await updateUser(usuario.id, { status: 'available' });
+      
+      // Actualizar los datos localmente para reflejar el cambio inmediatamente
+      const datosActualizados = data.map(u => 
+        u.id === usuario.id ? { ...u, estado: 'available' } : u
+      );
+      setData(datosActualizados);
+      
+      alert(`Usuario ${usuario.nombre} ${usuario.apellido} aprobado correctamente`);
+    } catch (error) {
+      console.error('Error al aprobar usuario:', error);
+      alert(`Error al aprobar el usuario: ${error.message}`);
+    }
+  };
+
+  const rechazarUsuario = async (usuario) => {
+    try {
+      // Confirmación antes de rechazar
+      if (!window.confirm(`¿Estás seguro de que deseas rechazar/desactivar al usuario ${usuario.nombre} ${usuario.apellido}?`)) {
+        return;
+      }
+
+      console.log('Rechazando usuario:', usuario);
+      
+      // Actualizar el status del usuario a 'disabled'
+      await updateUser(usuario.id, { status: 'disabled' });
+      
+      // Actualizar los datos localmente para reflejar el cambio inmediatamente
+      const datosActualizados = data.map(u => 
+        u.id === usuario.id ? { ...u, estado: 'disabled' } : u
+      );
+      setData(datosActualizados);
+      
+      alert(`Usuario ${usuario.nombre} ${usuario.apellido} ha sido desactivado`);
+    } catch (error) {
+      console.error('Error al rechazar usuario:', error);
+      alert(`Error al rechazar el usuario: ${error.message}`);
+    }
+  };
 
   const Calendar = ({ onChange }) => (
     <input
@@ -105,8 +288,18 @@ export default function AdmisionUsuario() {
                 </button>
               </div>
               <div style={{ display: 'flex', gap: 18, marginTop: 30 }}>
-                <button style={{ background: '#4dc3ff', color: '#fff', border: 'none', borderRadius: 7, padding: '7px 14px', fontWeight: 500, fontSize: 15, cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.03)', height: 36 }}>Aplicar Filtros</button>
-                <button style={{ background: '#4dc3ff', color: '#fff', border: 'none', borderRadius: 7, padding: '7px 14px', fontWeight: 500, fontSize: 15, cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.03)', height: 36 }}>Limpiar Filtros</button>
+                <button 
+                  onClick={aplicarFiltros}
+                  style={{ background: '#4dc3ff', color: '#fff', border: 'none', borderRadius: 7, padding: '7px 14px', fontWeight: 500, fontSize: 15, cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.03)', height: 36 }}
+                >
+                  Aplicar Filtros
+                </button>
+                <button 
+                  onClick={limpiarFiltros}
+                  style={{ background: '#4dc3ff', color: '#fff', border: 'none', borderRadius: 7, padding: '7px 14px', fontWeight: 500, fontSize: 15, cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.03)', height: 36 }}
+                >
+                  Limpiar Filtros
+                </button>
               </div>
             </div>
 
@@ -172,13 +365,7 @@ export default function AdmisionUsuario() {
             }}
           >
             <span
-              onClick={() =>
-                setTipo(
-                  tipo.includes(t.value)
-                    ? tipo.filter((v) => v !== t.value)
-                    : [...tipo, t.value]
-                )
-              }
+              onClick={() => handleTipoChange(t.value)}
               
               style={{
                 width: 20,
@@ -347,39 +534,92 @@ export default function AdmisionUsuario() {
   {/*-------------------------- Tabla con los datos -------------------------------*/}
 
             <div style={{ marginTop: '80px', borderRadius: '8px', border: '1px solid #e5e7eb', textAlign: 'center' }}>
-              <table style={{ width: '100%', fontSize: '16px', borderCollapse: 'collapse', textAlign: 'center' }}>
-                <thead style={{ backgroundColor: '#0288d1', color: '#fff' }}>
-                  <tr>
-                    <th style={{ padding: '18px', fontWeight: 'bold' }}>Nombre</th>
-                    <th style={{ padding: '18px', fontWeight: 'bold' }}>Apellido</th>
-                    <th style={{ padding: '18px', fontWeight: 'bold' }}>Email</th>
-                    <th style={{ padding: '18px', fontWeight: 'bold' }}>DNI</th>
-                    <th style={{ padding: '18px', fontWeight: 'bold' }}>Fecha de creación</th>
-                    <th style={{ padding: '18px', fontWeight: 'bold' }}>Tipo</th>
-                    <th style={{ padding: '18px', fontWeight: 'bold' }}>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody style={{ backgroundColor: '#fff' }}>
-                  {data.map((u, idx) => (
-                    <tr key={idx} style={{ borderTop: '1px solid #e5e7eb' }}>
-                      <td style={{ padding: '18px' }}>{u.nombre}</td>
-                      <td style={{ padding: '18px' }}>{u.apellido}</td>
-                      <td style={{ padding: '18px' }}>{u.email}</td>
-                      <td style={{ padding: '18px' }}>{u.dni}</td>
-                      <td style={{ padding: '18px' }}>{u.fecha}</td>
-                      <td style={{ padding: '18px' }}>{u.tipo}</td>
-                      <td style={{ padding: '18px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                        <button style={{ color: '#4caf50', border: 'none', background: 'none', cursor: 'pointer' }} title="Aprobar">
-                          <CheckCircle size={28} />
-                        </button>
-                        <button style={{ color: '#f44336', border: 'none', background: 'none', cursor: 'pointer' }} title="Rechazar">
-                          <XCircle size={28} />
-                        </button>
-                      </td>
+              {loading ? (
+                <div style={{ textAlign: 'center', padding: '40px', fontSize: '16px', color: '#666' }}>
+                  Cargando usuarios...
+                </div>
+              ) : error ? (
+                <div style={{ textAlign: 'center', padding: '40px', fontSize: '16px', color: '#f44336' }}>
+                  {error}
+                </div>
+              ) : (
+                <table style={{ width: '100%', fontSize: '16px', borderCollapse: 'collapse', textAlign: 'center' }}>
+                  <thead style={{ backgroundColor: '#0288d1', color: '#fff' }}>
+                    <tr>
+                      <th style={{ padding: '18px', fontWeight: 'bold' }}>Nombre</th>
+                      <th style={{ padding: '18px', fontWeight: 'bold' }}>Apellido</th>
+                      <th style={{ padding: '18px', fontWeight: 'bold' }}>Email</th>
+                      <th style={{ padding: '18px', fontWeight: 'bold' }}>DNI</th>
+                      <th style={{ padding: '18px', fontWeight: 'bold' }}>Fecha de creación</th>
+                      <th style={{ padding: '18px', fontWeight: 'bold' }}>Tipo</th>
+                      <th style={{ padding: '18px', fontWeight: 'bold' }}>Estado</th>
+                      <th style={{ padding: '18px', fontWeight: 'bold' }}>Acciones</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody style={{ backgroundColor: '#fff' }}>
+                    {filteredData.length === 0 ? (
+                      <tr>
+                        <td colSpan="8" style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
+                          {data.length === 0 ? 'No se encontraron usuarios' : 'No hay usuarios que coincidan con los filtros aplicados'}
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredData.map((u, idx) => (
+                        <tr key={u.id || idx} style={{ borderTop: '1px solid #e5e7eb' }}>
+                          <td style={{ padding: '18px' }}>{u.nombre}</td>
+                          <td style={{ padding: '18px' }}>{u.apellido}</td>
+                          <td style={{ padding: '18px' }}>{u.email}</td>
+                          <td style={{ padding: '18px' }}>{u.dni}</td>
+                          <td style={{ padding: '18px' }}>{u.fecha}</td>
+                          <td style={{ padding: '18px' }}>
+                            <span style={{
+                              backgroundColor: u.tipo === 'Administrador' ? '#ff9800' : 
+                                             u.tipo === 'Capacitador' ? '#4caf50' : 
+                                             u.tipo === 'Directivo' ? '#2196f3' : 
+                                             u.tipo === 'Alumno' ? '#9c27b0' : '#9e9e9e',
+                              color: 'white',
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              fontWeight: 'bold'
+                            }}>
+                              {u.tipo}
+                            </span>
+                          </td>
+                          <td style={{ padding: '18px' }}>
+                            <span style={{
+                              backgroundColor: u.estado === 'available' ? '#4caf50' : '#f44336',
+                              color: 'white',
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              fontWeight: 'bold'
+                            }}>
+                              {u.estado === 'available' ? 'Activo' : 'Inactivo'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '18px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                            <button 
+                              style={{ color: '#4caf50', border: 'none', background: 'none', cursor: 'pointer' }} 
+                              title="Aprobar"
+                              onClick={() => aprobarUsuario(u)}
+                            >
+                              <CheckCircle size={28} />
+                            </button>
+                            <button 
+                              style={{ color: '#f44336', border: 'none', background: 'none', cursor: 'pointer' }} 
+                              title="Rechazar"
+                              onClick={() => rechazarUsuario(u)}
+                            >
+                              <XCircle size={28} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              )}
             </div>
 
             {/* Paginación */}

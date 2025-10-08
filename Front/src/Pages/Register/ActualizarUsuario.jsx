@@ -1,78 +1,48 @@
-import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { APIRegistro } from "../../API/Request";
+import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { updateUser } from "../../API/Request";
 import ModalMensajeRegistro from "../../Components/Modals/RegisterModal";
 import ValidationErrorModal from "../../Components/Modals/ValidationErrorModal";
-import { useUser } from "../../context/UserContext";
 import NavBar from '../../Components/Student/NavBar';
 
-function Register() {
+function ActualizarUsuario() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { userData } = useUser();
-  const isAdmin = userData?.user?.role === "Administrador";
-  const isAdminCreateRoute = isAdmin && location?.pathname?.startsWith("/adminPanel/gestionUsuario/crearUsuario");
+  // El usuario a editar debe venir por location.state.user
+  const usuario = location.state?.user;
 
-  //Estados MODAL
+  // MODAL
   const [modalOpen, setModalOpen] = useState(false);
   const [modalCodigo, setModalCodigo] = useState(null);
   const [modalMensaje, setModalMensaje] = useState("");
 
-  // Estados para modal de validación
+  // Modal de validación
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [validationMessage, setValidationMessage] = useState("");
 
-  const handleModalClose = () => {
-    setModalOpen(false);
-    if (modalCodigo >= 200 && modalCodigo < 400) {
-      if (isAdminCreateRoute) {
-        // Si es administrador creando un usuario, volver a la gestión de usuarios
-        navigate("/adminPanel/gestionUsuario");
-      } else {
-        // Si es un registro normal, ir al login
-        navigate("/login");
-      }
-    }
-  };
-
-  //Estado de los errores - REMOVIDO, ahora usamos modal
-  const [documentType, setdocumentType] = useState("");
-  const [firstName, setfirstName] = useState("");
-  const [lastName, setlastName] = useState("");
-  const [documentNumber, setdocumentNumber] = useState("");
-  const [birthDate, setbirthDate] = useState("");
-  const [email, setEmail] = useState("");
-  const [postalCode, setpostalCode] = useState("");
-  const [address, setaddress] = useState("");
-  const [addressNumber, setaddressNumber] = useState("");
-  const [apartment, setapartment] = useState("");
-  const [areaCode, setareaCode] = useState("");
-  const [phone, setphone] = useState("");
-  const [password, setPassword] = useState("");
-  const [rePassword, setrePassword] = useState("");
-  const [aceptaTerminos, setAceptaTerminos] = useState(false);
-
-  // Rol (solo visible para administradores)
-  const [selectedRole, setSelectedRole] = useState(null);
-  const ROLE_OPTIONS = [
-    { value: "Capacitador", label: "Capacitador" },
-    { value: "Alumno", label: "Guardia" },
-    { value: "Administrador", label: "Administrador" },
-    { value: "Directivo", label: "Directivo" },
-  ];
-  
-  
-  // Estados de las provinces y ciudades
-  const [province, setprovince] = useState("");
-  const [ciudad, setCiudad] = useState("");
+  // Estados del formulario (inicializados con los datos del usuario)
+  const [documentType, setdocumentType] = useState(usuario?.documentType ?? "");
+  const [firstName, setfirstName] = useState(usuario?.firstName ?? "");
+  const [lastName, setlastName] = useState(usuario?.lastName ?? "");
+  const [documentNumber, setdocumentNumber] = useState(usuario?.documentNumber ?? "");
+  const [birthDate, setbirthDate] = useState(usuario?.birthDate?.slice(0,10) ?? "");
+  const [email, setEmail] = useState(usuario?.email ?? "");
+  const [postalCode, setpostalCode] = useState(usuario?.postalCode ?? "");
+  const [address, setaddress] = useState(usuario?.address ?? "");
+  const [addressNumber, setaddressNumber] = useState(usuario?.addressNumber ?? "");
+  const [apartment, setapartment] = useState(usuario?.apartment ?? "");
+  const [province, setprovince] = useState(usuario?.province ?? "");
+  const [ciudad, setCiudad] = useState(usuario?.city ?? "");
   const [ciudades, setCiudades] = useState([]);
+  const [areaCode, setareaCode] = useState(usuario?.areaCode ?? "");
+  const [phone, setphone] = useState(usuario?.phone ?? "");
+  // El campo password no se edita aquí
+  const [selectedRole, setSelectedRole] = useState(usuario?.role ?? null);
 
-  // Array de archivos de provinces
+  // Provincias y mapeo
   const provincesArchivos = [
     "buenos_aires", "catamarca", "chaco", "chubut", "ciudad_autónoma_de_buenos_aires", "corrientes", "córdoba", "entre_ríos", "formosa", "jujuy", "la_pampa", "la_rioja", "mendoza", "misiones", "neuquén", "río_negro", "salta", "san_juan", "san_luis", "santa_cruz", "santa_fe", "santiago_del_estero", "tierra_del_fuego,_antártida_e_islas_del_atlántico_sur", "tucumán"
   ];
-
-  // Mapeo para mostrar el firstName legible
   const provincefirstNames = {
     "buenos_aires": "Buenos Aires",
     "catamarca": "Catamarca",
@@ -100,47 +70,53 @@ function Register() {
     "tucumán": "Tucumán"
   };
 
-  // Handler para cargar ciudades
-  const handleprovinceChange = async (e) => {
-    const prov = e.target.value;
-    setprovince(prov);
-    setCiudad("");
-    if (prov) {
-      try {
-        const data = await import(`../../Components/Localidades/${prov}.json`);
-        setCiudades(data.default.localidades || []);
-      } catch {
+  // Roles
+  const ROLE_OPTIONS = [
+    { value: "Capacitador", label: "Capacitador" },
+    { value: "Alumno", label: "Guardia" },
+    { value: "Administrador", label: "Administrador" },
+    { value: "Directivo", label: "Directivo" },
+  ];
+
+  // Cargar ciudades al cambiar provincia
+  useEffect(() => {
+    async function cargarCiudades() {
+      if (province) {
+        try {
+          const data = await import(`../../Components/Localidades/${province}.json`);
+          setCiudades(data.default.localidades || []);
+        } catch {
+          setCiudades([]);
+        }
+      } else {
         setCiudades([]);
       }
-    } else {
-      setCiudades([]);
+    }
+    cargarCiudades();
+  }, [province]);
+
+  // Modal close
+  const handleModalClose = () => {
+    setModalOpen(false);
+    if (modalCodigo >= 200 && modalCodigo < 400) {
+      navigate("/adminPanel/gestionUsuario", { replace: true, state: null });
     }
   };
 
+  // Submit edición
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validar usando los estados
+    // Validación
     if (!firstName || !lastName || !documentType || !documentNumber || !birthDate 
-     || !email || !postalCode || !address || !addressNumber || !province || !ciudad || !areaCode || !phone || !password 
-     || !rePassword) {
+     || !email || !postalCode || !address || !addressNumber || !province || !ciudad || !areaCode || !phone) {
       setValidationMessage("Debe completar todos los campos");
-      setShowValidationModal(true);
-      return;
-    }
-    if (password !== rePassword) {
-      setValidationMessage("Las contraseñas no coinciden");
-      setShowValidationModal(true);
-      return;
-    }
-    if (!isAdminCreateRoute && !aceptaTerminos) {
-      setValidationMessage("Debe aceptar los términos y condiciones");
       setShowValidationModal(true);
       return;
     }
 
     try {
-      const usuario = {
+      const patch = {
         firstName,
         lastName,
         documentType,
@@ -155,43 +131,16 @@ function Register() {
         city: ciudad,
         areaCode,
         phone,
-        password,
-        // Solo los administradores en la ruta de creación de usuario pueden establecer el rol explícitamente
-        ...(isAdminCreateRoute && selectedRole ? { role: selectedRole } : {})
+        role: selectedRole
       };
-      await APIRegistro(usuario);
+      await updateUser(usuario._id, patch);
 
-      // Mostrar modal de éxito
       setModalCodigo(200);
-      setModalMensaje("¡Usuario registrado correctamente!");
+      setModalMensaje("¡Usuario actualizado correctamente!");
       setModalOpen(true);
-
-      // Restablecer todos los campos
-      setfirstName("");
-      setlastName("");
-      setdocumentType("");
-      setdocumentNumber("");
-      setbirthDate("");
-      setEmail("");
-      setpostalCode("");
-      setaddress("");
-      setaddressNumber("");
-      setapartment("");
-      setprovince("");
-      setCiudad("");
-      setareaCode("");
-      setphone("");
-      setPassword("");
-      setrePassword("");
-      setAceptaTerminos(false);
-    setCiudades([]);
-    setSelectedRole(null);
-
-      // Redirigir o mostrar mensaje de éxito
     } catch (err) {
       setModalCodigo(err.code || 400);
-      // Si hay detalles, los mostramos juntos
-      let mensaje = err.message || "Error al registrar.";
+      let mensaje = err.message || "Error al actualizar.";
       if (err.details && Array.isArray(err.details)) {
         mensaje += "\n" + err.details.map(d => `${d.field}: ${d.message}`).join("\n");
       }
@@ -202,15 +151,15 @@ function Register() {
 
   return (
     <>
-    {/* MODAL DE VALIDACIÓN */}
+      {/* MODAL DE VALIDACIÓN */}
       {showValidationModal && (
         <ValidationErrorModal
           mensaje={validationMessage}
           onClose={() => setShowValidationModal(false)}
         />
       )}
-      
-    {/* MODAL DE REGISTRO */}
+
+      {/* MODAL DE REGISTRO */}
       {modalOpen && (
         <ModalMensajeRegistro
           codigo={modalCodigo}
@@ -218,25 +167,11 @@ function Register() {
           onClose={handleModalClose}
         />
       )}
-      {/* NavBar solo en ruta de creación desde Admin Panel */}
-      {isAdminCreateRoute && <NavBar />}
 
-      {/* Fondo: oculto en modo Admin crear usuario */}
-      {!isAdminCreateRoute && (
-        <div
-          className="fixed inset-0 bg-[url('./assets/fondo.jpg')] bg-cover bg-center 
-          before:content-[''] before:absolute before:inset-0 
-          before:bg-[radial-gradient(1000px_600px_at_35%_35%,rgba(0,0,0,.08),transparent_40%)] 
-          after:content-[''] after:absolute after:inset-0 
-          after:bg-gradient-to-r after:from-[#10151b]/15 after:to-[#10151b]/35"
-          aria-hidden="true"
-        ></div>
-      )}
+      <NavBar />
 
-      {/* Contenedor */}
       <main className="relative min-h-screen flex items-center justify-center px-4 sm:px-6 md:px-8 py-8">
         <section className="w-full max-w-2xl bg-white/95 shadow-2xl rounded-2xl p-6 sm:p-8 md:p-10">
-          {/* Logo */}
           <div className="w-full flex justify-center mb-6 select-none">
             <h1 className="text-4xl font-extrabold tracking-widest">
               SIC<span className="text-[#f39a2d]">A</span>PSI
@@ -244,12 +179,11 @@ function Register() {
           </div>
 
           <h2 className="text-gray-900 text-2xl font-bold text-center mb-6">
-            {isAdminCreateRoute ? "Crear Usuario" : "Formulario de Inscripción"}
+            Editar Usuario
           </h2>
 
-          {/* Formulario */}
           <form className="space-y-5" onSubmit={handleSubmit}>
-            {/* firstName completo */}
+            {/* Nombre y Apellido */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               <input
                 type="text"
@@ -327,7 +261,7 @@ function Register() {
               <select
                 className="border rounded-lg px-3 py-2 w-full max-h-48 overflow-y-auto cursor-pointer"
                 value={province}
-                onChange={handleprovinceChange}
+                onChange={e => setprovince(e.target.value)}
               >
                 <option value="">Provincia</option>
                 {provincesArchivos.map(p => (
@@ -365,99 +299,42 @@ function Register() {
               />
             </div>
 
-            {/* Contraseña */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-              <input
-                type="password"
-                placeholder="Contraseña"
-                className="border rounded-lg px-3 py-2 w-full"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-              />
-              <input
-                type="password"
-                placeholder="Repetir contraseña"
-                className="border rounded-lg px-3 py-2 w-full"
-                value={rePassword}
-                onChange={e => setrePassword(e.target.value)}
-              />
+            {/* Rol */}
+            <div className="space-y-2">
+              <span className="block text-sm font-medium text-gray-700">Rol del usuario</span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {ROLE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    className={
+                      "px-3 py-2 rounded-lg border transition cursor-pointer " +
+                      (selectedRole === opt.value
+                        ? "bg-sky-500 text-white border-sky-500"
+                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50")
+                    }
+                    onClick={() => setSelectedRole(opt.value)}
+                    aria-pressed={selectedRole === opt.value}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500">Solo los administradores pueden asignar roles distintos a Guardia.</p>
             </div>
 
-            {/* Rol (solo visible para administradores) */}
-            {isAdminCreateRoute && (
-              <div className="space-y-2">
-                <span className="block text-sm font-medium text-gray-700">Rol del usuario</span>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {ROLE_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      className={
-                        "px-3 py-2 rounded-lg border transition cursor-pointer " +
-                        (selectedRole === opt.value
-                          ? "bg-sky-500 text-white border-sky-500"
-                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50")
-                      }
-                      onClick={() => setSelectedRole(opt.value)}
-                      aria-pressed={selectedRole === opt.value}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-xs text-gray-500">Solo los administradores pueden asignar roles distintos a Guardia.</p>
-              </div>
-            )}
-
-            {/* Aceptación de términos - solo visible para no administradores */}
-            {!isAdminCreateRoute && (
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  className="h-5 w-5 text-sky-500 border-gray-300 rounded focus:ring-sky-500 cursor-pointer"
-                  checked={aceptaTerminos}
-                  onChange={e => setAceptaTerminos(e.target.checked)}
-                />
-                <label className="ml-2 text-gray-700">
-                  Acepto los{" "}
-                  <a
-                    href="#"
-                    className="text-sky-600 hover:underline font-semibold"
-                  >
-                    términos y condiciones
-                  </a>
-                </label>
-              </div>
-            )}
-
-            {/* Botón de registro */}
+            {/* Botón de actualizar */}
             <button
               type="submit"
               className="w-full h-12 rounded-lg bg-sky-500 text-white font-semibold hover:bg-sky-600 transition cursor-pointer"
             >
-              {isAdminCreateRoute ? "Crear Usuario" : "Registrarse"}
+              Actualizar Usuario
             </button>
           </form>
-
-          {/* Volver a inicio de sesión - solo visible para no administradores */}
-          {!isAdminCreateRoute && (
-            <div className="mt-6 text-center">
-              <span className="text-xs text-gray-600">
-                ¿Ya tienes cuenta?{" "}
-                <a
-                  href="/"
-                  className="text-sky-600 hover:underline font-semibold"
-                  style={{ fontSize: "0.95em" }}
-                >
-                  Inicia sesión
-                </a>
-              </span>
-            </div>
-          )}
         </section>
       </main>
     </>
   );
 }
 
-export default Register;
+export default ActualizarUsuario;

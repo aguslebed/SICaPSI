@@ -180,8 +180,25 @@ export function makeUserController({ userService, trainingService, messageServic
       } catch (err) { 
         next(err); 
       }
-    }
-  };
+    },
+
+      /**
+   * Elimina un usuario por su ID
+   */
+    async deleteUser(req, res, next) {
+      try {
+        const userId = req.params.id;
+        if (!userId) throw new AppError('ID de usuario requerido', 400);
+        
+        const deletedUser = await userService.delete(userId);
+        if (!deletedUser) throw new AppError('Usuario no encontrado', 404);
+
+        res.json({ message: 'Usuario eliminado exitosamente', user: userFormatter.toPublic(deletedUser) });
+      } catch (err) {
+        next(err);
+      }
+    },
+}
 }
 
 export default makeUserController;
