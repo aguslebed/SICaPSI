@@ -50,7 +50,7 @@ function Login() {
 
       // Redirigir según rol
       const role = data?.user?.role;
-      if (role === 'Administrator') {
+      if (role === 'Administrador') {
         navigate('/adminPanel');
       } else {
         navigate('/userPanel');

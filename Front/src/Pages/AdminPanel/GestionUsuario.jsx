@@ -13,10 +13,10 @@ function getEstadoLabel(status) {
 }
 
 function getRoleLabel(role) {
-  if (role === 'Trainer') return 'Capacitador';
-  if (role === 'Student') return 'Guardia';
-  if (role === 'Manager') return 'Directivo';
-  if (role === 'Administrator') return 'Administrador';
+  if (role === 'Capacitador') return 'Capacitador';
+  if (role === 'Alumno') return 'Guardia';
+  if (role === 'Directivo') return 'Directivo';
+  if (role === 'Administrador') return 'Administrador';
   return role;
 }
 

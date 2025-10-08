@@ -57,12 +57,12 @@ async function initializeDatabase() {
   info(`✅ ${createdUsers.length} users created`);
 
   // Mapas por rol (solo admins y managers fueron creados aquí)
-  const admins = createdUsers.filter(u => u.role === 'Administrator');
-  const managers = createdUsers.filter(u => u.role === 'Manager');
+  const admins = createdUsers.filter(u => u.role === 'Administrador');
+  const managers = createdUsers.filter(u => u.role === 'Directivo');
   const adminUser = admins[0];
   // Registrar credenciales en texto plano para administradores y managers
-  admins.forEach(a => credentialsList.push({ email: a.email, password: defaultPasswordPlain, role: 'Administrator', name: a.firstName || a.email }));
-  managers.forEach(m => credentialsList.push({ email: m.email, password: defaultPasswordPlain, role: 'Manager', name: m.firstName || m.email }));
+  admins.forEach(a => credentialsList.push({ email: a.email, password: defaultPasswordPlain, role: 'Administrador', name: a.firstName || a.email }));
+  managers.forEach(m => credentialsList.push({ email: m.email, password: defaultPasswordPlain, role: 'Directivo', name: m.firstName || m.email }));
 
   // Crear 5 cursos: dos de ellos desactualizados (isActive = false)
   info('📚 Creando 5 cursos (2 inactivos)...');

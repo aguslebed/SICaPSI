@@ -50,7 +50,7 @@ export class EnrollmentService extends IEnrollmentService {
   //Devuelve todos los alumnos que NO estan anotados en una capacitacion
   async getUsersNotEnrolledInTraining(trainingId) {
   const users = await this.user.find({
-    role: "Student", 
+    role: "Alumno", 
     assignedTraining: { $ne: trainingId } 
   }).exec();
 
@@ -73,7 +73,7 @@ export class EnrollmentService extends IEnrollmentService {
     if (!training) throw new Error("Capacitacion no encontrado");
 
     const users = await this.user.find({
-      role: "Student",
+      role: "Alumno",
       assignedTraining: trainingId
     }).exec();
 
@@ -93,8 +93,8 @@ export class EnrollmentService extends IEnrollmentService {
     const training = await this.training.findById(trainingId);
     if (!training) throw new Error("Capacitacion no encontrado");
 
-    if (training.role !== "Trainer") {
-      throw new Error("El id no es de un capacitador");
+    if (user.role !== "Capacitador") {
+      throw new Error("El usuario no es un capacitador");
     }
 
     if (user.assignedTraining.includes(trainingId)) {
@@ -111,7 +111,7 @@ export class EnrollmentService extends IEnrollmentService {
   //Devuelve todos los capacitadores que NO estan anotados en una capacitacion en especifico
   async getTrainersNotEnrolledInTraining(trainingId) {
     const users = await this.user.find({
-      role: "Trainer", 
+      role: "Capacitador", 
       assignedTraining: { $ne: trainingId } 
     }).exec();
 

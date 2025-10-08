@@ -47,7 +47,7 @@ async function adminLoader() {
   }
   const me = await getMe();
   const role = me?.user?.role;
-  if (role !== 'Administrator') {
+  if (role !== 'Administrador') {
     throw redirect('/userPanel');
   }
   return { me };

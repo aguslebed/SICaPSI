@@ -72,10 +72,10 @@ function ActualizarUsuario() {
 
   // Roles
   const ROLE_OPTIONS = [
-    { value: "Trainer", label: "Capacitador" },
-    { value: "Student", label: "Guardia" },
-    { value: "Administrator", label: "Administrador" },
-    { value: "Manager", label: "Directivo" },
+    { value: "Capacitador", label: "Capacitador" },
+    { value: "Alumno", label: "Guardia" },
+    { value: "Administrador", label: "Administrador" },
+    { value: "Directivo", label: "Directivo" },
   ];
 
   // Cargar ciudades al cambiar provincia

@@ -10,7 +10,7 @@ function Register() {
   const navigate = useNavigate();
   const location = useLocation();
   const { userData } = useUser();
-  const isAdmin = userData?.user?.role === "Administrator";
+  const isAdmin = userData?.user?.role === "Administrador";
   const isAdminCreateRoute = isAdmin && location?.pathname?.startsWith("/adminPanel/gestionUsuario/crearUsuario");
 
   //Estados MODAL
@@ -55,10 +55,10 @@ function Register() {
   // Rol (solo visible para administradores)
   const [selectedRole, setSelectedRole] = useState(null);
   const ROLE_OPTIONS = [
-    { value: "Trainer", label: "Capacitador" },
-    { value: "Student", label: "Guardia" },
-    { value: "Administrator", label: "Administrador" },
-    { value: "Manager", label: "Directivo" },
+    { value: "Capacitador", label: "Capacitador" },
+    { value: "Alumno", label: "Guardia" },
+    { value: "Administrador", label: "Administrador" },
+    { value: "Directivo", label: "Directivo" },
   ];
   
   
