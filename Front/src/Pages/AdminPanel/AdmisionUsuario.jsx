@@ -420,6 +420,90 @@ export default function AdmisionUsuario() {
 
                   
 
+  {/*------------------------------------------------- ESTADO --------------------------------------*/}
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, position: 'relative', marginLeft: '80px', marginTop: '-50px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      {/* Botón para abrir/cerrar menú */}
+      <button onClick={() => setEstadoMenu(!estadoMenu)}
+        style={{
+          fontSize: 15,
+          fontWeight: 500,
+          color: '#444',
+          border: '1px solid #bdbdbd',
+          borderRadius: 7,
+          padding: '7px 12px',
+          background: '#f7f8fa',
+          cursor: 'pointer',
+          height: 36,
+          width: 180,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+        Estado<img width="20" height="20" src="https://img.icons8.com/ios-glyphs/60/chevron-down.png" alt="chevron-down"/>
+      </button>
+    </div>
+
+    {/* Menú desplegable */}
+    {estadoMenu && (
+      <div
+        style={{
+          position: 'absolute',
+          top: 35,
+          left: 0,
+          width: 180,
+          background: '#f7f8fa',
+          border: '1px solid #ccc',
+          borderRadius: 7,
+          boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+          padding: 5,
+          zIndex: 10,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 5
+        }}
+      >
+        {/* Opciones del botón 'ESTADO' */}
+        {estados.map((est) => (
+          <label
+            key={est.value}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 8px',
+              cursor: 'pointer',
+              fontSize: 15,
+              color: '#333',
+              borderRadius: 6
+            }}
+          >
+            <span
+              onClick={() => handleEstadoChange(est.value)}
+              style={{
+                width: 20,
+                height: 20,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 4,
+                background: '#fff',
+                border: '1px solid #bdbdbd'
+              }}
+            >
+              {estado.includes(est.value) ? (
+                <span style={{ width: 10, color: '#18b620ff', fontWeight: 'bold' }}>✓</span>
+              ) : (
+                <XCircle size={0} color="#444" />
+              )}
+            </span>
+            {est.label}
+          </label>
+        ))}
+      </div>
+    )}
+  </div>
+
   {/*--------------------------------------------* Fecha de creación -----------------------------------------------*/}
   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, position: 'relative', marginLeft: '80px', marginTop: '-50px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
