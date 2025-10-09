@@ -24,6 +24,7 @@ export class UserService extends IUserService {
     }
     const entity = new this.User({
       ...data,
+      role: data.role || "Alumno", // Por defecto todos los nuevos usuarios son Alumno
       ultimoIngreso: data.ultimoIngreso ?? null,
       legajo: data.legajo ?? null,
       imagenPerfil: data.imagenPerfil ?? null

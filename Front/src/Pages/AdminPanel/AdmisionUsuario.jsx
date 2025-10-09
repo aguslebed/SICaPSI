@@ -11,6 +11,12 @@ const tipos = [
   { label: 'Alumno', value: 'Alumno' },
 ];
 
+const estados = [
+  { label: 'Pendiente', value: 'pendiente' },
+  { label: 'Activo', value: 'available' },
+  { label: 'Inactivo', value: 'disabled' },
+];
+
 export default function AdmisionUsuario() {
   const location = useLocation();
   const [data, setData] = useState(location.state?.data || []);
@@ -21,6 +27,8 @@ export default function AdmisionUsuario() {
   const [busqueda, setBusqueda] = useState('');
   const [tipo, setTipo] = useState([]);
   const [tipoMenu, setTipoMenu] = useState(false);
+  const [estado, setEstado] = useState([]);
+  const [estadoMenu, setEstadoMenu] = useState(false);
   const [fechaMenu, setFechaMenu] = useState(false);
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
@@ -109,6 +117,13 @@ export default function AdmisionUsuario() {
       );
     }
 
+    // Filtro por estado de usuario
+    if (estado.length > 0) {
+      datosFiltrados = datosFiltrados.filter(usuario =>
+        estado.includes(usuario.estado)
+      );
+    }
+
     // Filtro por fecha desde
     if (fechaDesde) {
       const fechaDesdeObj = new Date(fechaDesde);
@@ -128,7 +143,7 @@ export default function AdmisionUsuario() {
     }
 
     setFilteredData(datosFiltrados);
-  }, [data, busqueda, tipo, fechaDesde, fechaHasta]);
+  }, [data, busqueda, tipo, estado, fechaDesde, fechaHasta]);
 
   // Función para aplicar filtros (ya se aplican automáticamente con useEffect)
   const aplicarFiltros = () => {
@@ -139,6 +154,7 @@ export default function AdmisionUsuario() {
   const limpiarFiltros = () => {
     setBusqueda('');
     setTipo([]);
+    setEstado([]);
     setFechaDesde('');
     setFechaHasta('');
     setFecha(new Date());
@@ -151,6 +167,17 @@ export default function AdmisionUsuario() {
         return prev.filter(t => t !== tipoValue);
       } else {
         return [...prev, tipoValue];
+      }
+    });
+  };
+
+  // Función para manejar cambios en los checkboxes de estado
+  const handleEstadoChange = (estadoValue) => {
+    setEstado(prev => {
+      if (prev.includes(estadoValue)) {
+        return prev.filter(e => e !== estadoValue);
+      } else {
+        return [...prev, estadoValue];
       }
     });
   };
@@ -588,14 +615,16 @@ export default function AdmisionUsuario() {
                           </td>
                           <td style={{ padding: '18px' }}>
                             <span style={{
-                              backgroundColor: u.estado === 'available' ? '#4caf50' : '#f44336',
+                              backgroundColor: u.estado === 'available' ? '#4caf50' : 
+                                             u.estado === 'pendiente' ? '#ff9800' : '#f44336',
                               color: 'white',
                               padding: '4px 8px',
                               borderRadius: '4px',
                               fontSize: '12px',
                               fontWeight: 'bold'
                             }}>
-                              {u.estado === 'available' ? 'Activo' : 'Inactivo'}
+                              {u.estado === 'available' ? 'Activo' : 
+                               u.estado === 'pendiente' ? 'Pendiente' : 'Inactivo'}
                             </span>
                           </td>
                           <td style={{ padding: '18px', display: 'flex', gap: '8px', justifyContent: 'center' }}>

@@ -73,7 +73,7 @@ function ActualizarUsuario() {
   // Roles
   const ROLE_OPTIONS = [
     { value: "Capacitador", label: "Capacitador" },
-    { value: "Alumno", label: "Guardia" },
+    { value: "Alumno", label: "Alumno" },
     { value: "Administrador", label: "Administrador" },
     { value: "Directivo", label: "Directivo" },
   ];

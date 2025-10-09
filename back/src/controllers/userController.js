@@ -14,7 +14,9 @@ export function makeUserController({ userService, trainingService, messageServic
     async list(req, res, next) {
       try {
         const users = await userService.list(req.query);
-        res.json(userFormatter.toPublicList(users));
+        // Excluir el administrador principal por seguridad
+        const filteredUsers = users.filter(user => user.email !== 'admin@sicapsi.com');
+        res.json(userFormatter.toPublicList(filteredUsers));
       } catch (err) { next(err); }
     },
 
@@ -40,8 +42,16 @@ export function makeUserController({ userService, trainingService, messageServic
 
     async update(req, res, next) {
       try {
-        const user = await userService.update(req.params.id, req.body);
-        res.json(userFormatter.toPublic(user));
+        // Verificar si se está intentando actualizar el administrador principal
+        const user = await userService.getById(req.params.id);
+        if (user && user.email === 'admin@sicapsi.com') {
+          return res.status(403).json({ 
+            message: 'No se puede modificar el administrador principal por razones de seguridad.' 
+          });
+        }
+        
+        const updatedUser = await userService.update(req.params.id, req.body);
+        res.json(userFormatter.toPublic(updatedUser));
       } catch (err) { next(err); }
     },
 
@@ -137,8 +147,16 @@ export function makeUserController({ userService, trainingService, messageServic
           throw new AppError('ID de profesor requerido', 400);
         }
 
-        if (!status || !['available', 'disabled'].includes(status)) {
-          throw new AppError('Estado inválido. Use: available o disabled', 400);
+        // Verificar si se está intentando cambiar el estado del administrador principal
+        const user = await userService.getById(id);
+        if (user && user.email === 'admin@sicapsi.com') {
+          return res.status(403).json({ 
+            message: 'No se puede modificar el estado del administrador principal.' 
+          });
+        }
+
+        if (!status || !['available', 'disabled', 'pendiente'].includes(status)) {
+          throw new AppError('Estado inválido. Use: available, disabled o pendiente', 400);
         }
 
         const updatedTeacher = await userService.updateTeacherStatus(id, status);
@@ -189,6 +207,14 @@ export function makeUserController({ userService, trainingService, messageServic
       try {
         const userId = req.params.id;
         if (!userId) throw new AppError('ID de usuario requerido', 400);
+        
+        // Verificar si se está intentando eliminar el administrador principal
+        const user = await userService.getById(userId);
+        if (user && user.email === 'admin@sicapsi.com') {
+          return res.status(403).json({ 
+            message: 'No se puede eliminar el administrador principal por razones de seguridad.' 
+          });
+        }
         
         const deletedUser = await userService.delete(userId);
         if (!deletedUser) throw new AppError('Usuario no encontrado', 404);
