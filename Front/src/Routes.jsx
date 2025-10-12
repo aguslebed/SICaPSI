@@ -1,28 +1,102 @@
-import Home from './Pages/Home/Home';
-import InicioDeSesion from './Pages/Login/Login';
-import PanelDeUsuario from './Pages/UserPanel/Student/UserPanel';
-import PrivateRoute from './PrivateRoute';
-import Registrarse from './Pages/Register/Register';
-import NotFound from './Pages/NotFound';
-import DetalleCapacitacion from './Pages/UserPanel/Student/TrainingIndex';
-import TrainingLevels from './Pages/UserPanel/Student/TrainingLevels';
-import MisReportes from './Pages/UserPanel/Student/TrainingReports';
-import NivelBibliografia from './Pages/UserPanel/Student/Levelbibliogrhapy';
-import NivelCapacitacion from './Pages/UserPanel/Student/LevelTraining';
-import ConsultaCapacitador from './Components/Modals/consultaCapacitador';
-import LevelTest from './Pages/UserPanel/Student/LevelTest'
+import React, { lazy } from 'react';
+import { createBrowserRouter, redirect } from 'react-router-dom';
+import ProtectedLayout from './Layouts/ProtectedLayout';
+import StudentLayout from './Layouts/StudentLayout';
+import { getMe, checkAuth } from './API/Request';
+import RouteError from './Pages/RouteError';
 
-export const routes = [
+const Mensajeria = lazy(() => import('./Pages/UserPanel/Student/Mensajeria'));
+const AdminActualizarUsuario = lazy(() => import('./Pages/Register/ActualizarUsuario'));
+
+const Home = lazy(() => import('./Pages/Home/Home'));
+const InicioDeSesion = lazy(() => import('./Pages/Login/Login'));
+const Registrarse = lazy(() => import('./Pages/Register/Register'));
+const NotFound = lazy(() => import('./Pages/NotFound'));
+const PanelDeUsuario = lazy(() => import('./Pages/UserPanel/Student/UserPanel'));
+const DetalleCapacitacion = lazy(() => import('./Pages/UserPanel/Student/TrainingIndex'));
+const TrainingLevels = lazy(() => import('./Pages/UserPanel/Student/TrainingLevels'));
+const MisReportes = lazy(() => import('./Pages/UserPanel/Student/TrainingReports'));
+const NivelBibliografia = lazy(() => import('./Pages/UserPanel/Student/Levelbibliogrhapy'));
+const NivelCapacitacion = lazy(() => import('./Pages/UserPanel/Student/LevelTraining'));
+const LevelTest = lazy(() => import('./Pages/UserPanel/Student/LevelTest'));
+
+// Admin pages (placeholders)
+const AdminHome = lazy(() => import('./Pages/AdminPanel/Index'));
+const AdmisionUsuario = lazy(() => import('./Pages/AdminPanel/AdmisionUsuario'));
+const GestionUsuario = lazy(() => import('./Pages/AdminPanel/GestionUsuario'));
+const GestionCursos = lazy(() => import('./Pages/AdminPanel/GestionCursos'));
+const GestionProfesores = lazy(() => import('./Pages/AdminPanel/GestionProfesores'));
+const ProfesorEditar = lazy(() => import('./Pages/AdminPanel/ProfesorEditar'));
+
+async function authLoader() {
+  try {
+    await checkAuth();
+  } catch {
+    throw redirect('/login');
+  }
+  const me = await getMe();
+  return { me };
+}
+
+async function adminLoader() {
+  // Verifica sesión y rol de administrador; si no, redirige a /userPanel
+  try {
+    await checkAuth();
+  } catch {
+    throw redirect('/login');
+  }
+  const me = await getMe();
+  const role = me?.user?.role;
+  if (role !== 'Administrador') {
+    throw redirect('/userPanel');
+  }
+  return { me };
+}
+
+export const router = createBrowserRouter([
   { path: '/', element: <Home /> },
   { path: '/login', element: <InicioDeSesion /> },
   { path: '/registrarse', element: <Registrarse /> },
-  { path: '/userPanel', element: <PrivateRoute><PanelDeUsuario /></PrivateRoute> },
-  { path: '/userPanel/:idTraining', element: <PrivateRoute><DetalleCapacitacion /></PrivateRoute> },
-  { path: '/userPanel/:idTraining/levels', element: <PrivateRoute><TrainingLevels /></PrivateRoute> },
-  { path: '/userPanel/:idTraining/messages', element: <PrivateRoute><ConsultaCapacitador /></PrivateRoute> },
-  { path: '/userPanel/:idTraining/reports', element: <PrivateRoute><MisReportes /></PrivateRoute> },
-  { path: '/userPanel/:idTraining/:nivelId/bibliogrhapy', element: <PrivateRoute><NivelBibliografia /></PrivateRoute> },
-  { path: '/userPanel/:idTraining/:nivelId/training', element: <PrivateRoute><NivelCapacitacion /></PrivateRoute> },
-  { path: '/userPanel/:idTraining/:nivelId/levelTest', element: <PrivateRoute><LevelTest /></PrivateRoute> },
-  { path: '*', element: <NotFound /> }
-];
+  {
+    path: '/adminPanel',
+    element: <ProtectedLayout />,
+    loader: adminLoader,
+    errorElement: <RouteError />,
+    children: [
+      // Página principal del panel admin
+      { index: true, element: <AdminHome /> },
+      // Secciones solicitadas
+      { path: 'admisionUsuario', element: <AdmisionUsuario /> },
+      { path: 'gestionUsuario', element: <GestionUsuario /> },
+      { path: 'gestionCursos', element: <GestionCursos /> },
+  { path: 'gestionProfesores', element: <GestionProfesores /> },
+  { path: 'profesorEditar/:id', element: <ProfesorEditar /> },
+      // Crear Usuario: debe renderizar el Register.jsx
+      { path: 'gestionUsuario/crearUsuario', element: <Registrarse /> },
+      { path: 'gestionUsuario/modificarUsuario', element: <AdminActualizarUsuario /> }
+
+    ]
+  },
+  {
+    path: '/userPanel',
+    element: <ProtectedLayout />,
+    loader: authLoader,
+    errorElement: <RouteError />, // Friendly error UI for route loading failures
+    children: [
+      {
+        element: <StudentLayout />,
+        children: [
+          { index: true, element: <PanelDeUsuario /> },
+          { path: ':idTraining', element: <DetalleCapacitacion /> },
+          { path: ':idTraining/levels', element: <TrainingLevels /> },
+          { path: ':idTraining/reports', element: <MisReportes /> },
+          { path: ':idTraining/:nivelId/bibliogrhapy', element: <NivelBibliografia /> },
+          { path: ':idTraining/:nivelId/training', element: <NivelCapacitacion /> },
+          { path: ':idTraining/:nivelId/levelTest', element: <LevelTest /> },
+          { path: ':idTraining/messages', element: <Mensajeria /> },
+        ],
+      },
+    ],
+  },
+  { path: '*', element: <NotFound /> },
+]);

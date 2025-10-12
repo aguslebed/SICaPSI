@@ -5,7 +5,9 @@
   "main": "src/app.js",
   "scripts": {
     "dev": "nodemon src/app.js",
-    "start": "node src/app.js"
+    "start": "node src/app.js",
+    "migrate:backfill-trainingId": "node src/scripts/backfillTrainingId.js",
+    "seed:cursos": "node src/scripts/crearCursos.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -14,6 +16,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "multer": "^1.4.5-lts.1",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.6.0"
   },

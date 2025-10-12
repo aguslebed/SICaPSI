@@ -1,1 +1,10 @@
 @import "tailwindcss";
+
+/* Global responsive media */
+video, iframe { max-width: 100%; height: auto; }
+img { max-width: 100%; }
+
+/* Optional: hide scrollbar for elements with no-scrollbar class */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+ 

@@ -1,8 +1,5 @@
-// Formatter para mensajes
-import { IMensaje } from '../interfaces/IMensaje.js';
-
-export class MessageResponseFormatter extends IMensaje{
-  static format(message) {
+export class MessageResponseFormatter {
+  format(message) {
     return {
       _id: message._id,
       sender: message.sender,

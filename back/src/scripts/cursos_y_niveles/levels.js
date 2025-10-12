@@ -1,140 +1,124 @@
 import { sampleTest } from "./test.js";
 
 export const sampleLevels = [
-  // Niveles para Desarrollo Web Full Stack
+  // Nivel 1: Patrullaje y control de accesos
   {
     levelNumber: 1,
-    title: "Introducción a HTML y CSS",
-    description: "Fundamentos de la estructura web y estilos",
+    title: "Patrullaje y Control de Accesos",
+    description: "Buenas prácticas de patrullaje, rutas, puntos críticos y control de accesos en instalaciones residenciales y corporativas.",
     bibliography: [
       {
-        title: "Guía Completa de HTML5",
-        description: "Documentación oficial y mejores prácticas",
-        videoUrl: ["https://example.com/html5-guide.pdf"],
+        title: "Manual de Patrullaje",
+        description: "Procedimientos estándar para patrullaje efectivo",
+        videoUrl: ["https://example.com/manual-patrullaje.pdf"],
         createdAt: new Date()
       },
       {
-        title: "CSS Tricks Handbook",
-        description: "Técnicas modernas de diseño web",
-        videoUrl: ["https://example.com/css-tricks.pdf"],
-        createdAt: new Date()
-      },
-      {
-        title: "HTML & CSS W3Schools",
-        description: "Referencias prácticas y ejemplos",
-        videoUrl: ["https://example.com/html-css-w3.pdf"],
+        title: "Control de Accesos 101",
+        description: "Guía práctica sobre identificaciones, registros y verificaciones",
+        videoUrl: ["https://example.com/control-accesos.pdf"],
         createdAt: new Date()
       }
     ],
     training: {
-      videoUrl: "https://www.youtube.com/embed/placeholder1",
-      description: "Video introductorio a HTML y CSS",
-      duration: 45,
+      title: "Patrullaje y Control de Accesos (Training)",
+      videoUrl: "https://www.youtube.com/embed/security-patrol-example",
+      description: "Video demostrativo sobre rutinas de patrullaje y gestión de accesos.",
+      duration: 40,
       createdAt: new Date()
     },
-    test: sampleTest.flatMap(t => t.test),
+    test: sampleTest,
     createdAt: new Date(),
     isActive: true
   },
 
-  // Niveles para Machine Learning para Principiantes
+  // Nivel 2: Reportes e incidencia
   {
     levelNumber: 2,
-    title: "Conceptos Básicos de ML",
-    description: "Definiciones y aplicaciones del machine learning",
+    title: "Detección y Reporte de Incidentes",
+    description: "Cómo identificar incidentes, recopilar evidencia y redactar partes y reportes claros y completos.",
     bibliography: [
       {
-        title: "Machine Learning Yearning",
-        description: "Guía introductoria de Andrew Ng",
-        videoUrl: ["https://example.com/ml-intro.pdf"],
+        title: "Guía de Redacción de Informes",
+        description: "Plantillas y ejemplos de partes de incidente",
+        videoUrl: ["https://example.com/reportes-guia.pdf"],
         createdAt: new Date()
       },
       {
-        title: "Hands-On ML",
-        description: "Libro práctico con ejemplos en Python",
-        videoUrl: ["https://example.com/hands-on-ml.pdf"],
-        createdAt: new Date()
-      },
-      {
-        title: "Scikit-Learn Docs",
-        description: "Documentación de librería en Python",
-        videoUrl: ["https://example.com/sklearn-docs.pdf"],
+        title: "Toma de Evidencia Básica",
+        description: "Buenas prácticas para fotografiar y documentar una escena",
+        videoUrl: ["https://example.com/evidencia.pdf"],
         createdAt: new Date()
       }
     ],
     training: {
-      videoUrl: "https://www.youtube.com/embed/ml1",
-      description: "Introducción al aprendizaje automático",
-      duration: 40,
+      title: "Detección y Reporte de Incidentes (Training)",
+      videoUrl: "https://www.youtube.com/embed/security-reporting-example",
+      description: "Tutorial sobre cómo detectar, documentar y reportar incidentes correctamente.",
+      duration: 35,
       createdAt: new Date()
     },
-    test: sampleTest.flatMap(t => t.test),
+    test: sampleTest,
     isActive: true
   },
+
+  // Nivel 3: Primeros auxilios y respuesta a emergencias
   {
     levelNumber: 3,
-    title: "Regresión Lineal y Logística",
-    description: "Modelos estadísticos básicos",
+    title: "Primeros Auxilios y Respuesta a Emergencias",
+    description: "Procedimientos básicos de primeros auxilios, RCP, control de hemorragias y coordinación con servicios de emergencia.",
     bibliography: [
       {
-        title: "Introducción a la Regresión",
-        description: "Fundamentos matemáticos",
-        videoUrl: ["https://example.com/regresion.pdf"],
+        title: "RCP y Primeros Auxilios",
+        description: "Guía práctica sobre RCP y manejo de heridas",
+        videoUrl: ["https://example.com/rcp-guia.pdf"],
         createdAt: new Date()
       },
       {
-        title: "Estadística Aplicada",
-        description: "Conceptos de probabilidad y regresión",
-        videoUrl: ["https://example.com/estadistica.pdf"],
-        createdAt: new Date()
-      },
-      {
-        title: "Python for Data Science",
-        description: "Ejemplos prácticos de regresión",
-        videoUrl: ["https://example.com/python-ds.pdf"],
+        title: "Coordinación con Emergencias",
+        description: "Protocolos para notificar y asistir a bomberos/ambulancias",
+        videoUrl: ["https://example.com/emergencias.pdf"],
         createdAt: new Date()
       }
     ],
     training: {
-      videoUrl: "https://www.youtube.com/embed/ml2",
-      description: "Aplicación práctica de regresión",
-      duration: 55,
+      title: "Primeros Auxilios y Respuesta a Emergencias (Training)",
+      videoUrl: "https://www.youtube.com/embed/security-first-aid-example",
+      description: "Demostraciones prácticas de RCP y atención inicial a víctimas.",
+      duration: 60,
       createdAt: new Date()
     },
-    test: sampleTest.flatMap(t => t.test),
+    test: sampleTest,
     isActive: true
   },
+
+  // Nivel 4: Control de garitas y gestión de visitas
   {
     levelNumber: 4,
-    title: "Árboles de Decisión",
-    description: "Primeros algoritmos supervisados",
+    title: "Control de Garitas y Gestión de Visitas",
+    description: "Operativa de garitas: registro de visitas, verificación de identidades, y comunicación con central.",
     bibliography: [
       {
-        title: "Decision Trees Explained",
-        description: "Guía sencilla sobre árboles",
-        videoUrl: ["https://example.com/decision-trees.pdf"],
+        title: "Procedimientos de Garita",
+        description: "Protocolos para el puesto de control",
+        videoUrl: ["https://example.com/garita.pdf"],
         createdAt: new Date()
       },
       {
-        title: "CART Algorithm",
-        description: "Introducción a algoritmos de clasificación",
-        videoUrl: ["https://example.com/cart.pdf"],
-        createdAt: new Date()
-      },
-      {
-        title: "Practical ML Trees",
-        description: "Ejemplos prácticos de árboles",
-        videoUrl: ["https://example.com/practical-ml.pdf"],
+        title: "Sistemas de Control de Acceso",
+        description: "Uso de software y hardware para control de accesos",
+        videoUrl: ["https://example.com/sistemas-acceso.pdf"],
         createdAt: new Date()
       }
     ],
     training: {
-      videoUrl: "https://www.youtube.com/embed/ml3",
-      description: "Cómo funcionan los árboles de decisión",
-      duration: 65,
+      title: "Control de Garitas y Gestión de Visitas (Training)",
+      videoUrl: "https://www.youtube.com/embed/security-guardhouse-example",
+      description: "Videos y prácticas sobre gestión de garitas y sistemas de acceso.",
+      duration: 45,
       createdAt: new Date()
     },
-    test: sampleTest.flatMap(t => t.test),
+    test: sampleTest,
     isActive: true
   }
 ];

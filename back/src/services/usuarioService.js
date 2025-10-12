@@ -10,13 +10,13 @@ const SALT_ROUNDS = 10; // Usuario.CONST.SALT_ROUNDS
 
 export const S_Usuario_Alta = async (data) => {
   // S.Usuario.Alta
-  const exists = await Usuario.findOne({ email: data.email });
+  const exists = await User.findOne({ email: data.email });
   if (exists) {
     throw new AppError("El mail ya está registrado", 409, "USR_001");
   }
  
   const hashed = await bcrypt.hash(data.password, SALT_ROUNDS);
-  const entity = new Usuario({
+  const entity = new User({
     ...data,
     password: hashed,
     ultimoIngreso: data.ultimoIngreso ?? null,

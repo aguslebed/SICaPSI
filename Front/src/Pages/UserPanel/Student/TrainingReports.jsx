@@ -1,27 +1,23 @@
 import React, { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
-import Navbar from "../../../Components/Student/NavBar"
-import MenuVertical from "../../../Components/Student/SideBar";
-import { useUser } from "../../../Context/UserContext";
+import { useUser } from "../../../context/UserContext";
 
 const TrainingReports = () => {
   const [videoSeleccionado, setVideoSeleccionado] = useState(null);
   const { userData } = useUser();
   const { idTraining } = useParams();
-  const trainings = userData.data.training || [];
+  const trainings = userData?.training || [];
   // Filtrar solo el training actual
   const selectedTraining = trainings.find(t => t._id === idTraining);
   const reports = selectedTraining?.report || []; 
   return (
     <>
-      <Navbar />
-      <div className="flex min-h-screen bg-gray-100">
-        {/* Sidebar */}
-        <MenuVertical />
+      <div className="min-h-screen bg-gray-100">
+        <div className="max-w-screen-xl w-full mx-auto flex px-4 sm:px-6 md:px-8">
 
-        {/* Contenido principal */}
-        <main className="flex-1 p-8">
-          <h1 className="text-2xl font-bold text-gray-800 mb-6">
+          {/* Contenido principal */}
+          <main className="flex-1 min-w-0 py-6 md:py-8">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6">
             Mis reportes (HU-11 Alumno)
           </h1>
 
@@ -89,7 +85,8 @@ const TrainingReports = () => {
               </div>
             </div>
           )}
-        </main>
+          </main>
+        </div>
       </div>
     </>
   );

@@ -5,37 +5,37 @@ import AppError from "../middlewares/AppError.js";
  */
 export const RegistrationValidator = (req, res, next) => {
   const {
-    nombre,
-    apellidos,
-    tipoDocumento,
-    numeroDocumento,
-    fechaNacimiento,
+    firstName,
+    lastName,
+    documentType,
+    documentNumber,
+    birthDate,
     email,
-    codigoPostal,
-    direccion,
-    numeroDireccion, 
-    provincia,
-    localidad,
-    codArea,
-    telefono,
+    postalCode,
+    address,
+    addressNumber, 
+    province,
+    city,
+    areaCode,
+    phone,
     password
     // departamento NO es obligatorio
   } = req.body || {};
 
   const errors = [];
-  if (!nombre) errors.push({ field: "nombre", message: "Obligatorio" });
-  if (!apellidos) errors.push({ field: "apellidos", message: "Obligatorio" });
-  if (!tipoDocumento) errors.push({ field: "tipoDocumento", message: "Obligatorio" });
-  if (!numeroDocumento) errors.push({ field: "numeroDocumento", message: "Obligatorio" });
-  if (!fechaNacimiento) errors.push({ field: "fechaNacimiento", message: "Obligatorio" });
+  if (!firstName) errors.push({ field: "nombre", message: "Obligatorio" });
+  if (!lastName) errors.push({ field: "apellidos", message: "Obligatorio" });
+  if (!documentType) errors.push({ field: "tipoDocumento", message: "Obligatorio" });
+  if (!documentNumber) errors.push({ field: "numeroDocumento", message: "Obligatorio" });
+  if (!birthDate) errors.push({ field: "fechaNacimiento", message: "Obligatorio" });
   if (!email) errors.push({ field: "email", message: "Obligatorio" });
-  if (!codigoPostal) errors.push({ field: "codigoPostal", message: "Obligatorio" });
-  if (!direccion) errors.push({ field: "direccion", message: "Obligatorio" });
-  if (!numeroDireccion) errors.push({ field: "numeroDireccion", message: "Obligatorio" });
-  if (!provincia) errors.push({ field: "provincia", message: "Obligatorio" });
-  if (!localidad) errors.push({ field: "localidad", message: "Obligatorio" });
-  if (!codArea) errors.push({ field: "codArea", message: "Obligatorio" });
-  if (!telefono) errors.push({ field: "telefono", message: "Obligatorio" });
+  if (!postalCode) errors.push({ field: "codigoPostal", message: "Obligatorio" });
+  if (!address) errors.push({ field: "direccion", message: "Obligatorio" });
+  if (!addressNumber) errors.push({ field: "numeroDireccion", message: "Obligatorio" });
+  if (!province) errors.push({ field: "provincia", message: "Obligatorio" });
+  if (!city) errors.push({ field: "localidad", message: "Obligatorio" });
+  if (!areaCode) errors.push({ field: "codArea", message: "Obligatorio" });
+  if (!phone) errors.push({ field: "telefono", message: "Obligatorio" });
   if (!password || String(password).length < 6)
     errors.push({ field: "password", message: "Mínimo 6 caracteres" });
 

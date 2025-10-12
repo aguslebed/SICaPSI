@@ -1,37 +1,87 @@
 import { useState } from "react";
 import { login } from "../../API/Request";
 import { Link } from "react-router-dom";
-import { useUser } from "../../Context/UserContext";
+import { useUser } from "../../context/UserContext";
+import { useNavigate } from 'react-router-dom';
+import LoadingOverlay from "../../Components/Shared/LoadingOverlay";
+import ValidationErrorModal from "../../Components/Modals/ValidationErrorModal";
+import AuthErrorModal from "../../Components/Modals/AuthErrorModal";
 
 function Login() {
-  const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [validationMessage, setValidationMessage] = useState("");
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const { setUserData } = useUser(); 
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
 
-    const email = e.target.email.value;
-    const password = e.target.password.value;
+    const email = e.target.email.value.trim();
+    const password = e.target.password.value.trim();
+
+    // Validar campos vacíos
+    if (!email && !password) {
+      setValidationMessage("Debe completar todos los campos");
+      setShowValidationModal(true);
+      return;
+    }
+    if (!email) {
+      setValidationMessage("Debe ingresar su correo electrónico");
+      setShowValidationModal(true);
+      return;
+    }
+    if (!password) {
+      setValidationMessage("Debe ingresar su contraseña");
+      setShowValidationModal(true);
+      return;
+    }
 
     try {
-        const data = await login(email, password);
-        setUserData(data); 
-  
+      setIsLoading(true);
+  const data = await login(email, password);
+  setUserData(data);
 
       // Indicar que se debe mostrar el modal
-       sessionStorage.setItem("showWelcomeModal", "true");
+      sessionStorage.setItem("showWelcomeModal", "true");
 
-      // Redirigir al dashboard
-        window.location.href = "/userPanel";
-    } catch (err) {
-      setError(err.message);
+      // Redirigir según rol
+      const role = data?.user?.role;
+      if (role === 'Administrador') {
+        navigate('/adminPanel');
+      } else {
+        navigate('/userPanel');
+      }
+    } catch {
+      // Mostrar modal de error para credenciales inválidas
+      setErrorMessage("Email o contraseña Inválidos");
+      setShowErrorModal(true);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <>
+      {/* Modal de validación */}
+      {showValidationModal && (
+        <ValidationErrorModal
+          mensaje={validationMessage}
+          onClose={() => setShowValidationModal(false)}
+        />
+      )}
+
+      {/* Modal de error de autenticación */}
+      {showErrorModal && (
+        <AuthErrorModal
+          mensaje={errorMessage}
+          onClose={() => setShowErrorModal(false)}
+        />
+      )}
+
       {/* Fondo */}
       <div
         className="fixed inset-0 bg-[url('./assets/fondo.jpg')] bg-cover bg-center 
@@ -41,6 +91,9 @@ function Login() {
         after:bg-gradient-to-r after:from-[#10151b]/15 after:to-[#10151b]/35"
         aria-hidden="true"
       ></div>
+
+      {/* Overlay de carga */}
+      {isLoading && <LoadingOverlay label="Iniciando sesión..." />}
 
       {/* Contenedor */}
       <main className="relative min-h-screen flex items-center justify-center p-6">
@@ -57,7 +110,7 @@ function Login() {
           </h2>
 
           {/* Formulario */}
-          <form id="loginForm" className="space-y-4 " onSubmit={handleSubmit}>
+          <form id="loginForm" className="space-y-4 " onSubmit={handleSubmit} aria-busy={isLoading}>
             <div>
               <label
                 className="block text-sm text-gray-700 mb-1"
@@ -70,7 +123,7 @@ function Login() {
                 type="email"
                 className="w-full border-0 border-b-2 border-gray-300 focus:border-blue-500 outline-none py-2 transition-colors"
                 placeholder="usuario@empresa.com"
-                required
+                disabled={isLoading}
               />
             </div>
 
@@ -86,7 +139,7 @@ function Login() {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   className="w-full border-0 border-b-2 border-gray-300 focus:border-blue-500 outline-none py-2 transition-colors pr-10"
-                  required
+                  disabled={isLoading}
                 />
                 <button
                   type="button"
@@ -94,6 +147,7 @@ function Login() {
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-sm"
                   onClick={() => setShowPassword((v) => !v)}
                   aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  disabled={isLoading}
                 >
                   {showPassword ? "Ocultar" : "Mostrar"}
                 </button>
@@ -105,6 +159,7 @@ function Login() {
                 id="remember"
                 type="checkbox"
                 className="h-4 w-4 accent-sky-500"
+                disabled={isLoading}
               />
               <label
                 htmlFor="remember"
@@ -116,12 +171,18 @@ function Login() {
 
             <button
               type="submit"
-              className="w-full h-12 rounded-lg bg-sky-500 text-white font-semibold hover:bg-sky-600 transition cursor-pointer"
+              className={`w-full h-12 rounded-lg text-white font-semibold transition ${isLoading ? 'bg-sky-400 cursor-not-allowed' : 'bg-sky-500 hover:bg-sky-600 cursor-pointer'}`}
+              disabled={isLoading}
             >
-              Acceder
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
+                  Procesando...
+                </span>
+              ) : (
+                'Acceder'
+              )}
             </button>
-
-            <p id="error" className="text-red-600 text-sm mt-2">{error}</p>
           </form>
 
           {/* Texto de registro */}

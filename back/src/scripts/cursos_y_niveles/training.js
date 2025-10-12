@@ -1,132 +1,132 @@
 export const sampleCourses = [
   {
-    title: "Desarrollo Web Full Stack",
-    subtitle: "Aprende a crear aplicaciones web completas",
-    description: "Curso completo de desarrollo web desde frontend hasta backend",
-    image: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=400",
+    title: "Capacitación 1",
+    subtitle: "Edificio de departamentos",
+    description: "Introducción a la seguridad privada: funciones del guardia, patrullaje y control de accesos en edificios de departamentos",
+  image: "/uploads/1.jpeg",
     isActive: true,
     createdBy: "64f1a3c5e2b8f7c9a12d3456", // ID ficticio de usuario
     introduction: {
-      title: "Bienvenido al Mundo del Desarrollo Web",
-      subtitle: "Tu viaje comienza aquí",
-      welcomeMessage: "¡Bienvenido! En este curso aprenderás las habilidades esenciales para convertirte en un desarrollador web full stack."
+      title: "Capacitación 1",
+      subtitle: "Edificio de departamentos",
+      welcomeMessage: "Introducción a la seguridad privada: funciones del guardia, patrullaje y control de accesos en edificios de departamentos"
     },
     levels: [],
     totalLevels: 0,
     report: [
       {
         level: 1,
-        score: ["8.5", "9.0"],
-        errorsCount: "2",
-        videoUrl: "https://example.com/report1.mp4",
-        description: "Buen desempeño en fundamentos de HTML y CSS."
+        score: 8.5,
+        errorsCount: 2,
+        videoUrl: "https://example.com/security-patrullaje-1.mp4",
+        description: "Buen desempeño en patrullaje y control de accesos en edificio: rutas correctas y comunicación efectiva."
       },
       {
         level: 2,
-        score: ["7.5"],
-        errorsCount: "4",
-        videoUrl: "https://example.com/report2.mp4",
-        description: "Necesita mejorar en JavaScript intermedio."
+        score: 7.5,
+        errorsCount: 4,
+        videoUrl: "https://example.com/security-comunicacion-1.mp4",
+        description: "Mejorar en comunicación de incidentes y redacción de partes: faltaron detalles en reporte."
       }
     ],
     progressPercentage: 33
   },
   {
-    title: "Machine Learning para Principiantes",
-    subtitle: "Introducción a la inteligencia artificial",
-    description: "Aprende los fundamentos del machine learning y la IA",
-    image: "https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=400",
+    title: "Capacitación 2",
+    subtitle: "Barrio privado pequeño",
+    description: "Protocolos de respuesta ante incidentes y primeros auxilios básicos para guardias de seguridad",
+  image: "/uploads/2.jpeg",
     isActive: true,
     createdBy: "64f1a3c5e2b8f7c9a12d7890",
     introduction: {
-      title: "Descubre el Poder del Machine Learning",
-      subtitle: "Transforma datos en conocimiento",
-      welcomeMessage: "Bienvenido al fascinante mundo del machine learning. Aprenderás a crear modelos predictivos y entender los algoritmos de IA."
+      title: "Capacitación 2",
+      subtitle: "Barrio privado pequeño",
+      welcomeMessage: "Protocolos de respuesta ante incidentes y primeros auxilios básicos para guardias de seguridad"
     },
     levels: [],
     totalLevels: 0,
     report: [
       {
         level: 1,
-        score: ["6.0", "6.5"],
-        errorsCount: "5",
-        videoUrl: "https://example.com/ml-report1.mp4",
-        description: "Le cuesta la interpretación de regresiones simples."
+        score: 6.0,
+        errorsCount: 5,
+        videoUrl: "https://example.com/security-primeros-auxilios-1.mp4",
+        description: "Dificultades en la aplicación de primeros auxilios: repasar RCP y control de hemorragias."
       }
     ],
     progressPercentage: 99
   },
   {
-    title: "Fundamentos de Programación",
-    subtitle: "Aprende a programar desde cero",
-    description: "Curso básico de algoritmos, lógica y estructuras de control",
-    image: "https://images.unsplash.com/photo-1584697964190-4b16d22b62d9?w=400",
+    title: "Capacitación 3",
+    subtitle: "Barrio privado grande",
+    description: "Curso básico de procedimientos y protocolos de seguridad: patrullaje, comunicación y manejo de emergencias",
+  image: "/uploads/3.jpeg",
     isActive: true,
     createdBy: "64f1a3c5e2b8f7c9a12d6543",
     introduction: {
-      title: "Da tus primeros pasos en Programación",
-      subtitle: "De la lógica al código",
-      welcomeMessage: "En este curso aprenderás a pensar como programador y a construir tus primeros programas."
+      title: "Capacitación 3",
+      subtitle: "Barrio privado grande",
+      welcomeMessage: "Curso básico de procedimientos y protocolos de seguridad: patrullaje, comunicación y manejo de emergencias"
     },
     levels: [],
     totalLevels: 0,
     report: [
       {
         level: 1,
-        score: ["9.0"],
-        errorsCount: "1",
-        videoUrl: "https://example.com/programacion-report1.mp4",
-        description: "Excelente comprensión de la lógica de programación."
+        score: 9.0,
+        errorsCount: 1,
+        videoUrl: "https://example.com/security-procedimientos-1.mp4",
+        description: "Excelente comprensión de procedimientos de patrullaje y respuesta ante emergencias."
       }
     ],
     progressPercentage: 55
   },
   {
-    title: "Bases de Datos con SQL",
-    subtitle: "Gestiona y consulta datos de forma profesional",
-    description: "Aprende a diseñar, consultar y optimizar bases de datos relacionales",
-    image: "https://images.unsplash.com/photo-1555421689-491a97ff2040?w=400",
+    title: "Capacitación 4",
+    subtitle: "Garita de seguridad",
+    description: "Técnicas de control y monitoreo en garitas: gestión de visitas, comunicación con central y manejo de reportes",
+  image: "/uploads/4.jpeg",
     isActive: true,
     createdBy: "64f1a3c5e2b8f7c9a12d4321",
     introduction: {
-      title: "Explora el Mundo de los Datos",
-      subtitle: "La base de toda aplicación",
-      welcomeMessage: "Bienvenido al curso de SQL, donde aprenderás a manipular y estructurar la información de manera eficiente."
+      title: "Capacitación 4",
+      subtitle: "Garita de seguridad",
+      welcomeMessage: "Técnicas de control y monitoreo en garitas: gestión de visitas, comunicación con central y manejo de reportes"
     },
     levels: [],
     totalLevels: 0,
     report: [
       {
         level: 1,
-        score: ["7.8"],
-        errorsCount: "3",
-        videoUrl: "https://example.com/sql-report1.mp4",
-        description: "Buen manejo de consultas básicas en SQL."
+        score: 7.8,
+        errorsCount: 3,
+        videoUrl: "https://example.com/security-garita-1.mp4",
+        description: "Buen manejo en control de garita: registro de visitas y comunicación con central."
       }
     ],
     progressPercentage: 77
   },
   {
-    title: "Desarrollo de Aplicaciones Móviles",
-    subtitle: "Crea apps para Android y iOS",
-    description: "Curso práctico de desarrollo móvil con frameworks modernos",
-    image: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400",
+    title: "Capacitación 5",
+    subtitle: "Pubs y discotecas",
+    description: "Buenas prácticas para seguridad en locales nocturnos: control de acceso, manejo de conflictos y evacuación",
+  image: "/uploads/5.jpeg",
     isActive: true,
     createdBy: "64f1a3c5e2b8f7c9a12d5678",
     introduction: {
-      title: "Construye Aplicaciones en tus Manos",
-      subtitle: "Del concepto a la tienda de apps",
-      welcomeMessage: "Aprenderás a desarrollar aplicaciones móviles que lleguen a miles de usuarios en todo el mundo."
+      title: "Capacitación 5",
+      subtitle: "Pubs y discotecas",
+      welcomeMessage: "Buenas prácticas para seguridad en locales nocturnos: control de acceso, manejo de conflictos y evacuación"
     },
     levels: [],
     totalLevels: 0,
     report: [
       {
         level: 1,
-        score: ["8.0"],
-        errorsCount: "2",
-        videoUrl: "https://example.com/movil-report1.mp4",
-        description: "Buen progreso en interfaces móviles."
+        score: 8.0,
+        errorsCount: 2,
+        videoUrl: "https://example.com/security-locales-1.mp4",
+        description: "Buen desempeño en control de acceso y manejo de conflictos en locales nocturnos."
       }
     ],
     progressPercentage: 10

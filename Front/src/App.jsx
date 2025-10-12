@@ -1,14 +1,14 @@
-import { Routes, Route } from 'react-router-dom';
+import React, { Suspense } from 'react';
 import './App.css';
-import { routes } from './Routes';
+import { RouterProvider } from 'react-router-dom';
+import { router } from './Routes';
+import LoadingOverlay from './Components/Shared/LoadingOverlay';
 
 function App() {
   return (
-    <Routes>
-      {routes.map(({ path, element }) => (
-        <Route key={path} path={path} element={element} />
-      ))}
-    </Routes>
+    <Suspense fallback={<LoadingOverlay label="Cargando aplicación..." />}> 
+      <RouterProvider router={router} />
+    </Suspense>
   );
 }
 

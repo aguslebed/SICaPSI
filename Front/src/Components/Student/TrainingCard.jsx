@@ -1,25 +1,31 @@
 import React from "react";
+import { useNavigate } from 'react-router-dom';
+import { resolveImageUrl } from '../../API/Request';
 
 const TrainingCard = ({ titulo, subtitulo, porcentaje, estado, link, imagen }) => {
+  const navigate = useNavigate();
   const handleClick = () => {
     if (estado === "activo") {
-      window.location.href = link;
+      navigate(link);
     }
   };
 
   return (
-    <div
-      className={`relative w-full h-40 rounded-md overflow-hidden cursor-pointer transition ${
-        estado === "activo" ? "hover:shadow-lg" : "cursor-not-allowed"
+    <button
+      type="button"
+      className={`relative w-full h-40 rounded-md overflow-hidden transition text-left ${
+        estado === "activo" ? "hover:shadow-lg cursor-pointer" : "cursor-not-allowed opacity-80"
       }`}
       onClick={handleClick}
+      disabled={estado !== "activo"}
+      aria-disabled={estado !== "activo"}
     >
       {/* Imagen de fondo */}
       <div
         className={`absolute inset-0 bg-cover bg-center ${
           estado === "activo" ? "" : "grayscale"
         }`}
-        style={{ backgroundImage: `url(${imagen})` }}
+        style={{ backgroundImage: `url(${resolveImageUrl(imagen)})` }}
       />
 
       {/* Overlay verde solo si está activo */}
@@ -48,7 +54,7 @@ const TrainingCard = ({ titulo, subtitulo, porcentaje, estado, link, imagen }) =
           </span>
         </div>
       )}
-    </div>
+    </button>
   );
 };
 

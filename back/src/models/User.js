@@ -17,15 +17,18 @@ const UserSchema = new mongoose.Schema({
   postalCode: { type: String, required: true },
   address: { type: String, required: true },
   addressNumber: { type: String, required: true },
-  apartment: { type: String, required: false },
+  apartment: { type: String, required: false }, 
   province: { type: String, required: true },
   city: { type: String, required: true },
   areaCode: { type: String, required: true },
   phone: { type: String, required: true },
   password: { type: String, required: true },
-  role: { type: String, enum: ["Administrator", "Trainer", "Manager", "Student"], default: "Student", required: true },
+  role: { type: String, enum: ["Administrador", "Capacitador", "Directivo", "Alumno"], default: "Alumno", required: true },
+  // CAMBIO: Campo agregado para manejar el estado de usuarios
+  // Permite manejar aprobación de usuarios y disponibilidad
+  status: { type: String, enum: ["available", "disabled", "pendiente"], default: "pendiente" },
   lastLogin: { type: Date },
-  institutionalID: { type: String, index: true, unique: true, sparse: true, default: null },
+  institutionalID: { type: Number, index: true, unique: true, sparse: true },
   profileImage: { type: String, required: false, default: null },
   assignedTraining: [{
     type: mongoose.Schema.Types.ObjectId,
@@ -39,3 +42,11 @@ const UserSchema = new mongoose.Schema({
  * M.User.Create (documented): instance creation
  */
 export default mongoose.model("User", UserSchema);
+// Pre-save hook para asignar institutionalID incremental
+UserSchema.pre('save', async function(next) {
+  if (this.institutionalID == null) {
+    const lastUser = await this.constructor.findOne({}, {}, { sort: { institutionalID: -1 } });
+    this.institutionalID = lastUser && lastUser.institutionalID != null ? lastUser.institutionalID + 1 : 0;
+  }
+  next();
+});

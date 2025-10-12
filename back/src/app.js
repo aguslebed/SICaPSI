@@ -1,14 +1,25 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config();
 import express from "express";
 import cors from "cors";
 import authRoutes from "./routes/authRoutes.js";
 import { connectDB } from "./config/db.js";
-import usuarioRoutes from "./routes/usuarioRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+import messageRoutes from "./routes/messageRoutes.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import cookieParser from "cookie-parser";
-import authMiddleware from "./middlewares/authMiddleware.js";
-import { makeUserController } from "./controllers/userController.js";
-const userController = makeUserController();
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from 'url';
+import trainingRoutes from "./routes/trainingRoutes.js";
+import enrollmentRoutes from "./routes/enrollmentRoutes.js";
+import levelRoutes from "./routes/levelRoutes.js";
+
+
+// __dirname equivalent for ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 /**
  * Configurador principal de la aplicación
  * Responsabilidades:
@@ -39,22 +50,36 @@ class AppConfig {
     }));
     this.app.use(express.json());
     this.app.use(cookieParser());
+
+    // Ensure uploads directory exists and serve it statically
+    const uploadsDir = path.resolve(__dirname, "..", "uploads");
+    try {
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+    } catch (e) {
+      console.error("No se pudo crear el directorio de uploads:", e);
+    }
+    this.app.use("/uploads", express.static(uploadsDir));
   }
 
   /**
    * Responsabilidad 2: Configurar rutas
-   */
+   */ 
   configureRoutes() {
-    this.app.use("/auth", authRoutes); 
-    this.app.get("/user/me", authMiddleware, userController.getUserCompleteData);
-
-  }
+    this.app.use("/users", userRoutes);
+    this.app.use("/auth", authRoutes);
+    this.app.use("/messages", messageRoutes);
+    this.app.use("/training", trainingRoutes);
+    this.app.use("/enrollment", enrollmentRoutes);
+    this.app.use("/level", levelRoutes);
+  } 
 
 
   /**
    * Responsabilidad 3: Configurar manejo de errores
    */
-  configureErrorHandling() {
+    configureErrorHandling() {
     this.app.use(errorHandler);
   }
 

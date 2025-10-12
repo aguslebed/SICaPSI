@@ -8,7 +8,7 @@ const ErrorModal = ({ mensaje, onClose }) => {
         <p className="font-semibold">{mensaje}</p>
         <button
           onClick={onClose}
-          className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
+          className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 cursor-pointer"
         >
           OK
         </button>

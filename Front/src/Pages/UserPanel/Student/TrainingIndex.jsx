@@ -1,31 +1,28 @@
 import React from "react";
 import { useParams, Link } from "react-router-dom";
-import Navbar from "../../../Components/Student/NavBar";
-import MenuVertical from "../../../Components/Student/SideBar";
-import { useUser } from "../../../Context/UserContext";
+import { useUser } from "../../../context/UserContext";
+import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
+import { resolveImageUrl } from "../../../API/Request";
 
 const TrainingIndex = () => {
   const { idTraining } = useParams();
   const { userData } = useUser();
-
-  if (!userData || !userData.data || !Array.isArray(userData.data.training)) {
-    return <div className="text-center mt-20">Cargando datos de training...</div>;
-  } 
-  const training = userData.data.training.find(c => c._id === idTraining);
+  if (!userData || !Array.isArray(userData.training)) {
+    return <LoadingOverlay label="Cargando datos de capacitación..." />;
+  }
+  const training = userData.training.find(c => c._id === idTraining);
   if (!training) return <p className="text-center mt-20">Capacitación no encontrada</p>;
 
  
   return (
     <>
-      <Navbar />
-      <div className="flex">
-        <MenuVertical />
-        <main className="flex-1 p-8">
+      <div className="">
+        <div className="">
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             {/* Imagen y título */}
             <div
               className="h-48 bg-black bg-center bg-cover flex flex-col justify-center text-white px-8"
-              style={{ backgroundImage: `url(${training.image})` }}
+              style={{ backgroundImage: `url(${resolveImageUrl(training.image)})` }}
             >
               <h1 className="text-3xl font-bold">{training.title}</h1>
               <p className="text-lg">{training.subtitle}</p>
@@ -45,7 +42,7 @@ const TrainingIndex = () => {
               <p>{training.description}</p>
             </div>
           </div>
-        </main>
+        </div>
       </div>
     </>
   );

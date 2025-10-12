@@ -16,32 +16,40 @@ const LevelSchema = new mongoose.Schema(
     }],
 
     training: {
-      videoUrl: { type: String, required: true },
+      title: { type: String, required: true },
       description: { type: String },
+      videoUrl: { type: String, required: true },
       duration: { type: Number },
       createdAt: { type: Date, default: Date.now }
     }, 
-    test: [{
-      idScene: { type: Number, required: true },
-      videoUrl: { type: String, required: true },
-      description: { type: String, required: true },
+    test: {
+      title: {  type: String, required: true},
+      description: { type: String},
+      imageUrl: { type: String},
       createdAt: { type: Date, default: Date.now },
-      lastOne: { type: Boolean, default: false},
-      bonus: {type: Number, default: 0},
-      options: [{
+      isActive: { type: Boolean, default: true },
+      scenes: [{
+        idScene: { type: Number, required: true },
+        videoUrl: { type: String, required: true },
         description: { type: String, required: true },
-        points: { type: Number, required: true },
-        next: { type: Number, default: null } // Points to idScene
+        lastOne: { type: Boolean, default: false},
+        bonus: {type: Number, default: 0},
+        options: [{
+          description: { type: String, required: true },
+          points: { type: Number, required: true },
+          next: { type: Number, default: null } // Points to idScene
+        }]
       }]
-    }],
-
-    isActive: { type: Boolean, default: true }
+    }
   },
   { timestamps: true }
 );
 
 // Indexes
-LevelSchema.index({ trainingId: 1, levelNumber: 1 });
+// Ensure a training cannot have duplicate level numbers
+LevelSchema.index({ trainingId: 1, levelNumber: 1 }, { unique: true });
+// Optionally ensure a training cannot have duplicate level titles
+LevelSchema.index({ trainingId: 1, title: 1 }, { unique: true, sparse: true });
 LevelSchema.index({ isActive: 1 });
 
 export default mongoose.model("Level", LevelSchema);

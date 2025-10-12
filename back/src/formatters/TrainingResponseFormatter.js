@@ -1,8 +1,5 @@
-// Formatter para cursos
-import { ITraining } from '../interfaces/ITraining.js';
-
-export class TrainingResponseFormatter extends ITraining{
-  static format(training) {
+export class TrainingResponseFormatter {
+  format(training) {
     return {
       _id: training._id,
       title: training.title,
