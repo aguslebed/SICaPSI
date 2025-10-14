@@ -21,6 +21,14 @@ function getRoleLabel(role) {
   return role;
 }
 
+function getRoleColor(role) {
+  if (role === 'Capacitador') return 'bg-green-500';
+  if (role === 'Alumno') return 'bg-purple-500';
+  if (role === 'Directivo') return 'bg-blue-500';
+  if (role === 'Administrador') return 'bg-orange-500';
+  return 'bg-gray-500';
+}
+
 function formatDate(dateStr) {
   const d = new Date(dateStr);
   return d.toLocaleDateString('es-AR');
@@ -226,7 +234,7 @@ export default function GestionUsuario() {
         <div className="admin-content-wrapper">
           <div className="admin-flex admin-justify-between admin-items-center" style={{ marginBottom: '0.5rem' }}>
             <h1 className="admin-title" style={{ marginBottom: 0 }}>Gestión de usuarios</h1>
-            <Link to="/adminPanel/gestionUsuario/crearUsuario" className="admin-btn admin-btn-success">
+            <Link to="/adminPanel/gestionUsuario/crearUsuario" className="admin-btn admin-btn-success" style={{ padding: '0.5rem 0.875rem', fontSize: '0.875rem' }}>
               Crear usuario
             </Link>
           </div>
@@ -410,16 +418,27 @@ export default function GestionUsuario() {
                       <td>{u.email}</td>
                       <td>{u.documentNumber}</td>
                       <td>
-                        <span className={`admin-badge ${
-                          estado.color === 'bg-green-500' ? 'admin-badge-success' : 
-                          estado.color === 'bg-yellow-400' ? 'admin-badge-warning' : 
-                          'admin-badge-danger'
-                        }`}>
+                        <span 
+                          className="inline-block px-3 py-1 rounded-full text-white text-xs font-medium text-center"
+                          style={{ minWidth: '110px', backgroundColor: 
+                            estado.color === 'bg-green-500' ? '#10b981' : 
+                            estado.color === 'bg-yellow-400' ? '#facc15' : '#ef4444' }}
+                        >
                           {estado.label}
                         </span>
                       </td>
                       <td>{formatDate(u.createdAt)}</td>
-                      <td>{getRoleLabel(u.role)}</td>
+                      <td>
+                        <span 
+                          className="inline-block px-3 py-1 rounded-full text-white text-xs font-medium text-center"
+                          style={{ minWidth: '110px', backgroundColor: getRoleColor(u.role) === 'bg-green-500' ? '#10b981' :
+                                   getRoleColor(u.role) === 'bg-purple-500' ? '#a855f7' :
+                                   getRoleColor(u.role) === 'bg-blue-500' ? '#3b82f6' :
+                                   getRoleColor(u.role) === 'bg-orange-500' ? '#f97316' : '#6b7280' }}
+                        >
+                          {getRoleLabel(u.role)}
+                        </span>
+                      </td>
                       <td>
                         <div className="admin-actions">
                           <Link to="/adminPanel/gestionUsuario/modificarUsuario"

@@ -85,7 +85,7 @@ const NavBar = () => {
 
       {/* Barra inferior con acciones (notificaciones / usuario) */}
       <div className="w-full bg-[#0888c2]">
-        <div className="w-full mx-auto h-12 md:h-14 flex items-center" style={{ padding: '0 2.5rem' }}>
+        <div className="w-full mx-auto h-12 md:h-14 flex items-center" style={{ maxWidth: '1400px', padding: '0 2.5rem' }}>
           {/* Botón Volver para rutas específicas del admin panel */}
           {shouldShowBackButton && (
             <button
@@ -187,7 +187,7 @@ const NavBar = () => {
                 <span className="hidden sm:inline text-white font-medium max-w-[140px] truncate text-sm">
                   {userData?.user?.firstName || 'Usuario'}
                 </span>
-                <div className="w-10 h-10 rounded-full border-2 border-white overflow-hidden shrink-0">
+                <div className="w-12 h-12 rounded-full border-2 border-white overflow-hidden shrink-0">
                   <img
                     src={resolveImageUrl(userData?.user?.profileImage) || "/images/alumno-avatar.png"}
                     alt={userData?.user?.firstName || "Usuario"}

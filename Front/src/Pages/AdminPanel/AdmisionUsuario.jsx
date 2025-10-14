@@ -442,20 +442,30 @@ export default function AdmisionUsuario() {
                         <td>{u.dni}</td>
                         <td>{u.fecha}</td>
                         <td>
-                          <span className={`admin-badge ${
-                            u.tipo === 'Administrador' ? 'admin-badge-warning' : 
-                            u.tipo === 'Capacitador' ? 'admin-badge-success' : 
-                            u.tipo === 'Directivo' ? 'admin-badge-info' : 
-                            u.tipo === 'Alumno' ? 'admin-badge-purple' : 'admin-badge-gray'
-                          }`}>
+                          <span 
+                            className="inline-block px-3 py-1 rounded-full text-white text-xs font-medium text-center"
+                            style={{ 
+                              minWidth: '110px',
+                              backgroundColor: 
+                                u.tipo === 'Administrador' ? '#f97316' : 
+                                u.tipo === 'Capacitador' ? '#10b981' : 
+                                u.tipo === 'Directivo' ? '#3b82f6' : 
+                                u.tipo === 'Alumno' ? '#a855f7' : '#6b7280'
+                            }}
+                          >
                             {u.tipo}
                           </span>
                         </td>
                         <td>
-                          <span className={`admin-badge ${
-                            u.estado === 'available' ? 'admin-badge-success' : 
-                            u.estado === 'pendiente' ? 'admin-badge-warning' : 'admin-badge-danger'
-                          }`}>
+                          <span 
+                            className="inline-block px-3 py-1 rounded-full text-white text-xs font-medium text-center"
+                            style={{ 
+                              minWidth: '110px',
+                              backgroundColor: 
+                                u.estado === 'available' ? '#10b981' : 
+                                u.estado === 'pendiente' ? '#facc15' : '#ef4444'
+                            }}
+                          >
                             {u.estado === 'available' ? 'Activo' : 
                              u.estado === 'pendiente' ? 'Pendiente' : 'Inactivo'}
                           </span>

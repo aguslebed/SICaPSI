@@ -234,14 +234,16 @@ function Register() {
       )}
 
       {/* Contenedor */}
-      <main className="relative min-h-screen flex items-center justify-center px-4 py-3">
+      <main className="relative min-h-screen flex items-start justify-center px-4 pt-4 pb-2">
         <section className="w-full bg-white/95 shadow-2xl rounded-lg p-4" style={{ maxWidth: '500px' }}>
-          {/* Logo */}
-          <div className="w-full flex justify-center mb-2 select-none">
-            <h1 className="text-2xl font-extrabold tracking-widest">
-              SIC<span className="text-[#f39a2d]">A</span>PSI
-            </h1>
-          </div>
+          {/* Logo - oculto en modo Admin crear usuario */}
+          {!isAdminCreateRoute && (
+            <div className="w-full flex justify-center mb-2 select-none">
+              <h1 className="text-2xl font-extrabold tracking-widest">
+                SIC<span className="text-[#f39a2d]">A</span>PSI
+              </h1>
+            </div>
+          )}
 
           <h2 className="text-gray-900 text-lg font-bold text-center mb-2.5">
             {isAdminCreateRoute ? "Crear Usuario" : "Formulario de Inscripción"}

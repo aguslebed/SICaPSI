@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import ModalWrapper from './ModalWrapper';
+import ImageCropModal from './ImageCropModal';
 import { useUser } from '../../context/UserContext';
 import { updateUser, getMe, uploadProfileImage, resolveImageUrl, changePassword } from '../../API/Request';
 import { User as UserIcon, Settings as SettingsIcon, ChevronDown, ChevronUp } from 'lucide-react';
@@ -43,6 +44,8 @@ const ProfilePreferencesModal = ({ open, onClose }) => {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [pwdForm, setPwdForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [pwdSaving, setPwdSaving] = useState(false);
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [selectedImageSrc, setSelectedImageSrc] = useState(null);
 
   const setField = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
 
@@ -119,15 +122,36 @@ const ProfilePreferencesModal = ({ open, onClose }) => {
 
   const onFileChange = async (e) => {
     const file = e.target.files?.[0];
-    if (!file || !userId) return;
+    if (!file) return;
     setError('');
     setSuccess('');
+    
+    // Create a local URL for the cropper
+    const localUrl = URL.createObjectURL(file);
+    setSelectedImageSrc(localUrl);
+    setCropModalOpen(true);
+    
+    // Reset the input so the same file can be selected again
+    e.target.value = '';
+  };
+
+  const handleCropComplete = async (croppedBlob) => {
+    if (!croppedBlob || !userId) return;
+    
     setUploading(true);
+    setError('');
+    setSuccess('');
+    
     try {
+      // Create a File from the blob
+      const croppedFile = new File([croppedBlob], 'profile.jpg', { type: 'image/jpeg' });
+      
       // Optimistic preview
-      const localUrl = URL.createObjectURL(file);
+      const localUrl = URL.createObjectURL(croppedBlob);
       setPreviewUrl(localUrl);
-      await uploadProfileImage(userId, file);
+      
+      // Upload to server
+      await uploadProfileImage(userId, croppedFile);
       const fresh = await getMe();
       setUserData(fresh);
       setSuccess('Imagen actualizada');
@@ -435,6 +459,17 @@ const ProfilePreferencesModal = ({ open, onClose }) => {
           )}
         </section>
       </div>
+      
+      {/* Modal de recorte de imagen */}
+      <ImageCropModal
+        open={cropModalOpen}
+        onClose={() => {
+          setCropModalOpen(false);
+          setSelectedImageSrc(null);
+        }}
+        imageSrc={selectedImageSrc}
+        onCropComplete={handleCropComplete}
+      />
     </ModalWrapper>
   );
 };

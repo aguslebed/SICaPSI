@@ -170,96 +170,90 @@ function ActualizarUsuario() {
 
       <NavBar />
 
-      <main className="relative min-h-screen flex items-center justify-center px-4 sm:px-6 md:px-8 py-6">
-        <section className="w-full max-w-3xl bg-white/95 shadow-2xl rounded-2xl p-4 sm:p-6 md:p-8">
-          <div className="w-full flex justify-center mb-4 select-none">
-            <h1 className="text-3xl font-extrabold tracking-widest">
-              SIC<span className="text-[#f39a2d]">A</span>PSI
-            </h1>
-          </div>
-
-          <h2 className="text-gray-900 text-xl font-bold text-center mb-4">
+      <main className="relative min-h-screen flex items-start justify-center px-4 pt-4 pb-2">
+        <section className="w-full bg-white/95 shadow-2xl rounded-lg p-4" style={{ maxWidth: '500px' }}>
+          <h2 className="text-gray-900 text-lg font-bold text-center mb-2.5">
             Editar Usuario
           </h2>
 
-          <form className="space-y-3" onSubmit={handleSubmit}>
+          <form className="space-y-2" onSubmit={handleSubmit}>
             {/* Nombre y Apellido */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <input
                 type="text"
                 placeholder="Nombre"
-                className="border rounded-lg px-3 py-2 w-full text-sm"
+                className="border rounded-md px-2.5 py-1.5 w-full text-sm"
                 value={firstName}
                 onChange={e => setfirstName(e.target.value)}
               />
               <input
                 type="text"
                 placeholder="Apellido"
-                className="border rounded-lg px-3 py-2 w-full text-sm"
+                className="border rounded-md px-2.5 py-1.5 w-full text-sm"
                 value={lastName}
                 onChange={e => setlastName(e.target.value)}
               />
             </div>
 
             {/* DNI y Fecha de Nacimiento */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-3">
-              <select className="border rounded-lg px-3 py-2 w-full cursor-pointer text-sm" value={documentType} onChange={e => setdocumentType(e.target.value)}>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              <select className="border rounded-md px-2.5 py-1.5 w-full cursor-pointer text-sm" value={documentType} onChange={e => setdocumentType(e.target.value)}>
                 <option value="">Tipo de documento</option>
                 <option value="DNI">DNI</option>
                 <option value="CUIL/CUIT">CUIL/CUIT</option>
                 <option value="Pasaporte">Pasaporte</option>
               </select>
-              <input type="text" placeholder="Número" className="border rounded-lg px-3 py-2 w-full text-sm" value={documentNumber} onChange={e => setdocumentNumber(e.target.value)} />
-              <input type="date" className="border rounded-lg px-3 py-2 w-full text-sm" value={birthDate} onChange={e => setbirthDate(e.target.value)} />
+              <input type="text" placeholder="Número" className="border rounded-md px-2.5 py-1.5 w-full text-sm" value={documentNumber} onChange={e => setdocumentNumber(e.target.value)} />
+              <input type="date" className="border rounded-md px-2.5 py-1.5 w-full text-sm" value={birthDate} onChange={e => setbirthDate(e.target.value)} />
             </div>
 
             {/* Email y Código Postal */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <input
                 type="email"
                 placeholder="e-mail"
-                className="border rounded-lg px-3 py-2 w-full text-sm"
+                className="border rounded-md px-2.5 py-1.5 w-full text-sm"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
               />
               <input
                 type="text"
                 placeholder="Código Postal"
-                className="border rounded-lg px-3 py-2 w-full text-sm"
+                className="border rounded-md px-2.5 py-1.5 w-full text-sm"
                 value={postalCode}
                 onChange={e => setpostalCode(e.target.value)}
               />
             </div>
 
             {/* Dirección */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               <input
                 type="text"
                 placeholder="Dirección"
-                className="border rounded-lg px-3 py-2 col-span-1 text-sm"
+                className="border rounded-md px-2.5 py-1.5 col-span-1 text-sm"
                 value={address}
                 onChange={e => setaddress(e.target.value)}
               />
               <input
                 type="text"
                 placeholder="Número"
-                className="border rounded-lg px-3 py-2 col-span-1 text-sm"
+                className="border rounded-md px-2.5 py-1.5 col-span-1 text-sm"
                 value={addressNumber}
                 onChange={e => setaddressNumber(e.target.value)}
               />
               <input
                 type="text"
                 placeholder="Departamento"
-                className="border rounded-lg px-3 py-2 col-span-1 text-sm"
+                className="border rounded-md px-2.5 py-1.5 col-span-1 text-sm"
                 value={apartment}
                 onChange={e => setapartment(e.target.value)}
               />
             </div>
 
             {/* province y Ciudad */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <select
-                className="border rounded-lg px-3 py-2 w-full max-h-48 overflow-y-auto cursor-pointer text-sm"
+                className="border rounded-md px-2.5 py-1.5 w-full max-h-48 overflow-y-auto cursor-pointer text-sm"
                 value={province}
                 onChange={e => setprovince(e.target.value)}
               >
@@ -269,7 +263,7 @@ function ActualizarUsuario() {
                 ))}
               </select>
               <select
-                className="border rounded-lg px-3 py-2 w-full max-h-48 overflow-y-auto cursor-pointer text-sm"
+                className="border rounded-md px-2.5 py-1.5 w-full max-h-48 overflow-y-auto cursor-pointer text-sm"
                 value={ciudad}
                 onChange={e => setCiudad(e.target.value)}
                 disabled={!province}
@@ -282,18 +276,18 @@ function ActualizarUsuario() {
             </div>
 
             {/* Teléfono */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <input
                 type="text"
                 placeholder="Código de área"
-                className="border rounded-lg px-3 py-2 w-full text-sm"
+                className="border rounded-md px-2.5 py-1.5 w-full text-sm"
                 value={areaCode}
                 onChange={e => setareaCode(e.target.value)}
               />
               <input
                 type="text"
                 placeholder="Número de teléfono"
-                className="border rounded-lg px-3 py-2 w-full text-sm"
+                className="border rounded-md px-2.5 py-1.5 w-full text-sm"
                 value={phone}
                 onChange={e => setphone(e.target.value)}
               />
@@ -308,7 +302,7 @@ function ActualizarUsuario() {
                     key={opt.value}
                     type="button"
                     className={
-                      "px-2 py-1.5 rounded-lg border transition cursor-pointer text-sm " +
+                      "px-2 py-1.5 rounded-md border transition cursor-pointer text-sm " +
                       (selectedRole === opt.value
                         ? "bg-sky-500 text-white border-sky-500"
                         : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50")
@@ -326,7 +320,7 @@ function ActualizarUsuario() {
             {/* Botón de actualizar */}
             <button
               type="submit"
-              className="w-full h-10 rounded-lg bg-sky-500 text-white font-semibold hover:bg-sky-600 transition cursor-pointer text-sm"
+              className="w-full py-1.5 rounded-md bg-sky-500 text-white font-semibold hover:bg-sky-600 transition cursor-pointer text-sm"
             >
               Actualizar Usuario
             </button>
