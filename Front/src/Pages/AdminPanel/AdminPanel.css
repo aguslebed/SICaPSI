@@ -222,6 +222,20 @@
   background-color: var(--primary-hover);
 }
 
+/* Inputs de tipo date - cursor pointer y tamaño más grande */
+input[type="date"] {
+  cursor: pointer;
+  padding: 0.5rem 0.75rem !important;
+  font-size: 0.9375rem !important;
+  min-height: 2.5rem;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  font-size: 1.125rem;
+  padding: 0.25rem;
+}
+
 /* ====================================
    BOTONES
    ==================================== */
@@ -454,6 +468,7 @@
   display: flex;
   gap: 0.5rem;
   align-items: center;
+  justify-content: center;
   flex-wrap: wrap;
 }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, Outlet } from 'react-router-dom';
 import NavBar from '../../Components/Student/NavBar';
 import { deleteUser as deleteUserApi, getAllUsers } from '../../API/Request';
@@ -64,6 +64,36 @@ export default function GestionUsuario() {
   const [search, setSearch] = useState('');
   const [searchApplied, setSearchApplied] = useState(''); // Nuevo estado
   const [loading, setLoading] = useState(false);
+  
+  // Estados para modal de eliminar
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  // Referencias para los dropdowns
+  const tipoMenuRef = useRef(null);
+  const estadoMenuRef = useRef(null);
+  const fechaMenuRef = useRef(null);
+
+  // Cerrar dropdowns al hacer click fuera
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (tipoMenuRef.current && !tipoMenuRef.current.contains(event.target)) {
+        setTipoMenu(false);
+      }
+      if (estadoMenuRef.current && !estadoMenuRef.current.contains(event.target)) {
+        setEstadoMenu(false);
+      }
+      if (fechaMenuRef.current && !fechaMenuRef.current.contains(event.target)) {
+        setFechaMenu(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     async function fetchUsers() {
@@ -215,16 +245,34 @@ export default function GestionUsuario() {
     { label: 'Deshabilitado', value: 'Deshabilitado' },
   ];
 
-  const deleteUser = async (id) => {
-  try {
-    await deleteUserApi(id);
-    const updatedUsers = users.filter(u => u._id !== id);
-    setUsers(updatedUsers);
-    setFilteredUsers(updatedUsers);
-  } catch (error) {
-    alert(error.message || "Error al eliminar usuario");
-  }
-};
+  const openDeleteModal = (user) => {
+    setUserToDelete(user);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!userToDelete) return;
+    
+    try {
+      setLoading(true);
+      await deleteUserApi(userToDelete._id);
+      const updatedUsers = users.filter(u => u._id !== userToDelete._id);
+      setUsers(updatedUsers);
+      setFilteredUsers(updatedUsers);
+      setShowDeleteModal(false);
+      setShowSuccessModal(true);
+      setUserToDelete(null);
+    } catch (error) {
+      alert(error.message || "Error al eliminar usuario");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setUserToDelete(null);
+  };
 
   return (
     <>
@@ -269,7 +317,7 @@ export default function GestionUsuario() {
             </div>
             
             {/* Filtro Tipo */}
-            <div className="admin-filter-group admin-dropdown">
+            <div className="admin-filter-group admin-dropdown" ref={tipoMenuRef}>
               <button onClick={() => setTipoMenu(!tipoMenu)} className="admin-dropdown-btn">
                 Tipo
                 <img width="14" height="14" src="https://img.icons8.com/ios-glyphs/60/chevron-down.png" alt="chevron-down"/>
@@ -277,9 +325,13 @@ export default function GestionUsuario() {
               {tipoMenu && (
                 <div className="admin-dropdown-menu">
                   {tipos.map((t) => (
-                    <label key={t.value} className="admin-dropdown-item">
+                    <label 
+                      key={t.value} 
+                      className="admin-dropdown-item"
+                      onClick={() => handleTipoChange(t.value)}
+                      style={{ cursor: 'pointer' }}
+                    >
                       <span
-                        onClick={() => handleTipoChange(t.value)}
                         style={{
                           width: 18,
                           height: 18,
@@ -303,7 +355,7 @@ export default function GestionUsuario() {
             </div>
             
             {/* Filtro Estado */}
-            <div className="admin-filter-group admin-dropdown">
+            <div className="admin-filter-group admin-dropdown" ref={estadoMenuRef}>
               <button onClick={() => setEstadoMenu(!estadoMenu)} className="admin-dropdown-btn">
                 Estado
                 <img width="14" height="14" src="https://img.icons8.com/ios-glyphs/60/chevron-down.png" alt="chevron-down"/>
@@ -311,9 +363,13 @@ export default function GestionUsuario() {
               {estadoMenu && (
                 <div className="admin-dropdown-menu">
                   {estadosOpciones.map((est) => (
-                    <label key={est.value} className="admin-dropdown-item">
+                    <label 
+                      key={est.value} 
+                      className="admin-dropdown-item"
+                      onClick={() => handleEstadoChange(est.value)}
+                      style={{ cursor: 'pointer' }}
+                    >
                       <span
-                        onClick={() => handleEstadoChange(est.value)}
                         style={{
                           width: 18,
                           height: 18,
@@ -337,7 +393,7 @@ export default function GestionUsuario() {
             </div>
             
             {/* Filtro Fecha */}
-            <div className="admin-filter-group admin-dropdown">
+            <div className="admin-filter-group admin-dropdown" ref={fechaMenuRef}>
               <button onClick={() => setFechaMenu(!fechaMenu)} className="admin-dropdown-btn">
                 Fecha
                 <img width="14" height="14" src="https://img.icons8.com/ios-glyphs/60/chevron-down.png" alt="chevron-down"/>
@@ -450,10 +506,14 @@ export default function GestionUsuario() {
                           </Link>
                           <button 
                             className="admin-action-btn" 
-                            title="Deshabilitar usuario" 
-                            onClick={() => deleteUser(u._id)}
+                            title="Eliminar usuario" 
+                            onClick={() => openDeleteModal(u)}
                           >
-                            🚫
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="black">
+                              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                              <circle cx="17" cy="17" r="5" fill="black"/>
+                              <path d="M14.5 14.5l5 5M19.5 14.5l-5 5" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                            </svg>
                           </button>
                         </div>
                       </td>
@@ -476,6 +536,179 @@ export default function GestionUsuario() {
       </section>
         <Outlet />
         </div>
+
+        {/* Modal de confirmación de eliminación */}
+        {showDeleteModal && (
+          <div 
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999
+            }}
+          >
+            <div 
+              style={{
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                padding: '24px',
+                maxWidth: '400px',
+                width: '90%',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)'
+              }}
+            >
+              <h3 style={{ 
+                fontSize: '1.25rem', 
+                fontWeight: '600', 
+                marginBottom: '16px',
+                color: '#1f2937'
+              }}>
+                ¿Confirmar eliminación?
+              </h3>
+              <p style={{ 
+                marginBottom: '24px', 
+                color: '#4b5563',
+                fontSize: '0.95rem'
+              }}>
+                ¿Estás seguro de que deseas eliminar al usuario <strong>{userToDelete?.nombre} {userToDelete?.apellido}</strong>? 
+                Esta acción no se puede deshacer.
+              </p>
+              <div style={{ 
+                display: 'flex', 
+                gap: '12px', 
+                justifyContent: 'flex-end' 
+              }}>
+                <button
+                  onClick={cancelDelete}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    border: '1px solid #d1d5db',
+                    backgroundColor: 'white',
+                    color: '#374151',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: '500'
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={loading}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: '500',
+                    opacity: loading ? 0.6 : 1
+                  }}
+                >
+                  {loading ? 'Eliminando...' : 'Eliminar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de éxito */}
+        {showSuccessModal && (
+          <div 
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999
+            }}
+          >
+            <div 
+              style={{
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                padding: '32px',
+                maxWidth: '400px',
+                width: '90%',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+                textAlign: 'center'
+              }}
+            >
+              {/* Checkmark verde */}
+              <div style={{ 
+                marginBottom: '20px',
+                display: 'flex',
+                justifyContent: 'center'
+              }}>
+                <svg 
+                  width="64" 
+                  height="64" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle cx="12" cy="12" r="10" fill="#10b981" />
+                  <path 
+                    d="M8 12l2 2 4-4" 
+                    stroke="white" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
+              
+              <h3 style={{ 
+                fontSize: '1.125rem', 
+                fontWeight: '600', 
+                marginBottom: '12px',
+                color: '#1f2937'
+              }}>
+                Usuario eliminado exitosamente
+              </h3>
+              
+              <p style={{ 
+                marginBottom: '24px', 
+                color: '#6b7280',
+                fontSize: '0.95rem',
+                lineHeight: '1.5'
+              }}>
+                Usuario dado de baja correctamente. No podrá acceder al sistema.
+              </p>
+              
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                style={{
+                  padding: '10px 24px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  width: '100%'
+                }}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        )}
       </main>
     </>
   );

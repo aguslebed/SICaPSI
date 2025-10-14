@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { CheckCircle, XCircle, Search, Filter, Bold } from 'lucide-react';
 import NavBar from '../../Components/Student/NavBar';
 import { useLocation } from 'react-router-dom';
@@ -12,12 +12,6 @@ const tipos = [
   { label: 'Alumno', value: 'Alumno' },
 ];
 
-const estados = [
-  { label: 'Pendiente', value: 'pendiente' },
-  { label: 'Activo', value: 'available' },
-  { label: 'Inactivo', value: 'disabled' },
-];
-
 export default function AdmisionUsuario() {
   const location = useLocation();
   const [data, setData] = useState(location.state?.data || []);
@@ -28,14 +22,33 @@ export default function AdmisionUsuario() {
   const [busqueda, setBusqueda] = useState('');
   const [tipo, setTipo] = useState([]);
   const [tipoMenu, setTipoMenu] = useState(false);
-  const [estado, setEstado] = useState([]);
-  const [estadoMenu, setEstadoMenu] = useState(false);
   const [fechaMenu, setFechaMenu] = useState(false);
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
   const [fecha, setFecha] = useState(new Date());
   const [fechaDesdeVisible, setFechaDesdeVisible] = useState(false);
   const [fechaHastaVisible, setFechaHastaVisible] = useState(false);
+
+  // Referencias para los dropdowns
+  const tipoMenuRef = useRef(null);
+  const fechaMenuRef = useRef(null);
+
+  // Cerrar dropdowns al hacer click fuera
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (tipoMenuRef.current && !tipoMenuRef.current.contains(event.target)) {
+        setTipoMenu(false);
+      }
+      if (fechaMenuRef.current && !fechaMenuRef.current.contains(event.target)) {
+        setFechaMenu(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Cargar usuarios al montar el componente
   useEffect(() => {
@@ -118,13 +131,6 @@ export default function AdmisionUsuario() {
       );
     }
 
-    // Filtro por estado de usuario
-    if (estado.length > 0) {
-      datosFiltrados = datosFiltrados.filter(usuario =>
-        estado.includes(usuario.estado)
-      );
-    }
-
     // Filtro por fecha desde
     if (fechaDesde) {
       const fechaDesdeObj = new Date(fechaDesde);
@@ -144,7 +150,7 @@ export default function AdmisionUsuario() {
     }
 
     setFilteredData(datosFiltrados);
-  }, [data, busqueda, tipo, estado, fechaDesde, fechaHasta]);
+  }, [data, busqueda, tipo, fechaDesde, fechaHasta]);
 
   // Función para aplicar filtros (ya se aplican automáticamente con useEffect)
   const aplicarFiltros = () => {
@@ -155,7 +161,6 @@ export default function AdmisionUsuario() {
   const limpiarFiltros = () => {
     setBusqueda('');
     setTipo([]);
-    setEstado([]);
     setFechaDesde('');
     setFechaHasta('');
     setFecha(new Date());
@@ -168,17 +173,6 @@ export default function AdmisionUsuario() {
         return prev.filter(t => t !== tipoValue);
       } else {
         return [...prev, tipoValue];
-      }
-    });
-  };
-
-  // Función para manejar cambios en los checkboxes de estado
-  const handleEstadoChange = (estadoValue) => {
-    setEstado(prev => {
-      if (prev.includes(estadoValue)) {
-        return prev.filter(e => e !== estadoValue);
-      } else {
-        return [...prev, estadoValue];
       }
     });
   };
@@ -285,7 +279,7 @@ export default function AdmisionUsuario() {
             </div>
 
             {/* Filtro Tipo */}
-            <div className="admin-filter-group admin-dropdown">
+            <div className="admin-filter-group admin-dropdown" ref={tipoMenuRef}>
               <button onClick={() => setTipoMenu(!tipoMenu)} className="admin-dropdown-btn">
                 Tipo
                 <img width="14" height="14" src="https://img.icons8.com/ios-glyphs/60/chevron-down.png" alt="chevron-down"/>
@@ -293,9 +287,13 @@ export default function AdmisionUsuario() {
               {tipoMenu && (
                 <div className="admin-dropdown-menu">
                   {tipos.map((t) => (
-                    <label key={t.value} className="admin-dropdown-item">
+                    <label 
+                      key={t.value} 
+                      className="admin-dropdown-item"
+                      onClick={() => handleTipoChange(t.value)}
+                      style={{ cursor: 'pointer' }}
+                    >
                       <span
-                        onClick={() => handleTipoChange(t.value)}
                         style={{
                           width: 18,
                           height: 18,
@@ -318,42 +316,8 @@ export default function AdmisionUsuario() {
               )}
             </div>
 
-            {/* Filtro Estado */}
-            <div className="admin-filter-group admin-dropdown">
-              <button onClick={() => setEstadoMenu(!estadoMenu)} className="admin-dropdown-btn">
-                Estado
-                <img width="14" height="14" src="https://img.icons8.com/ios-glyphs/60/chevron-down.png" alt="chevron-down"/>
-              </button>
-              {estadoMenu && (
-                <div className="admin-dropdown-menu">
-                  {estados.map((est) => (
-                    <label key={est.value} className="admin-dropdown-item">
-                      <span
-                        onClick={() => handleEstadoChange(est.value)}
-                        style={{
-                          width: 18,
-                          height: 18,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          borderRadius: 4,
-                          background: '#fff',
-                          border: '1px solid #bdbdbd'
-                        }}
-                      >
-                        {estado.includes(est.value) && (
-                          <span style={{ fontSize: 12, color: '#18b620ff', fontWeight: 'bold' }}>✓</span>
-                        )}
-                      </span>
-                      {est.label}
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-
             {/* Filtro Fecha */}
-            <div className="admin-filter-group admin-dropdown">
+            <div className="admin-filter-group admin-dropdown" ref={fechaMenuRef}>
               <button onClick={() => setFechaMenu(!fechaMenu)} className="admin-dropdown-btn">
                 Fecha
                 <img width="14" height="14" src="https://img.icons8.com/ios-glyphs/60/chevron-down.png" alt="chevron-down"/>
@@ -424,14 +388,13 @@ export default function AdmisionUsuario() {
                     <th>DNI</th>
                     <th>Fecha de creación</th>
                     <th>Tipo</th>
-                    <th>Estado</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredData.length === 0 ? (
                     <tr>
-                      <td colSpan="8" className="admin-empty">
+                      <td colSpan="7" className="admin-empty">
                         {data.length === 0 ? 'No se encontraron usuarios' : 'No hay usuarios que coincidan con los filtros aplicados'}
                       </td>
                     </tr>
@@ -458,37 +421,27 @@ export default function AdmisionUsuario() {
                             {u.tipo}
                           </span>
                         </td>
-                        <td data-label="Estado">
-                          <span 
-                            className="inline-block px-3 py-1 rounded-full text-white text-xs font-medium text-center"
-                            style={{ 
-                              minWidth: '110px',
-                              backgroundColor: 
-                                u.estado === 'available' ? '#10b981' : 
-                                u.estado === 'pendiente' ? '#facc15' : '#ef4444'
-                            }}
-                          >
-                            {u.estado === 'available' ? 'Activo' : 
-                             u.estado === 'pendiente' ? 'Pendiente' : 'Inactivo'}
-                          </span>
-                        </td>
                         <td data-label="Acciones">
                           <div className="admin-actions">
                             <button 
                               className="admin-action-btn" 
-                              style={{ color: 'var(--success-color)' }}
                               title="Aprobar"
                               onClick={() => aprobarUsuario(u)}
                             >
-                              <CheckCircle size={20} />
+                              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none">
+                                <circle cx="12" cy="12" r="10" fill="#22c55e"/>
+                                <path d="M8 12l2.5 2.5 5.5-5.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
                             </button>
                             <button 
                               className="admin-action-btn" 
-                              style={{ color: 'var(--danger-color)' }}
                               title="Rechazar"
                               onClick={() => rechazarUsuario(u)}
                             >
-                              <XCircle size={20} />
+                              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none">
+                                <circle cx="12" cy="12" r="10" fill="#ef4444"/>
+                                <path d="M9 9l6 6M15 9l-6 6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
                             </button>
                           </div>
                         </td>

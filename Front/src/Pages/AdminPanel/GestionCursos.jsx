@@ -4,7 +4,7 @@ import { Link, Outlet } from 'react-router-dom';
 import NavBar from '../../Components/Student/NavBar';
 import OpenCohortModal from '../../Components/Modals/OpenCohortModal';
 import CreateTrainingModal from '../../Components/Modals/CreateTrainingModal';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getAllActiveTrainings } from '../../API/Request';
 import LoadingOverlay from '../../Components/Shared/LoadingOverlay';
 import './AdminPanel.css';
@@ -20,6 +20,27 @@ export default function GestionCursos() {
   const [estadoMenu, setEstadoMenu] = useState(false);
   const [nivelesSeleccionados, setNivelesSeleccionados] = useState([]);
   const [estadosSeleccionados, setEstadosSeleccionados] = useState([]);
+
+  // Referencias para los dropdowns
+  const nivelMenuRef = useRef(null);
+  const estadoMenuRef = useRef(null);
+
+  // Cerrar dropdowns al hacer click fuera
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (nivelMenuRef.current && !nivelMenuRef.current.contains(event.target)) {
+        setNivelMenu(false);
+      }
+      if (estadoMenuRef.current && !estadoMenuRef.current.contains(event.target)) {
+        setEstadoMenu(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const niveles = [
     { label: 'Nivel 1', value: 'nivel1' },
@@ -115,7 +136,7 @@ export default function GestionCursos() {
             </div>
 
             {/* Filtros */}
-            <div className="admin-filter-group admin-dropdown">
+            <div className="admin-filter-group admin-dropdown" ref={nivelMenuRef}>
               <button onClick={() => setNivelMenu(!nivelMenu)} className="admin-dropdown-btn">
                 Nivel
                 <img width="14" height="14" src="https://img.icons8.com/ios-glyphs/60/chevron-down.png" alt="chevron-down"/>
@@ -123,9 +144,13 @@ export default function GestionCursos() {
               {nivelMenu && (
                 <div className="admin-dropdown-menu">
                   {niveles.map((n) => (
-                    <label key={n.value} className="admin-dropdown-item">
+                    <label 
+                      key={n.value} 
+                      className="admin-dropdown-item"
+                      onClick={() => handleNivelChange(n.value)}
+                      style={{ cursor: 'pointer' }}
+                    >
                       <span
-                        onClick={() => handleNivelChange(n.value)}
                         style={{
                           width: 18,
                           height: 18,
@@ -148,7 +173,7 @@ export default function GestionCursos() {
               )}
             </div>
 
-            <div className="admin-filter-group admin-dropdown">
+            <div className="admin-filter-group admin-dropdown" ref={estadoMenuRef}>
               <button onClick={() => setEstadoMenu(!estadoMenu)} className="admin-dropdown-btn">
                 Estado
                 <img width="14" height="14" src="https://img.icons8.com/ios-glyphs/60/chevron-down.png" alt="chevron-down"/>
@@ -156,9 +181,13 @@ export default function GestionCursos() {
               {estadoMenu && (
                 <div className="admin-dropdown-menu">
                   {estadosOpciones.map((est) => (
-                    <label key={est.value} className="admin-dropdown-item">
+                    <label 
+                      key={est.value} 
+                      className="admin-dropdown-item"
+                      onClick={() => handleEstadoChange(est.value)}
+                      style={{ cursor: 'pointer' }}
+                    >
                       <span
-                        onClick={() => handleEstadoChange(est.value)}
                         style={{
                           width: 18,
                           height: 18,

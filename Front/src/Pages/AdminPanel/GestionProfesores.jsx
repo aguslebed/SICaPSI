@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import NavBar from "../../Components/Student/NavBar";
 import { useNavigate } from "react-router-dom";
 import { listTeachers, setTeacherStatus } from "../../API/Request";
@@ -22,11 +22,11 @@ export default function GestionProfesores() {
   // filtros
   const [search, setSearch] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
-  const [filtrarDisponible, setFD] = useState(true);
-  const [filtrarDeshabilitado, setFDes] = useState(true);
+  const [filtrarDisponible, setFD] = useState(false);
+  const [filtrarDeshabilitado, setFDes] = useState(false);
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
-  const [appliedFilters, setAppliedFilters] = useState({ filtrarDisponible: true, filtrarDeshabilitado: true, desde: "", hasta: "" });
+  const [appliedFilters, setAppliedFilters] = useState({ filtrarDisponible: false, filtrarDeshabilitado: false, desde: "", hasta: "" });
 
   // Estados para el dropdown de fecha
   const [fechaMenu, setFechaMenu] = useState(false);
@@ -35,6 +35,27 @@ export default function GestionProfesores() {
   
   // Estados para el dropdown de estado
   const [estadoMenu, setEstadoMenu] = useState(false);
+
+  // Referencias para los dropdowns
+  const estadoMenuRef = useRef(null);
+  const fechaMenuRef = useRef(null);
+
+  // Cerrar dropdowns al hacer click fuera
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (estadoMenuRef.current && !estadoMenuRef.current.contains(event.target)) {
+        setEstadoMenu(false);
+      }
+      if (fechaMenuRef.current && !fechaMenuRef.current.contains(event.target)) {
+        setFechaMenu(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // datos
   const [rowsRaw, setRowsRaw] = useState([]);
@@ -190,7 +211,7 @@ export default function GestionProfesores() {
             </div>
 
             {/* Filtro Estado */}
-            <div className="admin-filter-group admin-dropdown">
+            <div className="admin-filter-group admin-dropdown" ref={estadoMenuRef}>
               <button onClick={() => setEstadoMenu(!estadoMenu)} className="admin-dropdown-btn">
                 Estado
                 <img width="14" height="14" src="https://img.icons8.com/ios-glyphs/60/chevron-down.png" alt="chevron-down"/>
@@ -198,9 +219,13 @@ export default function GestionProfesores() {
               {estadoMenu && (
                 <div className="admin-dropdown-menu">
                   {estados.map((est) => (
-                    <label key={est.value} className="admin-dropdown-item">
+                    <label 
+                      key={est.value} 
+                      className="admin-dropdown-item"
+                      onClick={() => handleEstadoChange(est.value)}
+                      style={{ cursor: 'pointer' }}
+                    >
                       <span
-                        onClick={() => handleEstadoChange(est.value)}
                         style={{
                           width: 18,
                           height: 18,
@@ -224,7 +249,7 @@ export default function GestionProfesores() {
             </div>
 
             {/* Filtro Fecha */}
-            <div className="admin-filter-group admin-dropdown">
+            <div className="admin-filter-group admin-dropdown" ref={fechaMenuRef}>
               <button onClick={() => setFechaMenu(!fechaMenu)} className="admin-dropdown-btn">
                 Fecha
                 <img width="14" height="14" src="https://img.icons8.com/ios-glyphs/60/chevron-down.png" alt="chevron-down"/>
