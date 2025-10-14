@@ -124,11 +124,23 @@
   }
 }
 
+@media (max-width: 767px) {
+  .admin-filters > * {
+    width: 100%;
+  }
+}
+
 .admin-filter-group {
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
   min-width: 0;
+}
+
+@media (max-width: 767px) {
+  .admin-filter-group {
+    width: 100%;
+  }
 }
 
 .admin-filter-label {
@@ -146,6 +158,14 @@
   background-color: #f7f8fa;
   transition: all 0.2s;
   min-width: 130px;
+}
+
+@media (max-width: 767px) {
+  .admin-filter-input,
+  .admin-filter-select {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 .admin-filter-input:focus,
@@ -265,6 +285,7 @@
 
 .admin-table-wrapper {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border-radius: 0;
   box-shadow: none;
   background-color: var(--bg-white);
@@ -276,6 +297,77 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.8125rem;
+}
+
+@media (max-width: 767px) {
+  /* Ocultar tabla tradicional en móviles */
+  .admin-table thead {
+    display: none;
+  }
+  
+  .admin-table tbody {
+    display: block;
+  }
+  
+  .admin-table tr {
+    display: block;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    background-color: var(--bg-white);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  
+  .admin-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.625rem 0.75rem;
+    border-top: 1px solid var(--border-color);
+    text-align: right;
+    font-size: 0.8125rem;
+  }
+  
+  .admin-table td:first-child {
+    border-top: none;
+    background-color: #f9fafb;
+    font-weight: 600;
+  }
+  
+  .admin-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    text-align: left;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  
+  /* Acciones centradas en móvil */
+  .admin-table td:last-child {
+    justify-content: center;
+    border-top: 1px solid var(--border-color);
+    background-color: #f9fafb;
+    padding: 0.75rem;
+  }
+  
+  .admin-table td:last-child::before {
+    content: '';
+  }
+}
+
+@media (max-width: 767px) {
+  .admin-table {
+    font-size: 0.75rem;
+  }
+  
+  /* Badges más pequeños en móvil */
+  .admin-table td span[style*="minWidth"] {
+    min-width: 90px !important;
+    font-size: 0.7rem !important;
+    padding: 0.25rem 0.5rem !important;
+  }
 }
 
 .admin-table thead {
@@ -519,6 +611,12 @@
   display: inline-block;
 }
 
+@media (max-width: 767px) {
+  .admin-dropdown {
+    width: 100%;
+  }
+}
+
 .admin-dropdown-btn {
   display: flex;
   align-items: center;
@@ -532,6 +630,13 @@
   background-color: #f7f8fa;
   cursor: pointer;
   min-width: 130px;
+}
+
+@media (max-width: 767px) {
+  .admin-dropdown-btn {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 .admin-dropdown-menu {
@@ -548,6 +653,15 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+@media (max-width: 767px) {
+  .admin-dropdown-menu {
+    max-height: 250px;
+    right: 0;
+  }
 }
 
 .admin-dropdown-item {
@@ -628,12 +742,41 @@
 /* Pantallas pequeñas (móviles) */
 @media (max-width: 639px) {
   .admin-table {
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
   }
   
   .admin-table th,
   .admin-table td {
-    padding: 0.5rem;
+    padding: 0.375rem 0.25rem;
+    font-size: 0.7rem;
+  }
+  
+  .admin-btn {
+    font-size: 0.75rem;
+    padding: 0.3125rem 0.625rem;
+  }
+  
+  .admin-title {
+    font-size: 1.125rem;
+  }
+  
+  .admin-content-wrapper {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .admin-card {
+    padding: 0.625rem;
+  }
+  
+  .admin-actions {
+    justify-content: center;
+  }
+}
+
+/* Tablets y pantallas medianas */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .admin-content-wrapper {
+    padding: 0.75rem 1rem;
   }
   
   .admin-filters {
@@ -641,16 +784,21 @@
   }
 }
 
-/* Pantallas medianas (tablets y laptops de 14") */
-@media (min-width: 640px) and (max-width: 1023px) {
-  .admin-container {
-    max-width: 100%;
+/* Pantallas grandes (desktops) */
+@media (min-width: 1024px) {
+  .admin-content-wrapper {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  
+  .admin-filters {
+    gap: 0.75rem;
   }
 }
 
-/* Pantallas grandes */
-@media (min-width: 1024px) {
-  .admin-container {
-    max-width: 1400px;
+/* Pantallas muy grandes */
+@media (min-width: 1440px) {
+  .admin-content-wrapper {
+    max-width: 1600px;
   }
 }

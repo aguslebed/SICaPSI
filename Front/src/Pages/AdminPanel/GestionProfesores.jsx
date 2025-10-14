@@ -298,14 +298,14 @@ export default function GestionProfesores() {
               )}
               {pageRows.map((r) => (
                 <tr key={r.id}>
-                  <td>{r.nombre}</td>
-                  <td>{r.apellido}</td>
-                  <td>{r.email}</td>
-                  <td>{r.dni}</td>
-                  <td><Chip estado={r.estado} /></td>
-                  <td>{r.creado ? new Date(r.creado).toLocaleDateString() : "-"}</td>
-                  <td>{r.curso?.map((c, i) => <div key={i}>{c}</div>)}</td>
-                  <td>
+                  <td data-label="Nombre">{r.nombre}</td>
+                  <td data-label="Apellido">{r.apellido}</td>
+                  <td data-label="Email">{r.email}</td>
+                  <td data-label="DNI">{r.dni}</td>
+                  <td data-label="Estado"><Chip estado={r.estado} /></td>
+                  <td data-label="Fecha de creación">{r.creado ? new Date(r.creado).toLocaleDateString() : "-"}</td>
+                  <td data-label="Curso Asignado">{r.curso?.map((c, i) => <div key={i}>{c}</div>)}</td>
+                  <td data-label="Acciones">
                     <div className="admin-actions">
                       {/* Editar */}
                       <button

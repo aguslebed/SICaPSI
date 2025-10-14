@@ -200,9 +200,50 @@ const ProfilePreferencesModal = ({ open, onClose }) => {
         <span>Perfil y preferencias</span>
       </div>
 
-      <div className="flex flex-col md:flex-row bg-white" style={{ minHeight: 420 }}>
-        {/* Sidebar (oculta en mobile) */}
-        <aside className="hidden md:block md:w-72 bg-gray-50 border-r">
+      <div className="flex flex-col md:flex-row bg-white" style={{ minHeight: 420, maxHeight: '85vh' }}>
+        {/* Avatar y selector móvil unificados */}
+        <div className="block md:hidden px-3 py-3 bg-gray-100">
+          {/* Avatar */}
+          <div className="flex items-center gap-3 mb-4">
+            <img
+              src={previewUrl || resolveImageUrl(user?.profileImage) || '/images/alumno-avatar.png'}
+              alt={user?.firstName || 'Usuario'}
+              className="w-12 h-12 rounded-full border object-cover"
+            />
+            <div className="flex-1">
+              <div className="font-semibold text-gray-800 text-xs">{user?.firstName || 'Usuario'}</div>
+              <button
+                type="button"
+                onClick={onPickImage}
+                className={`mt-1 text-xs px-2 py-0.5 rounded border border-gray-300 text-gray-700 hover:bg-gray-100 cursor-pointer ${uploading ? 'opacity-60 cursor-wait' : ''}`}
+                disabled={uploading}
+              >
+                {uploading ? 'Subiendo...' : 'Cambiar imagen'}
+              </button>
+            </div>
+          </div>
+          
+          {/* Select de navegación */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Sección</label>
+            <select 
+              value={activeTab}
+              onChange={(e) => setActiveTab(e.target.value)}
+              className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <optgroup label="Perfil">
+                <option value="datos">Datos principales</option>
+                <option value="contacto">Contacto</option>
+              </optgroup>
+              <optgroup label="Preferencias">
+                <option value="generales">Generales</option>
+                <option value="seguridad">Seguridad</option>
+              </optgroup>
+            </select>
+          </div>
+        </div>
+        
+        <aside className="hidden md:block md:w-72 bg-gray-50 border-r overflow-y-auto">
           {/* Avatar y nombre */}
           <div className="flex flex-col items-center gap-2 p-4 border-b">
             <img
@@ -290,9 +331,9 @@ const ProfilePreferencesModal = ({ open, onClose }) => {
         </aside>
 
         {/* Contenido */}
-        <section className="flex-1 p-4 sm:p-6">
-          {/* Barra de título de sección */}
-          <div className="bg-[#0a82b6] text-white px-3 sm:px-4 py-2 rounded-md mb-4 text-sm sm:text-base font-semibold flex items-center gap-2">
+        <section className="flex-1 p-3 sm:p-6 overflow-y-auto">
+          {/* Barra de título de sección - oculta en mobile */}
+          <div className="hidden md:flex bg-[#0a82b6] text-white px-3 sm:px-4 py-2 rounded-md mb-4 text-sm sm:text-base font-semibold items-center gap-2">
             {activeTab === 'datos' && <UserIcon className="w-4 h-4" />}
             {activeTab === 'contacto' && <UserIcon className="w-4 h-4" />}
             {activeTab === 'generales' && <SettingsIcon className="w-4 h-4" />}
@@ -308,71 +349,41 @@ const ProfilePreferencesModal = ({ open, onClose }) => {
           {/* Input de archivo único (oculto) */}
           <input id={fileInputId} type="file" accept="image/*" className="hidden" onChange={onFileChange} />
 
-          {/* Avatar móvil (solo visible en pantallas pequeñas) */}
-          <div className="md:hidden flex items-center gap-4 mb-4">
-            <img
-              src={previewUrl || resolveImageUrl(user?.profileImage) || '/images/alumno-avatar.png'}
-              alt={user?.firstName || 'Usuario'}
-              className="w-16 h-16 rounded-full border object-cover"
-            />
-            <div className="flex-1">
-              <div className="font-semibold text-gray-800 text-sm">{user?.firstName || 'Usuario'}</div>
-              <div className="mt-2 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={onPickImage}
-                  className={`text-xs px-3 py-1 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100 cursor-pointer ${uploading ? 'opacity-60 cursor-wait' : ''}`}
-                  disabled={uploading}
-                >
-                  {uploading ? 'Subiendo...' : 'Cambiar imagen'}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Navegación de tabs en mobile */}
-          <div className="md:hidden flex gap-2 mb-4">
-            <button className={`px-3 py-2 rounded-md text-sm ${activeTab === 'datos' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100'} cursor-pointer`} onClick={() => setActiveTab('datos')}>Datos</button>
-            <button className={`px-3 py-2 rounded-md text-sm ${activeTab === 'contacto' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100'} cursor-pointer`} onClick={() => setActiveTab('contacto')}>Contacto</button>
-            <button className={`px-3 py-2 rounded-md text-sm ${activeTab === 'generales' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100'} cursor-pointer`} onClick={() => setActiveTab('generales')}>Generales</button>
-            <button className={`px-3 py-2 rounded-md text-sm ${activeTab === 'seguridad' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100'} cursor-pointer`} onClick={() => setActiveTab('seguridad')}>Seguridad</button>
-          </div>
-
           {/* Campos según sección */}
           {activeTab === 'datos' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6">
               <label className="block">
-                <span className="text-sm text-gray-700">Nombre</span>
-                <input className="mt-1 w-full border rounded-md px-3 py-2" value={form.firstName} onChange={e => setField('firstName', e.target.value)} />
+                <span className="text-xs sm:text-sm text-gray-700">Nombre</span>
+                <input className="mt-1 w-full border rounded px-2 py-1.5 text-sm" value={form.firstName} onChange={e => setField('firstName', e.target.value)} />
               </label>
               <label className="block">
-                <span className="text-sm text-gray-700">Apellido</span>
-                <input className="mt-1 w-full border rounded-md px-3 py-2" value={form.lastName} onChange={e => setField('lastName', e.target.value)} />
+                <span className="text-xs sm:text-sm text-gray-700">Apellido</span>
+                <input className="mt-1 w-full border rounded px-2 py-1.5 text-sm" value={form.lastName} onChange={e => setField('lastName', e.target.value)} />
               </label>
               <label className="block md:col-span-2">
-                <span className="text-sm text-gray-700">Email</span>
-                <input type="email" className="mt-1 w-full border rounded-md px-3 py-2" value={form.email} onChange={e => setField('email', e.target.value)} />
+                <span className="text-xs sm:text-sm text-gray-700">Email</span>
+                <input type="email" className="mt-1 w-full border rounded px-2 py-1.5 text-sm" value={form.email} onChange={e => setField('email', e.target.value)} />
               </label>
               <label className="block md:col-span-2">
-                <span className="text-sm text-gray-700">Fecha de nacimiento</span>
-                <input type="date" className="mt-1 w-full border rounded-md px-3 py-2" value={form.birthDate} onChange={e => setField('birthDate', e.target.value)} />
+                <span className="text-xs sm:text-sm text-gray-700">Fecha de nacimiento</span>
+                <input type="date" className="mt-1 w-full border rounded px-2 py-1.5 text-sm" value={form.birthDate} onChange={e => setField('birthDate', e.target.value)} />
               </label>
             </div>
           )}
 
           {activeTab === 'contacto' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6">
               <label className="block">
-                <span className="text-sm text-gray-700">Localidad</span>
-                <input className="mt-1 w-full border rounded-md px-3 py-2" value={form.city} onChange={e => setField('city', e.target.value)} />
+                <span className="text-xs sm:text-sm text-gray-700">Localidad</span>
+                <input className="mt-1 w-full border rounded px-2 py-1.5 text-sm" value={form.city} onChange={e => setField('city', e.target.value)} />
               </label>
               <label className="block">
-                <span className="text-sm text-gray-700">Provincia</span>
-                <input className="mt-1 w-full border rounded-md px-3 py-2" value={form.province} onChange={e => setField('province', e.target.value)} />
+                <span className="text-xs sm:text-sm text-gray-700">Provincia</span>
+                <input className="mt-1 w-full border rounded px-2 py-1.5 text-sm" value={form.province} onChange={e => setField('province', e.target.value)} />
               </label> 
               <label className="block">
-                <span className="text-sm text-gray-700">Código Postal</span>
-                <input className="mt-1 w-full border rounded-md px-3 py-2" value={form.postalCode} onChange={e => setField('postalCode', e.target.value)} />
+                <span className="text-xs sm:text-sm text-gray-700">Código Postal</span>
+                <input className="mt-1 w-full border rounded px-2 py-1.5 text-sm" value={form.postalCode} onChange={e => setField('postalCode', e.target.value)} />
               </label>
             </div>
           )}

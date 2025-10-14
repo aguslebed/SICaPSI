@@ -232,9 +232,9 @@ export default function GestionUsuario() {
       <NavBar />
       <main className="admin-container">
         <div className="admin-content-wrapper">
-          <div className="admin-flex admin-justify-between admin-items-center" style={{ marginBottom: '0.5rem' }}>
+          <div className="admin-flex admin-justify-between admin-items-center" style={{ marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <h1 className="admin-title" style={{ marginBottom: 0 }}>Gestión de usuarios</h1>
-            <Link to="/adminPanel/gestionUsuario/crearUsuario" className="admin-btn admin-btn-success" style={{ padding: '0.5rem 0.875rem', fontSize: '0.875rem' }}>
+            <Link to="/adminPanel/gestionUsuario/crearUsuario" className="admin-btn admin-btn-success" style={{ padding: '0.5rem 0.875rem', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
               Crear usuario
             </Link>
           </div>
@@ -413,11 +413,11 @@ export default function GestionUsuario() {
                   const estado = getEstadoLabel(u.status);
                   return (
                     <tr key={u._id}>
-                      <td>{u.firstName}</td>
-                      <td>{u.lastName}</td>
-                      <td>{u.email}</td>
-                      <td>{u.documentNumber}</td>
-                      <td>
+                      <td data-label="Nombre">{u.firstName}</td>
+                      <td data-label="Apellido">{u.lastName}</td>
+                      <td data-label="Email">{u.email}</td>
+                      <td data-label="DNI">{u.documentNumber}</td>
+                      <td data-label="Estado">
                         <span 
                           className="inline-block px-3 py-1 rounded-full text-white text-xs font-medium text-center"
                           style={{ minWidth: '110px', backgroundColor: 
@@ -427,8 +427,8 @@ export default function GestionUsuario() {
                           {estado.label}
                         </span>
                       </td>
-                      <td>{formatDate(u.createdAt)}</td>
-                      <td>
+                      <td data-label="Fecha">{formatDate(u.createdAt)}</td>
+                      <td data-label="Tipo">
                         <span 
                           className="inline-block px-3 py-1 rounded-full text-white text-xs font-medium text-center"
                           style={{ minWidth: '110px', backgroundColor: getRoleColor(u.role) === 'bg-green-500' ? '#10b981' :
@@ -439,7 +439,7 @@ export default function GestionUsuario() {
                           {getRoleLabel(u.role)}
                         </span>
                       </td>
-                      <td>
+                      <td data-label="Acciones">
                         <div className="admin-actions">
                           <Link to="/adminPanel/gestionUsuario/modificarUsuario"
                             state={{ user: u }}

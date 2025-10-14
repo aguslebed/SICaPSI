@@ -18,7 +18,7 @@ const ModalWrapper = ({ children, onClose, overlayClassName = "", panelClassName
           <button
             type="button"
             aria-label="Cerrar"
-            className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 bg-white/80 rounded-full w-10 h-10 flex items-center justify-center border shadow-sm cursor-pointer"
+            className="absolute top-2 sm:top-3 right-2 sm:right-3 text-gray-700 hover:text-gray-900 bg-white/90 hover:bg-white rounded-full w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center shadow-md cursor-pointer transition-all z-10"
             onClick={onClose}
           >
             <svg

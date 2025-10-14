@@ -251,7 +251,9 @@ export default function AdmisionUsuario() {
       <NavBar />
       <main className="admin-container">
         <div className="admin-content-wrapper">
-          <h1 className="admin-title">Admisión de usuarios</h1>
+          <div style={{ marginBottom: '0.5rem' }}>
+            <h1 className="admin-title" style={{ marginBottom: 0 }}>Admisión de usuarios</h1>
+          </div>
           <hr className="admin-divider" />
           
           <section className="admin-card">
@@ -436,12 +438,12 @@ export default function AdmisionUsuario() {
                   ) : (
                     filteredData.map((u, idx) => (
                       <tr key={u.id || idx}>
-                        <td>{u.nombre}</td>
-                        <td>{u.apellido}</td>
-                        <td>{u.email}</td>
-                        <td>{u.dni}</td>
-                        <td>{u.fecha}</td>
-                        <td>
+                        <td data-label="Nombre">{u.nombre}</td>
+                        <td data-label="Apellido">{u.apellido}</td>
+                        <td data-label="Email">{u.email}</td>
+                        <td data-label="DNI">{u.dni}</td>
+                        <td data-label="Fecha">{u.fecha}</td>
+                        <td data-label="Tipo">
                           <span 
                             className="inline-block px-3 py-1 rounded-full text-white text-xs font-medium text-center"
                             style={{ 
@@ -456,7 +458,7 @@ export default function AdmisionUsuario() {
                             {u.tipo}
                           </span>
                         </td>
-                        <td>
+                        <td data-label="Estado">
                           <span 
                             className="inline-block px-3 py-1 rounded-full text-white text-xs font-medium text-center"
                             style={{ 
@@ -470,7 +472,7 @@ export default function AdmisionUsuario() {
                              u.estado === 'pendiente' ? 'Pendiente' : 'Inactivo'}
                           </span>
                         </td>
-                        <td>
+                        <td data-label="Acciones">
                           <div className="admin-actions">
                             <button 
                               className="admin-action-btn" 

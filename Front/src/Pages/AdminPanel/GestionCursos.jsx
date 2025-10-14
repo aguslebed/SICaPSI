@@ -223,17 +223,17 @@ export default function GestionCursos() {
                     const estado = t.createdBy ? 'Asignado' : 'Sin asignar';
                     return (
                       <tr key={t._id}>
-                        <td>
+                        <td data-label="Capacitación">
                           <div style={{ fontWeight: 600 }}>{t.title}</div>
                           <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>{t.subtitle}</div>
                         </td>
-                        <td>{nivelLabel}</td>
-                        <td>{profesor || '-'}</td>
-                        <td>-</td>
-                        <td style={{ color: estado === 'Asignado' ? 'var(--success-color)' : 'var(--danger-color)' }}>
+                        <td data-label="Nivel">{nivelLabel}</td>
+                        <td data-label="Profesor">{profesor || '-'}</td>
+                        <td data-label="Cohorte">-</td>
+                        <td data-label="Estado" style={{ color: estado === 'Asignado' ? 'var(--success-color)' : 'var(--danger-color)' }}>
                           {estado}
                         </td>
-                        <td>
+                        <td data-label="Acciones">
                           <div className="admin-actions">
                             <button className="admin-btn admin-btn-sm" style={{ backgroundColor: 'var(--warning-color)', color: 'white' }}>
                               Editar
