@@ -3,6 +3,7 @@ import { CheckCircle, XCircle, Search, Filter, Bold } from 'lucide-react';
 import NavBar from '../../Components/Student/NavBar';
 import { useLocation } from 'react-router-dom';
 import { listUsers, updateUser } from '../../API/Request';
+import './AdminPanel.css';
 
 const tipos = [
   { label: 'Capacitador', value: 'Capacitador' },
@@ -248,502 +249,255 @@ export default function AdmisionUsuario() {
   return (
     <>
       <NavBar />
-      <main className="bg-[#f7f8fa] min-h-screen p-0 max-w-screen-xl mx-auto">
-        {/* Barra superior */}
-          <div className="max-w-screen-xl mx-auto px-4 h-12 flex items-center justify-center">
-            <div className="black-ops-one-regular">
-            </div>
-          </div>
-        
- 
-
-    <h1 style={{ fontSize: '45px', fontFamily: 'Inter, sans-serif', padding: '20px 40px', position: 'absolute', top: '150px', backgroundColor: 'transparent' }}>Admisión de usuarios</h1>
-    <hr style={{ marginTop: '80px', border: '1px solid #e5e7eb', width: '96%', marginLeft: '40px' }} />
-    <section className="mx-10 bg-white rounded-xl shadow p-5" style={{ marginTop: '30px' }}>
-  
-  {/* Filtros */}
-      <div style={{
-        display: 'flex',
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 2,
-        marginBottom: 24,
-        justifyContent: 'flex-start',
-        width: '100%'
-      }}>
-
-  {/* Buscar */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+      <main className="admin-container">
+        <div className="admin-content-wrapper">
+          <h1 className="admin-title">Admisión de usuarios</h1>
+          <hr className="admin-divider" />
+          
+          <section className="admin-card">
+            {/* Filtros */}
+            <div className="admin-filters" style={{ alignItems: 'flex-start' }}>
+            {/* Búsqueda y Botones */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', minWidth: 'fit-content' }}>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <input
                   type="text"
                   value={busqueda}
                   onChange={e => setBusqueda(e.target.value)}
-                  placeholder="Buscar"
-                  style={{
-                    border: '2px solid #222',
-                    borderRadius: 20,
-                    padding: '7px 16px',
-                    width: 280,
-                    fontSize: 15,
-                    outline: 'none',
-                    background: '#fff',
-                    marginRight: -38,
-                    marginTop: '50px',
-                    zIndex: 2,
-                    height: 38
-                  }}
+                  placeholder="Buscar por nombre, email o DNI"
+                  className="admin-search-input"
+                  style={{ flex: 1, minWidth: 0 }}
                 />
-  {/*{-------------------------------lupita buscador-----------------------------*/}
-                <button
-                  style={{
-                    background: 'rgb(77, 195, 255)',
-                    border: '0px solid #222',
-                    borderRadius: '20%',
-                    width: 50,
-                    height: 40,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    position: 'relative',
-                    left: '50px',
-                    top: '25px'
-                  }}
-                  title="Buscar"
-                >
-                  <span style={{ fontSize: 24 }}>🔎︎</span>
+                <button className="admin-search-btn" title="Buscar">
+                  🔎
                 </button>
               </div>
-              <div style={{ display: 'flex', gap: 18, marginTop: 30 }}>
-                <button 
-                  onClick={aplicarFiltros}
-                  style={{ background: '#4dc3ff', color: '#fff', border: 'none', borderRadius: 7, padding: '7px 14px', fontWeight: 500, fontSize: 15, cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.03)', height: 36 }}
-                >
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button onClick={aplicarFiltros} className="admin-btn admin-btn-primary admin-btn-sm" style={{ flex: 1 }}>
                   Aplicar Filtros
                 </button>
-                <button 
-                  onClick={limpiarFiltros}
-                  style={{ background: '#4dc3ff', color: '#fff', border: 'none', borderRadius: 7, padding: '7px 14px', fontWeight: 500, fontSize: 15, cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.03)', height: 36 }}
-                >
+                <button onClick={limpiarFiltros} className="admin-btn admin-btn-primary admin-btn-sm" style={{ flex: 1 }}>
                   Limpiar Filtros
                 </button>
               </div>
             </div>
 
-  {/*------------------------------------------------- TIPO --------------------------------------*/}
-
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, position: 'relative', marginLeft: '300px', marginTop: '-50px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-
-  {/* Botón para abrir/cerrar menú */}
-          <button onClick={() => setTipoMenu(!tipoMenu)}
-          style={{
-          fontSize: 15,
-          fontWeight: 500,
-          color: '#444',
-          border: '1px solid #bdbdbd',
-          borderRadius: 7,
-          padding: '7px 12px',
-          background: '#f7f8fa',
-          cursor: 'pointer',
-          height: 36,
-          width: 180,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          Tipo<img width="20" height="20" src="https://img.icons8.com/ios-glyphs/60/chevron-down.png" alt="chevron-down"/>
-          </button></div>
-
-  {/*----------------------- Menú desplegable------------------------------------------- */}
-    {tipoMenu && (
-      <div
-        style={{
-          position: 'absolute',
-          top: 35, //esto es para cambiar el espacio entre 'tipo' y las opciones
-          left: 0,
-          width: 180,
-          background: '#f7f8fa',
-          border: '1px solid #ccc',
-          borderRadius: 7,
-          boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-          padding: 5,
-          zIndex: 10,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 5 //espacio entre las opciones
-        }}
-      >
-
-        
-  {/*----------- las opciones del botón 'TIPO'------------------- */}
-        {tipos.map((t) => (
-          <label
-            key={t.value}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '6px 8px',
-              cursor: 'pointer',
-              fontSize: 15, //letra para cambiar capacitador, guardia o admin
-              color: '#333',
-              borderRadius: 6
-            }}
-          >
-            <span
-              onClick={() => handleTipoChange(t.value)}
-              
-              style={{
-                width: 20,
-                height: 20,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: 4,
-                background: '#fff',
-                border: '1px solid #bdbdbd'
-              }}
-            >
-              {tipo.includes(t.value) ? (
-                <XCircle size={0} color="#444" />
-              ) : (
-                <span style={{ width: 10, color: '#18b620ff', fontWeight: 'bold' }}>✓</span>
+            {/* Filtro Tipo */}
+            <div className="admin-filter-group admin-dropdown">
+              <button onClick={() => setTipoMenu(!tipoMenu)} className="admin-dropdown-btn">
+                Tipo
+                <img width="14" height="14" src="https://img.icons8.com/ios-glyphs/60/chevron-down.png" alt="chevron-down"/>
+              </button>
+              {tipoMenu && (
+                <div className="admin-dropdown-menu">
+                  {tipos.map((t) => (
+                    <label key={t.value} className="admin-dropdown-item">
+                      <span
+                        onClick={() => handleTipoChange(t.value)}
+                        style={{
+                          width: 18,
+                          height: 18,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 4,
+                          background: '#fff',
+                          border: '1px solid #bdbdbd'
+                        }}
+                      >
+                        {tipo.includes(t.value) && (
+                          <span style={{ fontSize: 12, color: '#18b620ff', fontWeight: 'bold' }}>✓</span>
+                        )}
+                      </span>
+                      {t.label}
+                    </label>
+                  ))}
+                </div>
               )}
-            </span>
-            {t.label}
-          </label>
-        ))}
-      </div>
-    )}
-  </div>
+            </div>
 
-                  
-
-  {/*------------------------------------------------- ESTADO --------------------------------------*/}
-  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, position: 'relative', marginLeft: '80px', marginTop: '-50px' }}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      {/* Botón para abrir/cerrar menú */}
-      <button onClick={() => setEstadoMenu(!estadoMenu)}
-        style={{
-          fontSize: 15,
-          fontWeight: 500,
-          color: '#444',
-          border: '1px solid #bdbdbd',
-          borderRadius: 7,
-          padding: '7px 12px',
-          background: '#f7f8fa',
-          cursor: 'pointer',
-          height: 36,
-          width: 180,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-        Estado<img width="20" height="20" src="https://img.icons8.com/ios-glyphs/60/chevron-down.png" alt="chevron-down"/>
-      </button>
-    </div>
-
-    {/* Menú desplegable */}
-    {estadoMenu && (
-      <div
-        style={{
-          position: 'absolute',
-          top: 35,
-          left: 0,
-          width: 180,
-          background: '#f7f8fa',
-          border: '1px solid #ccc',
-          borderRadius: 7,
-          boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-          padding: 5,
-          zIndex: 10,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 5
-        }}
-      >
-        {/* Opciones del botón 'ESTADO' */}
-        {estados.map((est) => (
-          <label
-            key={est.value}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '6px 8px',
-              cursor: 'pointer',
-              fontSize: 15,
-              color: '#333',
-              borderRadius: 6
-            }}
-          >
-            <span
-              onClick={() => handleEstadoChange(est.value)}
-              style={{
-                width: 20,
-                height: 20,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: 4,
-                background: '#fff',
-                border: '1px solid #bdbdbd'
-              }}
-            >
-              {estado.includes(est.value) ? (
-                <span style={{ width: 10, color: '#18b620ff', fontWeight: 'bold' }}>✓</span>
-              ) : (
-                <XCircle size={0} color="#444" />
+            {/* Filtro Estado */}
+            <div className="admin-filter-group admin-dropdown">
+              <button onClick={() => setEstadoMenu(!estadoMenu)} className="admin-dropdown-btn">
+                Estado
+                <img width="14" height="14" src="https://img.icons8.com/ios-glyphs/60/chevron-down.png" alt="chevron-down"/>
+              </button>
+              {estadoMenu && (
+                <div className="admin-dropdown-menu">
+                  {estados.map((est) => (
+                    <label key={est.value} className="admin-dropdown-item">
+                      <span
+                        onClick={() => handleEstadoChange(est.value)}
+                        style={{
+                          width: 18,
+                          height: 18,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 4,
+                          background: '#fff',
+                          border: '1px solid #bdbdbd'
+                        }}
+                      >
+                        {estado.includes(est.value) && (
+                          <span style={{ fontSize: 12, color: '#18b620ff', fontWeight: 'bold' }}>✓</span>
+                        )}
+                      </span>
+                      {est.label}
+                    </label>
+                  ))}
+                </div>
               )}
-            </span>
-            {est.label}
-          </label>
-        ))}
-      </div>
-    )}
-  </div>
+            </div>
 
-  {/*--------------------------------------------* Fecha de creación -----------------------------------------------*/}
-  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, position: 'relative', marginLeft: '80px', marginTop: '-50px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {/* Botón para abrir/cerrar menú */}
-                <button
-                  onClick={() => setFechaMenu(!fechaMenu)}
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 500,
-                    color: '#444',
-                    border: '1px solid #bdbdbd',
-                    borderRadius: 7,
-                    padding: '7px 12px',
-                    background: '#f7f8fa',
-                    cursor: 'pointer',
-                    height: 36,
-                    width: 180,
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}
-                >Fecha de creación
-                  <img width="20" height="20" src="https://img.icons8.com/ios-glyphs/60/chevron-down.png" alt="chevron-down"/>
-                </button>
-              </div>
-
-              {/* Menú desplegable */}
+            {/* Filtro Fecha */}
+            <div className="admin-filter-group admin-dropdown">
+              <button onClick={() => setFechaMenu(!fechaMenu)} className="admin-dropdown-btn">
+                Fecha
+                <img width="14" height="14" src="https://img.icons8.com/ios-glyphs/60/chevron-down.png" alt="chevron-down"/>
+              </button>
               {fechaMenu && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 35,
-                    left: 0,
-                    width: 180,
-                    background: '#f7f8fa',
-                    border: '1px solid #ccc',
-                    borderRadius: 7,
-                    boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-                    padding: 15,
-                    zIndex: 10,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 23
-                  }}
-                >
+                <div className="admin-dropdown-menu" style={{ minWidth: '200px', padding: '0.75rem' }}>
                   <button
                     onClick={() => setFechaDesdeVisible(!fechaDesdeVisible)}
-                    style={{
-                      fontSize: 15,
-                      fontWeight: 500,
-                      color: '#444',
-                      border: '1px solid #bdbdbd',
-                      borderRadius: 7,
-                      padding: '7px 12px',
-                      background: '#fff',
-                      cursor: 'pointer',
-                      height: 36,
-                      width: '100%',
-                      textAlign: 'center',
-                      position: 'relative'
-                    }}
+                    className="admin-btn admin-btn-secondary admin-btn-sm"
+                    style={{ width: '100%', marginBottom: '0.5rem', fontSize: '0.8125rem' }}
                   >
                     {fechaDesde ? `Desde: ${new Date(fechaDesde).toLocaleDateString()}` : "Desde"}
                   </button>
                   {fechaDesdeVisible && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '40px',
-                        left: 0,
-                        background: '#fff',
-                        border: '1px solid #ccc',
-                        borderRadius: 7,
-                        boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-                        padding: 10,
-                        zIndex: 20
+                    <input
+                      type="date"
+                      value={fechaDesde}
+                      onChange={(e) => {
+                        setFechaDesde(e.target.value);
+                        setFechaDesdeVisible(false);
                       }}
-                    >
-                      <input
-                        type="date"
-                        value={fechaDesde}
-                        onChange={(e) => {
-                          setFechaDesde(e.target.value);
-                          setFechaDesdeVisible(false);
-                        }}
-                      />
-                    </div>
+                      className="admin-filter-input"
+                      style={{ width: '100%', marginBottom: '0.5rem' }}
+                    />
                   )}
 
                   <button
                     onClick={() => setFechaHastaVisible(!fechaHastaVisible)}
-                    style={{
-                      fontSize: 15,
-                      fontWeight: 500,
-                      color: '#444',
-                      border: '1px solid #bdbdbd',
-                      borderRadius: 7,
-                      padding: '7px 12px',
-                      background: '#fff',
-                      cursor: 'pointer',
-                      height: 36,
-                      width: '100%',
-                      textAlign: 'center',
-                      position: 'relative'
-                    }}
+                    className="admin-btn admin-btn-secondary admin-btn-sm"
+                    style={{ width: '100%', fontSize: '0.8125rem' }}
                   >
                     {fechaHasta ? `Hasta: ${new Date(fechaHasta).toLocaleDateString()}` : "Hasta"}
                   </button>
                   {fechaHastaVisible && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '40px',
-                        left: 0,
-                        background: '#fff',
-                        border: '1px solid #ccc',
-                        borderRadius: 7,
-                        boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-                        padding: 10,
-                        zIndex: 20
+                    <input
+                      type="date"
+                      value={fechaHasta}
+                      onChange={(e) => {
+                        setFechaHasta(e.target.value);
+                        setFechaHastaVisible(false);
                       }}
-                    >
-                      <input
-                        type="date"
-                        value={fechaHasta}
-                        onChange={(e) => {
-                          setFechaHasta(e.target.value);
-                          setFechaHastaVisible(false);
-                        }}
-                      />
-                    </div>
+                      className="admin-filter-input"
+                      style={{ width: '100%', marginTop: '0.5rem' }}
+                    />
                   )}
                 </div>
               )}
             </div>
           </div>
 
-
-  {/*-------------------------- Tabla con los datos -------------------------------*/}
-
-            <div style={{ marginTop: '80px', borderRadius: '8px', border: '1px solid #e5e7eb', textAlign: 'center' }}>
-              {loading ? (
-                <div style={{ textAlign: 'center', padding: '40px', fontSize: '16px', color: '#666' }}>
-                  Cargando usuarios...
-                </div>
-              ) : error ? (
-                <div style={{ textAlign: 'center', padding: '40px', fontSize: '16px', color: '#f44336' }}>
-                  {error}
-                </div>
-              ) : (
-                <table style={{ width: '100%', fontSize: '16px', borderCollapse: 'collapse', textAlign: 'center' }}>
-                  <thead style={{ backgroundColor: '#0288d1', color: '#fff' }}>
+          {/* Tabla */}
+          <div className="admin-table-wrapper" style={{ marginTop: '1.5rem' }}>
+            {loading ? (
+              <div className="admin-empty">
+                Cargando usuarios...
+              </div>
+            ) : error ? (
+              <div className="admin-empty" style={{ color: 'var(--danger-color)' }}>
+                {error}
+              </div>
+            ) : (
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Apellido</th>
+                    <th>Email</th>
+                    <th>DNI</th>
+                    <th>Fecha de creación</th>
+                    <th>Tipo</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredData.length === 0 ? (
                     <tr>
-                      <th style={{ padding: '18px', fontWeight: 'bold' }}>Nombre</th>
-                      <th style={{ padding: '18px', fontWeight: 'bold' }}>Apellido</th>
-                      <th style={{ padding: '18px', fontWeight: 'bold' }}>Email</th>
-                      <th style={{ padding: '18px', fontWeight: 'bold' }}>DNI</th>
-                      <th style={{ padding: '18px', fontWeight: 'bold' }}>Fecha de creación</th>
-                      <th style={{ padding: '18px', fontWeight: 'bold' }}>Tipo</th>
-                      <th style={{ padding: '18px', fontWeight: 'bold' }}>Estado</th>
-                      <th style={{ padding: '18px', fontWeight: 'bold' }}>Acciones</th>
+                      <td colSpan="8" className="admin-empty">
+                        {data.length === 0 ? 'No se encontraron usuarios' : 'No hay usuarios que coincidan con los filtros aplicados'}
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody style={{ backgroundColor: '#fff' }}>
-                    {filteredData.length === 0 ? (
-                      <tr>
-                        <td colSpan="8" style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
-                          {data.length === 0 ? 'No se encontraron usuarios' : 'No hay usuarios que coincidan con los filtros aplicados'}
+                  ) : (
+                    filteredData.map((u, idx) => (
+                      <tr key={u.id || idx}>
+                        <td>{u.nombre}</td>
+                        <td>{u.apellido}</td>
+                        <td>{u.email}</td>
+                        <td>{u.dni}</td>
+                        <td>{u.fecha}</td>
+                        <td>
+                          <span className={`admin-badge ${
+                            u.tipo === 'Administrador' ? 'admin-badge-warning' : 
+                            u.tipo === 'Capacitador' ? 'admin-badge-success' : 
+                            u.tipo === 'Directivo' ? 'admin-badge-info' : 
+                            u.tipo === 'Alumno' ? 'admin-badge-purple' : 'admin-badge-gray'
+                          }`}>
+                            {u.tipo}
+                          </span>
                         </td>
-                      </tr>
-                    ) : (
-                      filteredData.map((u, idx) => (
-                        <tr key={u.id || idx} style={{ borderTop: '1px solid #e5e7eb' }}>
-                          <td style={{ padding: '18px' }}>{u.nombre}</td>
-                          <td style={{ padding: '18px' }}>{u.apellido}</td>
-                          <td style={{ padding: '18px' }}>{u.email}</td>
-                          <td style={{ padding: '18px' }}>{u.dni}</td>
-                          <td style={{ padding: '18px' }}>{u.fecha}</td>
-                          <td style={{ padding: '18px' }}>
-                            <span style={{
-                              backgroundColor: u.tipo === 'Administrador' ? '#ff9800' : 
-                                             u.tipo === 'Capacitador' ? '#4caf50' : 
-                                             u.tipo === 'Directivo' ? '#2196f3' : 
-                                             u.tipo === 'Alumno' ? '#9c27b0' : '#9e9e9e',
-                              color: 'white',
-                              padding: '4px 8px',
-                              borderRadius: '4px',
-                              fontSize: '12px',
-                              fontWeight: 'bold'
-                            }}>
-                              {u.tipo}
-                            </span>
-                          </td>
-                          <td style={{ padding: '18px' }}>
-                            <span style={{
-                              backgroundColor: u.estado === 'available' ? '#4caf50' : 
-                                             u.estado === 'pendiente' ? '#ff9800' : '#f44336',
-                              color: 'white',
-                              padding: '4px 8px',
-                              borderRadius: '4px',
-                              fontSize: '12px',
-                              fontWeight: 'bold'
-                            }}>
-                              {u.estado === 'available' ? 'Activo' : 
-                               u.estado === 'pendiente' ? 'Pendiente' : 'Inactivo'}
-                            </span>
-                          </td>
-                          <td style={{ padding: '18px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                        <td>
+                          <span className={`admin-badge ${
+                            u.estado === 'available' ? 'admin-badge-success' : 
+                            u.estado === 'pendiente' ? 'admin-badge-warning' : 'admin-badge-danger'
+                          }`}>
+                            {u.estado === 'available' ? 'Activo' : 
+                             u.estado === 'pendiente' ? 'Pendiente' : 'Inactivo'}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="admin-actions">
                             <button 
-                              style={{ color: '#4caf50', border: 'none', background: 'none', cursor: 'pointer' }} 
+                              className="admin-action-btn" 
+                              style={{ color: 'var(--success-color)' }}
                               title="Aprobar"
                               onClick={() => aprobarUsuario(u)}
                             >
-                              <CheckCircle size={28} />
+                              <CheckCircle size={20} />
                             </button>
                             <button 
-                              style={{ color: '#f44336', border: 'none', background: 'none', cursor: 'pointer' }} 
+                              className="admin-action-btn" 
+                              style={{ color: 'var(--danger-color)' }}
                               title="Rechazar"
                               onClick={() => rechazarUsuario(u)}
                             >
-                              <XCircle size={28} />
+                              <XCircle size={20} />
                             </button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              )}
-            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            )}
+          </div>
 
             {/* Paginación */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px', marginTop: '16px', fontSize: '14px', color: '#757575' }}>
-              <span>Anterior</span>
-              <button style={{ width: '28px', height: '28px', borderRadius: '4px', backgroundColor: '#0288d1', color: '#fff', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>1</button>
-              <button style={{ width: '28px', height: '28px', borderRadius: '4px', backgroundColor: '#fff', color: '#757575', border: '1px solid #e5e7eb', cursor: 'pointer' }}>2</button>
-              <button style={{ width: '28px', height: '28px', borderRadius: '4px', backgroundColor: '#fff', color: '#757575', border: '1px solid #e5e7eb', cursor: 'pointer' }}>3</button>
-              <span>Siguiente</span>
+            <div className="admin-pagination">
+              <span className="admin-pagination-text">Anterior</span>
+              <button className="admin-page-btn active">1</button>
+              <button className="admin-page-btn">2</button>
+              <button className="admin-page-btn">3</button>
+              <span className="admin-pagination-text">Siguiente</span>
             </div>
-        </section>
+          </section>
+        </div>
       </main>
     </>
   );

@@ -3,6 +3,7 @@ import { Link, Outlet } from 'react-router-dom';
 import NavBar from '../../Components/Student/NavBar';
 import { deleteUser as deleteUserApi, getAllUsers } from '../../API/Request';
 import LoadingOverlay from '../../Components/Shared/LoadingOverlay';
+import './AdminPanel.css';
 
 
 function getEstadoLabel(status) {
@@ -38,6 +39,17 @@ export default function GestionUsuario() {
   const [estadoEdit, setEstadoEdit] = useState('');
   const [fechaDesdeEdit, setFechaDesdeEdit] = useState('');
   const [fechaHastaEdit, setFechaHastaEdit] = useState('');
+  
+  // Estados para el dropdown de fecha
+  const [fechaMenu, setFechaMenu] = useState(false);
+  const [fechaDesdeVisible, setFechaDesdeVisible] = useState(false);
+  const [fechaHastaVisible, setFechaHastaVisible] = useState(false);
+  
+  // Estados para los dropdowns de Tipo y Estado
+  const [tipoMenu, setTipoMenu] = useState(false);
+  const [estadoMenu, setEstadoMenu] = useState(false);
+  const [tiposSeleccionados, setTiposSeleccionados] = useState(['Capacitador', 'Guardia', 'Administrador', 'Directivo']);
+  const [estadosSeleccionados, setEstadosSeleccionados] = useState(['Habilitado', 'Pendiente', 'Deshabilitado']);
 
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
@@ -116,7 +128,43 @@ export default function GestionUsuario() {
     setFechaDesdeEdit('');
     setFechaHastaEdit('');
     setFiltersApplied(false);
+    setTiposSeleccionados(['Capacitador', 'Guardia', 'Administrador', 'Directivo']);
+    setEstadosSeleccionados(['Habilitado', 'Pendiente', 'Deshabilitado']);
   };
+
+  // Funciones para manejar cambios en los checkboxes
+  const handleTipoChange = (tipoValue) => {
+    setTiposSeleccionados(prev => {
+      if (prev.includes(tipoValue)) {
+        return prev.filter(t => t !== tipoValue);
+      } else {
+        return [...prev, tipoValue];
+      }
+    });
+  };
+
+  const handleEstadoChange = (estadoValue) => {
+    setEstadosSeleccionados(prev => {
+      if (prev.includes(estadoValue)) {
+        return prev.filter(e => e !== estadoValue);
+      } else {
+        return [...prev, estadoValue];
+      }
+    });
+  };
+
+  const tipos = [
+    { label: 'Capacitador', value: 'Capacitador' },
+    { label: 'Guardia', value: 'Guardia' },
+    { label: 'Administrador', value: 'Administrador' },
+    { label: 'Directivo', value: 'Directivo' },
+  ];
+
+  const estadosOpciones = [
+    { label: 'Habilitado', value: 'Habilitado' },
+    { label: 'Pendiente', value: 'Pendiente' },
+    { label: 'Deshabilitado', value: 'Deshabilitado' },
+  ];
 
   const deleteUser = async (id) => {
   try {
@@ -133,147 +181,240 @@ export default function GestionUsuario() {
     <>
       {loading && <LoadingOverlay label="Cargando usuarios..." />}
       <NavBar />
-      <main className="p-6 bg-[#f6f8fa] min-h-screen">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex justify-between items-center mb-4">
-            <h1 className="text-3xl font-bold">Gestión de usuarios</h1>
-            <Link to="/adminPanel/gestionUsuario/crearUsuario" className="bg-green-400 hover:bg-green-500 text-white px-4 py-2 rounded-lg">Crear usuario</Link>
+      <main className="admin-container">
+        <div className="admin-content-wrapper">
+          <div className="admin-flex admin-justify-between admin-items-center" style={{ marginBottom: '0.5rem' }}>
+            <h1 className="admin-title" style={{ marginBottom: 0 }}>Gestión de usuarios</h1>
+            <Link to="/adminPanel/gestionUsuario/crearUsuario" className="admin-btn admin-btn-success">
+              Crear usuario
+            </Link>
           </div>
-          {/* Filtros */}
-          <div className="bg-white rounded shadow p-4 flex flex-wrap gap-4 mb-6 items-end">
-            <div>
-              <label className="block text-sm mb-1">Buscar</label>
-              <div className="flex">
+          <hr className="admin-divider" />
+          
+          {/* Filtros y Tabla dentro de la misma sección */}
+          <section className="admin-card">
+            <div className="admin-filters" style={{ alignItems: 'flex-start' }}>
+            {/* Búsqueda y Botones */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', minWidth: 'fit-content' }}>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <input
                   type="text"
-                  className="border rounded-l px-3 py-1"
-                  placeholder="Buscar..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
+                  placeholder="Buscar..."
+                  className="admin-search-input"
+                  style={{ flex: 1, minWidth: 0 }}
                 />
-                <button
-                  className="bg-sky-400 text-white px-3 rounded-r cursor-pointer"
-                  onClick={() => setSearchApplied(search)}
-                >🔍</button>
+                <button className="admin-search-btn" onClick={() => setSearchApplied(search)} title="Buscar">
+                  🔎
+                </button>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button onClick={aplicarFiltros} className="admin-btn admin-btn-primary admin-btn-sm" style={{ flex: 1 }}>
+                  Aplicar Filtros
+                </button>
+                <button onClick={limpiarFiltros} className="admin-btn admin-btn-primary admin-btn-sm" style={{ flex: 1 }}>
+                  Limpiar Filtros
+                </button>
               </div>
             </div>
-            <div>
-              <label className="block text-sm mb-1">Tipo</label>
-              <select
-                className="border rounded px-3 py-1"
-                value={tipoEdit}
-                onChange={e => setTipoEdit(e.target.value)}
-              >
-                <option value="">Todos</option>
-                <option value="Capacitador">Capacitador</option>
-                <option value="Guardia">Guardia</option>
-                <option value="Administrador">Administrador</option>
-                <option value="Directivo">Directivo</option>
-              </select>
+            
+            {/* Filtro Tipo */}
+            <div className="admin-filter-group admin-dropdown">
+              <button onClick={() => setTipoMenu(!tipoMenu)} className="admin-dropdown-btn">
+                Tipo
+                <img width="14" height="14" src="https://img.icons8.com/ios-glyphs/60/chevron-down.png" alt="chevron-down"/>
+              </button>
+              {tipoMenu && (
+                <div className="admin-dropdown-menu">
+                  {tipos.map((t) => (
+                    <label key={t.value} className="admin-dropdown-item">
+                      <span
+                        onClick={() => handleTipoChange(t.value)}
+                        style={{
+                          width: 18,
+                          height: 18,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 4,
+                          background: '#fff',
+                          border: '1px solid #bdbdbd'
+                        }}
+                      >
+                        {tiposSeleccionados.includes(t.value) && (
+                          <span style={{ fontSize: 12, color: '#18b620ff', fontWeight: 'bold' }}>✓</span>
+                        )}
+                      </span>
+                      {t.label}
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
-            <div>
-              <label className="block text-sm mb-1">Estado</label>
-              <select
-                className="border rounded px-3 py-1"
-                value={estadoEdit}
-                onChange={e => setEstadoEdit(e.target.value)}
-              >
-                <option value="">Todos</option>
-                <option value="Habilitado">Habilitado</option>
-                <option value="Pendiente">Pendiente</option>
-                <option value="Deshabilitado">Deshabilitado</option>
-              </select>
+            
+            {/* Filtro Estado */}
+            <div className="admin-filter-group admin-dropdown">
+              <button onClick={() => setEstadoMenu(!estadoMenu)} className="admin-dropdown-btn">
+                Estado
+                <img width="14" height="14" src="https://img.icons8.com/ios-glyphs/60/chevron-down.png" alt="chevron-down"/>
+              </button>
+              {estadoMenu && (
+                <div className="admin-dropdown-menu">
+                  {estadosOpciones.map((est) => (
+                    <label key={est.value} className="admin-dropdown-item">
+                      <span
+                        onClick={() => handleEstadoChange(est.value)}
+                        style={{
+                          width: 18,
+                          height: 18,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 4,
+                          background: '#fff',
+                          border: '1px solid #bdbdbd'
+                        }}
+                      >
+                        {estadosSeleccionados.includes(est.value) && (
+                          <span style={{ fontSize: 12, color: '#18b620ff', fontWeight: 'bold' }}>✓</span>
+                        )}
+                      </span>
+                      {est.label}
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
-            <div>
-              <label className="block text-sm mb-1">Fecha de creación</label>
-              <div className="flex gap-1 items-center">
-                <p>Desde:</p>
-                <input
-                  type="date"
-                  className="border rounded px-2 py-1"
-                  value={fechaDesdeEdit}
-                  onChange={e => setFechaDesdeEdit(e.target.value)}
-                />
-                <p>Hasta:</p>
-                <input
-                  type="date"
-                  className="border rounded px-2 py-1"
-                  value={fechaHastaEdit}
-                  onChange={e => setFechaHastaEdit(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="flex flex-col gap-1">
-              <button
-                className="bg-sky-400 text-white px-3 py-1 rounded cursor-pointer"
-                onClick={aplicarFiltros}
-              >Aplicar Filtros</button>
-              <button
-                className="bg-gray-200 text-gray-700 px-3 py-1 rounded cursor-pointer"
-                onClick={limpiarFiltros}
-              >Limpiar Filtros</button>
+            
+            {/* Filtro Fecha */}
+            <div className="admin-filter-group admin-dropdown">
+              <button onClick={() => setFechaMenu(!fechaMenu)} className="admin-dropdown-btn">
+                Fecha
+                <img width="14" height="14" src="https://img.icons8.com/ios-glyphs/60/chevron-down.png" alt="chevron-down"/>
+              </button>
+              {fechaMenu && (
+                <div className="admin-dropdown-menu" style={{ minWidth: '200px', padding: '0.75rem' }}>
+                  <button
+                    onClick={() => setFechaDesdeVisible(!fechaDesdeVisible)}
+                    className="admin-btn admin-btn-secondary admin-btn-sm"
+                    style={{ width: '100%', marginBottom: '0.5rem', fontSize: '0.8125rem' }}
+                  >
+                    {fechaDesdeEdit ? `Desde: ${new Date(fechaDesdeEdit).toLocaleDateString()}` : "Desde"}
+                  </button>
+                  {fechaDesdeVisible && (
+                    <input
+                      type="date"
+                      value={fechaDesdeEdit}
+                      onChange={(e) => {
+                        setFechaDesdeEdit(e.target.value);
+                        setFechaDesdeVisible(false);
+                      }}
+                      className="admin-filter-input"
+                      style={{ width: '100%', marginBottom: '0.5rem' }}
+                    />
+                  )}
+
+                  <button
+                    onClick={() => setFechaHastaVisible(!fechaHastaVisible)}
+                    className="admin-btn admin-btn-secondary admin-btn-sm"
+                    style={{ width: '100%', fontSize: '0.8125rem' }}
+                  >
+                    {fechaHastaEdit ? `Hasta: ${new Date(fechaHastaEdit).toLocaleDateString()}` : "Hasta"}
+                  </button>
+                  {fechaHastaVisible && (
+                    <input
+                      type="date"
+                      value={fechaHastaEdit}
+                      onChange={(e) => {
+                        setFechaHastaEdit(e.target.value);
+                        setFechaHastaVisible(false);
+                      }}
+                      className="admin-filter-input"
+                      style={{ width: '100%', marginTop: '0.5rem' }}
+                    />
+                  )}
+                </div>
+              )}
             </div>
           </div>
+        
           {/* Tabla */}
-          <div className="overflow-x-auto bg-white rounded shadow">
-            <table className="min-w-full">
-              <thead>
-                <tr className="bg-[#0888c2] text-white">
-                  <th className="px-4 py-3 text-left">Nombre</th>
-                  <th className="px-4 py-3 text-left">Apellido</th>
-                  <th className="px-4 py-3 text-left">Email</th>
-                  <th className="px-4 py-3 text-left">DNI</th>
-                  <th className="px-4 py-3 text-left">Estado</th>
-                  <th className="px-4 py-3 text-left">Fecha de creación</th>
-                  <th className="px-4 py-3 text-left">Tipo</th>
-                  <th className="px-4 py-3 text-left">Acciones</th>
+          <div className="admin-table-wrapper" style={{ marginTop: '1.5rem' }}>
+            <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Apellido</th>
+                <th>Email</th>
+                <th>DNI</th>
+                <th>Estado</th>
+                <th>Fecha de creación</th>
+                <th>Tipo</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="admin-empty">No hay usuarios para mostrar.</td>
                 </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="text-center py-8 text-gray-500">No hay usuarios para mostrar.</td>
-                  </tr>
-                ) : (
-                  filteredUsers.map(u => {
-                    const estado = getEstadoLabel(u.status);
-                    return (
-                      <tr key={u._id} className="border-b">
-                        <td className="px-4 py-3">{u.firstName}</td>
-                        <td className="px-4 py-3">{u.lastName}</td>
-                        <td className="px-4 py-3">{u.email}</td>
-                        <td className="px-4 py-3">{u.documentNumber}</td>
-                        <td className="px-4 py-3">
-                          <span className={`text-white px-3 py-1 rounded-full text-sm ${estado.color}`}>{estado.label}</span>
-                        </td>
-                        <td className="px-4 py-3">{formatDate(u.createdAt)}</td>
-                        <td className="px-4 py-3">{getRoleLabel(u.role)}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex gap-2">
-                            <Link to="/adminPanel/gestionUsuario/modificarUsuario"
-                              state={{ user: u }}
-                              className="cursor-pointer"
-                              >
-                      📝  </Link>
-                            <button className='cursor-pointer' title="Deshabilitar usuario" onClick={() => deleteUser(u._id)}><span role="img" aria-label="users">🚫</span></button>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-          {/* Paginación */}
-          <div className="flex justify-end mt-4 gap-2">
-            <button className="px-3 py-1 rounded border">Anterior</button>
-            <button className="px-3 py-1 rounded border bg-sky-400 text-white">1</button>
-            <button className="px-3 py-1 rounded border">2</button>
-            <button className="px-3 py-1 rounded border">3</button>
-            <button className="px-3 py-1 rounded border">Siguiente</button>
-          </div>
-          <Outlet />
+              ) : (
+                filteredUsers.map(u => {
+                  const estado = getEstadoLabel(u.status);
+                  return (
+                    <tr key={u._id}>
+                      <td>{u.firstName}</td>
+                      <td>{u.lastName}</td>
+                      <td>{u.email}</td>
+                      <td>{u.documentNumber}</td>
+                      <td>
+                        <span className={`admin-badge ${
+                          estado.color === 'bg-green-500' ? 'admin-badge-success' : 
+                          estado.color === 'bg-yellow-400' ? 'admin-badge-warning' : 
+                          'admin-badge-danger'
+                        }`}>
+                          {estado.label}
+                        </span>
+                      </td>
+                      <td>{formatDate(u.createdAt)}</td>
+                      <td>{getRoleLabel(u.role)}</td>
+                      <td>
+                        <div className="admin-actions">
+                          <Link to="/adminPanel/gestionUsuario/modificarUsuario"
+                            state={{ user: u }}
+                            className="admin-action-btn"
+                            title="Editar usuario"
+                          >
+                            📝
+                          </Link>
+                          <button 
+                            className="admin-action-btn" 
+                            title="Deshabilitar usuario" 
+                            onClick={() => deleteUser(u._id)}
+                          >
+                            🚫
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+        
+        {/* Paginación */}
+        <div className="admin-pagination">
+          <span className="admin-pagination-text">Anterior</span>
+          <button className="admin-page-btn active">1</button>
+          <button className="admin-page-btn">2</button>
+          <button className="admin-page-btn">3</button>
+          <span className="admin-pagination-text">Siguiente</span>
+        </div>
+      </section>
+        <Outlet />
         </div>
       </main>
     </>

@@ -7,12 +7,51 @@ import CreateTrainingModal from '../../Components/Modals/CreateTrainingModal';
 import { useState, useEffect } from 'react';
 import { getAllActiveTrainings } from '../../API/Request';
 import LoadingOverlay from '../../Components/Shared/LoadingOverlay';
+import './AdminPanel.css';
 
 export default function GestionCursos() {
   const [openCohorte, setOpenCohorte] = useState(false);
   const [trainings, setTrainings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Estados para los dropdowns
+  const [nivelMenu, setNivelMenu] = useState(false);
+  const [estadoMenu, setEstadoMenu] = useState(false);
+  const [nivelesSeleccionados, setNivelesSeleccionados] = useState([]);
+  const [estadosSeleccionados, setEstadosSeleccionados] = useState([]);
+
+  const niveles = [
+    { label: 'Nivel 1', value: 'nivel1' },
+    { label: 'Nivel 2', value: 'nivel2' },
+    { label: 'Nivel 3', value: 'nivel3' },
+  ];
+
+  const estadosOpciones = [
+    { label: 'Asignado', value: 'asignado' },
+    { label: 'Sin asignar', value: 'sin_asignar' },
+  ];
+
+  // Funciones para manejar cambios en los checkboxes
+  const handleNivelChange = (nivelValue) => {
+    setNivelesSeleccionados(prev => {
+      if (prev.includes(nivelValue)) {
+        return prev.filter(n => n !== nivelValue);
+      } else {
+        return [...prev, nivelValue];
+      }
+    });
+  };
+
+  const handleEstadoChange = (estadoValue) => {
+    setEstadosSeleccionados(prev => {
+      if (prev.includes(estadoValue)) {
+        return prev.filter(e => e !== estadoValue);
+      } else {
+        return [...prev, estadoValue];
+      }
+    });
+  };
 
   // sample profesores placeholder (could come from API later)
   const sampleProfesores = [
@@ -45,72 +84,134 @@ export default function GestionCursos() {
   return (
     <>
       <NavBar />
-      <main className="w-full">
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 md:px-8 py-6">
-          <h1 className="text-3xl font-semibold mb-2">Gestión de cursos</h1>
-        <hr className="border-gray-300 mb-6" />
+      <main className="admin-container">
+        <div className="admin-content-wrapper">
+          <h1 className="admin-title">Gestión de cursos</h1>
+          <hr className="admin-divider" />
 
-        <div className="bg-white shadow-sm rounded p-6">
-          <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-            {/* Left: buscador y botones */}
-            <div className="flex-1">
-              <div className="flex items-center gap-3">
+          <section className="admin-card">
+            <div className="admin-filters" style={{ alignItems: 'flex-start' }}>
+            {/* Búsqueda y Botones */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', minWidth: 'fit-content' }}>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <input
                   type="text"
                   placeholder="Buscar curso"
-                  className="w-full max-w-md border rounded-full px-4 py-2 text-sm focus:outline-none"
+                  className="admin-search-input"
+                  style={{ flex: 1, minWidth: 0 }}
                 />
-                <button className="w-10 h-10 rounded bg-sky-500 flex items-center justify-center text-white cursor-pointer">🔍</button>
+                <button className="admin-search-btn" title="Buscar">
+                  🔎
+                </button>
               </div>
-
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                <button className="bg-sky-500 text-white px-3 py-1 rounded text-sm cursor-pointer">Aplicar Filtros</button>
-                <button className="bg-gray-200 text-gray-700 px-3 py-1 rounded text-sm cursor-pointer">Limpiar Filtros</button>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button className="admin-btn admin-btn-primary admin-btn-sm" style={{ flex: 1 }}>
+                  Aplicar Filtros
+                </button>
+                <button className="admin-btn admin-btn-primary admin-btn-sm" style={{ flex: 1 }}>
+                  Limpiar Filtros
+                </button>
               </div>
             </div>
 
-            {/* Center: selects centrados */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <select className="border rounded px-3 py-2 text-sm w-40 text-center">
-                <option value="">Nivel</option>
-                <option value="nivel1">Nivel 1</option>
-                <option value="nivel2">Nivel 2</option>
-                <option value="nivel3">Nivel 3</option>
-              </select>
-
-              <select className="border rounded px-3 py-2 text-sm w-40 text-center">
-                <option value="">Estado</option>
-                <option value="asignado">Asignado</option>
-                <option value="sin_asignar">Sin asignar</option>
-              </select>
+            {/* Filtros */}
+            <div className="admin-filter-group admin-dropdown">
+              <button onClick={() => setNivelMenu(!nivelMenu)} className="admin-dropdown-btn">
+                Nivel
+                <img width="14" height="14" src="https://img.icons8.com/ios-glyphs/60/chevron-down.png" alt="chevron-down"/>
+              </button>
+              {nivelMenu && (
+                <div className="admin-dropdown-menu">
+                  {niveles.map((n) => (
+                    <label key={n.value} className="admin-dropdown-item">
+                      <span
+                        onClick={() => handleNivelChange(n.value)}
+                        style={{
+                          width: 18,
+                          height: 18,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 4,
+                          background: '#fff',
+                          border: '1px solid #bdbdbd'
+                        }}
+                      >
+                        {nivelesSeleccionados.includes(n.value) && (
+                          <span style={{ fontSize: 12, color: '#18b620ff', fontWeight: 'bold' }}>✓</span>
+                        )}
+                      </span>
+                      {n.label}
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Right: acciones */}
-            <div className="flex items-center gap-3 ml-auto">
-              <button onClick={() => setOpenCohorte(true)} className="bg-sky-400 hover:bg-sky-500 text-white px-4 py-2 rounded-lg cursor-pointer">Abrir Cohorte</button>
-              <button onClick={() => setOpenCreateTraining(true)} className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg cursor-pointer">Crear Capacitación</button>
+            <div className="admin-filter-group admin-dropdown">
+              <button onClick={() => setEstadoMenu(!estadoMenu)} className="admin-dropdown-btn">
+                Estado
+                <img width="14" height="14" src="https://img.icons8.com/ios-glyphs/60/chevron-down.png" alt="chevron-down"/>
+              </button>
+              {estadoMenu && (
+                <div className="admin-dropdown-menu">
+                  {estadosOpciones.map((est) => (
+                    <label key={est.value} className="admin-dropdown-item">
+                      <span
+                        onClick={() => handleEstadoChange(est.value)}
+                        style={{
+                          width: 18,
+                          height: 18,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 4,
+                          background: '#fff',
+                          border: '1px solid #bdbdbd'
+                        }}
+                      >
+                        {estadosSeleccionados.includes(est.value) && (
+                          <span style={{ fontSize: 12, color: '#18b620ff', fontWeight: 'bold' }}>✓</span>
+                        )}
+                      </span>
+                      {est.label}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Acciones - Botones a la derecha */}
+            <div className="admin-filter-group" style={{ marginLeft: 'auto' }}>
+              <div className="admin-actions">
+                <button onClick={() => setOpenCohorte(true)} className="admin-btn admin-btn-primary" style={{ padding: '0.5rem 0.875rem', fontSize: '0.875rem' }}>
+                  Abrir Cohorte
+                </button>
+                <button onClick={() => setOpenCreateTraining(true)} className="admin-btn admin-btn-success" style={{ padding: '0.5rem 0.875rem', fontSize: '0.875rem' }}>
+                  Crear Capacitación
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <section className="mt-6">
-          <div className="overflow-hidden bg-white rounded shadow-sm">
+          <section style={{ marginTop: '1.5rem' }}>
+            <div className="admin-table-wrapper">
             {loading && <LoadingOverlay label="Cargando capacitaciones..." />}
-            <table className="min-w-full">
+            <table className="admin-table">
               <thead>
-                <tr className="bg-[#0888c2] text-white">
-                  <th className="px-6 py-4 text-left font-semibold">Capacitación</th>
-                  <th className="px-6 py-4 text-left font-semibold">Nivel</th>
-                  <th className="px-6 py-4 text-left font-semibold">Profesor Asignado</th>
-                  <th className="px-6 py-4 text-left font-semibold">Cupos</th>
-                  <th className="px-6 py-4 text-left font-semibold">Estado</th>
-                  <th className="px-6 py-4 text-left font-semibold">Acciones</th>
+                <tr>
+                  <th>Capacitación</th>
+                  <th>Nivel</th>
+                  <th>Profesor Asignado</th>
+                  <th>Cupos</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y">
+              <tbody>
                 {(!trainings || trainings.length === 0) && !loading ? (
                   <tr>
-                    <td className="px-6 py-8 text-sm text-gray-600" colSpan={6}>
+                    <td className="admin-empty" colSpan={6}>
                       No hay cursos para mostrar.
                     </td>
                   </tr>
@@ -122,18 +223,24 @@ export default function GestionCursos() {
                     const estado = t.createdBy ? 'Asignado' : 'Sin asignar';
                     return (
                       <tr key={t._id}>
-                        <td className="px-6 py-6">
-                          <div className="font-semibold">{t.title}</div>
-                          <div className="text-sm text-gray-600">{t.subtitle}</div>
+                        <td>
+                          <div style={{ fontWeight: 600 }}>{t.title}</div>
+                          <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>{t.subtitle}</div>
                         </td>
-                        <td className="px-6 py-6">{nivelLabel}</td>
-                        <td className="px-6 py-6">{profesor || '-'}</td>
-                        <td className="px-6 py-6">-</td>
-                        <td className={`px-6 py-6 ${estado === 'Asignado' ? 'text-green-600' : 'text-red-500'}`}>{estado}</td>
-                        <td className="px-6 py-6">
-                          <div className="flex gap-2">
-                            <button className="px-3 py-1 bg-yellow-400 hover:bg-yellow-500 text-white rounded text-sm">Editar</button>
-                            <button className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm">Eliminar</button>
+                        <td>{nivelLabel}</td>
+                        <td>{profesor || '-'}</td>
+                        <td>-</td>
+                        <td style={{ color: estado === 'Asignado' ? 'var(--success-color)' : 'var(--danger-color)' }}>
+                          {estado}
+                        </td>
+                        <td>
+                          <div className="admin-actions">
+                            <button className="admin-btn admin-btn-sm" style={{ backgroundColor: 'var(--warning-color)', color: 'white' }}>
+                              Editar
+                            </button>
+                            <button className="admin-btn admin-btn-danger admin-btn-sm">
+                              Eliminar
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -144,6 +251,7 @@ export default function GestionCursos() {
             </table>
           </div>
         </section>
+      </section>
 
         <Outlet />
         </div>
@@ -153,7 +261,7 @@ export default function GestionCursos() {
         onClose={() => setOpenCohorte(false)}
         cursos={trainings}
         profesores={sampleProfesores}
-        onSave={(payload) => console.log('Guardar cohorte', payload)} //Por ahora asi 
+        onSave={(payload) => console.log('Guardar cohorte', payload)}
       />
       <CreateTrainingModal
         open={openCreateTraining}
