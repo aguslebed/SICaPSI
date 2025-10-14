@@ -36,13 +36,21 @@
 
 .admin-content-wrapper {
   margin: 0 auto;
-  padding: 0.25rem 1.25rem 0.875rem 1.25rem;
+  padding: 1rem 1rem 0.875rem 1rem;
   width: 100%;
 }
 
-@media (min-width: 768px) {
-  .admin-container {
-    padding: 1rem 1.5rem;
+@media (min-width: 640px) {
+  .admin-content-wrapper {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .admin-content-wrapper {
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
   }
 }
 
@@ -786,19 +794,7 @@
 
 /* Pantallas grandes (desktops) */
 @media (min-width: 1024px) {
-  .admin-content-wrapper {
-    max-width: 1400px;
-    margin: 0 auto;
-  }
-  
   .admin-filters {
     gap: 0.75rem;
-  }
-}
-
-/* Pantallas muy grandes */
-@media (min-width: 1440px) {
-  .admin-content-wrapper {
-    max-width: 1600px;
   }
 }

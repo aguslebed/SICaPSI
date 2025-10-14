@@ -85,7 +85,7 @@ const NavBar = () => {
 
       {/* Barra inferior con acciones (notificaciones / usuario) */}
       <div className="w-full bg-[#0888c2]">
-        <div className="w-full mx-auto h-12 md:h-14 flex items-center" style={{ maxWidth: '1400px', padding: '0 2.5rem' }}>
+        <div className="w-full h-12 md:h-14 flex items-center px-4 sm:px-6 lg:px-10">
           {/* Botón Volver para rutas específicas del admin panel */}
           {shouldShowBackButton && (
             <button
