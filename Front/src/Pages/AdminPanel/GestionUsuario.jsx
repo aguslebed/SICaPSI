@@ -48,8 +48,8 @@ export default function GestionUsuario() {
   // Estados para los dropdowns de Tipo y Estado
   const [tipoMenu, setTipoMenu] = useState(false);
   const [estadoMenu, setEstadoMenu] = useState(false);
-  const [tiposSeleccionados, setTiposSeleccionados] = useState(['Capacitador', 'Guardia', 'Administrador', 'Directivo']);
-  const [estadosSeleccionados, setEstadosSeleccionados] = useState(['Habilitado', 'Pendiente', 'Deshabilitado']);
+  const [tiposSeleccionados, setTiposSeleccionados] = useState([]);
+  const [estadosSeleccionados, setEstadosSeleccionados] = useState([]);
 
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
@@ -85,19 +85,43 @@ export default function GestionUsuario() {
           u.documentNumber?.toLowerCase().includes(s)
       );
     }
-    if(filtersApplied){
 
-      if (tipo) {
+    if (filtersApplied) {
+      // Filtrado por tipos - primero usar las selecciones múltiples si existen
+      if (tiposSeleccionados && tiposSeleccionados.length > 0) {
+        result = result.filter(u => tiposSeleccionados.includes(getRoleLabel(u.role)));
+      } else if (tipo) {
         result = result.filter(u => getRoleLabel(u.role) === tipo);
       }
-      if (estado) {
-        const estadoMap = {
-          'Habilitado': 'available',
-          'Deshabilitado': 'disabled',
-          'Pendiente': 'pending'
+
+      // Filtrado por estados - primero usar las selecciones múltiples si existen
+      if (estadosSeleccionados && estadosSeleccionados.length > 0) {
+        // Soportar variantes del backend (inglés/español)
+        const estadoMapLookup = {
+          'Habilitado': ['available', 'habilitado'],
+          'Deshabilitado': ['disabled', 'deshabilitado'],
+          'Pendiente': ['pending', 'pendiente']
         };
-        result = result.filter(u => u.status === estadoMap[estado]);
+        // mapped será la lista plana de valores aceptables en minúsculas
+        const mapped = estadosSeleccionados
+          .map(e => estadoMapLookup[e] || [])
+          .flat()
+          .map(m => String(m).toLowerCase());
+  const availableStatuses = Array.from(new Set((users || []).map(u => String(u.status || '').toLowerCase())));
+        if (mapped.length > 0) {
+          result = result.filter(u => mapped.includes(String(u.status || '').toLowerCase()));
+        }
+      } else if (estado) {
+        const estadoMapLookup = {
+          'Habilitado': ['available', 'habilitado'],
+          'Deshabilitado': ['disabled', 'deshabilitado'],
+          'Pendiente': ['pending', 'pendiente']
+        };
+        const expectedList = (estadoMapLookup[estado] || []).map(s => String(s).toLowerCase());
+        result = result.filter(u => expectedList.includes(String(u.status || '').toLowerCase()));
       }
+
+      // Filtrado por fechas
       if (fechaDesde) {
         result = result.filter(u => new Date(u.createdAt) >= new Date(fechaDesde));
       }
@@ -105,8 +129,9 @@ export default function GestionUsuario() {
         result = result.filter(u => new Date(u.createdAt) <= new Date(fechaHasta));
       }
     }
+
     setFilteredUsers(result);
-  }, [users, searchApplied, tipo, estado, fechaDesde, fechaHasta, filtersApplied]);
+  }, [users, searchApplied, tipo, estado, fechaDesde, fechaHasta, filtersApplied, tiposSeleccionados, estadosSeleccionados]);
 
   // Aplica los filtros (excepto búsqueda)
   const aplicarFiltros = () => {
@@ -115,6 +140,8 @@ export default function GestionUsuario() {
     setFechaDesde(fechaDesdeEdit);
     setFechaHasta(fechaHastaEdit);
     setFiltersApplied(true);
+    // Debug: mostrar selección de estados y estados presentes en users
+    // debug logs removed
   };
 
   // Limpia todos los filtros
@@ -128,28 +155,42 @@ export default function GestionUsuario() {
     setFechaDesdeEdit('');
     setFechaHastaEdit('');
     setFiltersApplied(false);
-    setTiposSeleccionados(['Capacitador', 'Guardia', 'Administrador', 'Directivo']);
-    setEstadosSeleccionados(['Habilitado', 'Pendiente', 'Deshabilitado']);
+    setTiposSeleccionados([]);
+    setEstadosSeleccionados([]);
   };
 
   // Funciones para manejar cambios en los checkboxes
   const handleTipoChange = (tipoValue) => {
     setTiposSeleccionados(prev => {
-      if (prev.includes(tipoValue)) {
-        return prev.filter(t => t !== tipoValue);
+      const newSelection = prev.includes(tipoValue)
+        ? prev.filter(t => t !== tipoValue)
+        : [...prev, tipoValue];
+      // Actualizar tipoEdit basado en la selección
+      if (newSelection.length === 1) {
+        setTipoEdit(newSelection[0]);
+      } else if (newSelection.length === 0 || newSelection.length === tipos.length) {
+        setTipoEdit('');
       } else {
-        return [...prev, tipoValue];
+        setTipoEdit(newSelection[0]); // Tomar el primero si hay múltiples
       }
+      return newSelection;
     });
   };
 
   const handleEstadoChange = (estadoValue) => {
     setEstadosSeleccionados(prev => {
-      if (prev.includes(estadoValue)) {
-        return prev.filter(e => e !== estadoValue);
+      const newSelection = prev.includes(estadoValue)
+        ? prev.filter(e => e !== estadoValue)
+        : [...prev, estadoValue];
+      // Actualizar estadoEdit basado en la selección
+      if (newSelection.length === 1) {
+        setEstadoEdit(newSelection[0]);
+      } else if (newSelection.length === 0 || newSelection.length === estadosOpciones.length) {
+        setEstadoEdit('');
       } else {
-        return [...prev, estadoValue];
+        setEstadoEdit(newSelection[0]); // Tomar el primero si hay múltiples
       }
+      return newSelection;
     });
   };
 
