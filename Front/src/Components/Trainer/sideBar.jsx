@@ -16,7 +16,7 @@ function SideBar() {
       <button
         type="button"
         className="flex items-center gap-3 text-left text-blue-700 text-base lg:text-lg border-b border-blue-200 w-full pb-2 transition hover:bg-blue-50 hover:text-blue-800 cursor-pointer"
-        onClick={() => navigate('/userPanel')}
+        onClick={() => navigate('/trainer')}
       >
         <FaHome className="text-xl" />
         <span>Inicio</span>
@@ -25,7 +25,7 @@ function SideBar() {
       <button
         type="button"
         className="flex items-center gap-3 text-left text-blue-700 text-base lg:text-lg border-b border-blue-200 w-full pb-2 transition hover:bg-blue-50 hover:text-blue-800 cursor-pointer"
-        onClick={() => navigate(`/userPanel/${idTraining}/levels`)}
+        onClick={() => navigate(`/trainer/${idTraining}/levels`)}
       >
         <FaLayerGroup className="text-xl" />
         <span>Niveles</span>
@@ -35,7 +35,7 @@ function SideBar() {
       <button
         type="button"
         className="flex items-center gap-3 text-left text-blue-700 text-base lg:text-lg border-b border-blue-200 w-full pb-2 transition hover:bg-blue-50 hover:text-blue-800 cursor-pointer"
-        onClick={() => navigate(`/userPanel/${idTraining}/messages`)}
+        onClick={() => navigate(`/trainer/${idTraining}/messages`)}
       >
         <FaComments className="text-xl" />
         <span>Mensajería</span>
@@ -44,7 +44,7 @@ function SideBar() {
       <button
         type="button"
         className="flex items-center gap-3 text-left text-blue-700 text-base lg:text-lg border-b border-blue-200 w-full pb-2 transition hover:bg-blue-50 hover:text-blue-800 cursor-pointer"
-        onClick={() => navigate(`/userPanel/${idTraining}/students`)}
+        onClick={() => navigate(`/trainer/${idTraining}/students`)}
       >
         <PiStudentFill  className="text-xl" />
         <span>Alumnos</span>
@@ -53,7 +53,7 @@ function SideBar() {
       <button
         type="button"
         className="flex items-center gap-3 text-left text-blue-700 text-base lg:text-lg border-b border-blue-200 w-full pb-2 transition hover:bg-blue-50 hover:text-blue-800 cursor-pointer"
-        onClick={() => navigate(`/userPanel/${idTraining}/statistics`)}
+        onClick={() => navigate(`/trainer/${idTraining}/statistics`)}
       >
         <GoGraph  className="text-xl" />
         <span>Estadisticas</span>

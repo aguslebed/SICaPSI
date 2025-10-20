@@ -2,6 +2,8 @@ import React, { lazy } from 'react';
 import { createBrowserRouter, redirect } from 'react-router-dom';
 import ProtectedLayout from './Layouts/ProtectedLayout';
 import StudentLayout from './Layouts/StudentLayout';
+import TrainerLayout from './Layouts/TrainerLayout';
+import UserPanelLayoutSwitcher from './Layouts/UserPanelLayoutSwitcher';
 import { getMe, checkAuth } from './API/Request';
 import RouteError from './Pages/RouteError';
 
@@ -22,6 +24,9 @@ const LevelTest = lazy(() => import('./Pages/UserPanel/Student/LevelTest'));
 const Students = lazy(() => import('./Pages/UserPanel/Student/Students'));
 const Statistics = lazy(() => import('./Pages/UserPanel/Student/Statistics'));
 
+//Capacitador pages
+const TrainerPanel = lazy(() => import('./Pages/UserPanel/Trainer/TrainerPanel'));
+
 // Admin pages (placeholders)
 const AdminHome = lazy(() => import('./Pages/AdminPanel/Index'));
 const AdmisionUsuario = lazy(() => import('./Pages/AdminPanel/AdmisionUsuario'));
@@ -30,13 +35,29 @@ const GestionCapacitacion = lazy(() => import('./Pages/AdminPanel/GestionCapacit
 const GestionProfesores = lazy(() => import('./Pages/AdminPanel/GestionProfesores'));
 const ProfesorEditar = lazy(() => import('./Pages/AdminPanel/ProfesorEditar'));
 
-async function authLoader() {
+async function authLoader({ request }) {
   try {
     await checkAuth();
   } catch {
     throw redirect('/login');
   }
   const me = await getMe();
+
+  // Decide preferred base path depending on role
+  const role = me?.user?.role;
+  const url = new URL(request.url);
+  const currentPath = url.pathname.replace(/\/$/, '');
+
+  // If trainer and currently not under /trainer -> redirect to /trainer
+  if (role === 'Capacitador' && !currentPath.startsWith('/trainer')) {
+    throw redirect('/trainer');
+  }
+
+  // If not trainer and currently under /trainer -> redirect to /userPanel
+  if (role !== 'Capacitador' && currentPath.startsWith('/trainer')) {
+    throw redirect('/userPanel');
+  }
+
   return { me };
 }
 
@@ -52,6 +73,7 @@ async function adminLoader() {
   if (role !== 'Administrador') {
     throw redirect('/userPanel');
   }
+  
   return { me };
 }
 
@@ -92,6 +114,28 @@ export const router = createBrowserRouter([
           { path: ':idTraining', element: <DetalleCapacitacion /> },
           { path: ':idTraining/levels', element: <TrainingLevels /> },
           { path: ':idTraining/reports', element: <MisReportes /> },
+          { path: ':idTraining/:nivelId/bibliogrhapy', element: <NivelBibliografia /> },
+          { path: ':idTraining/:nivelId/training', element: <NivelCapacitacion /> },
+          { path: ':idTraining/:nivelId/levelTest', element: <LevelTest /> },
+          { path: ':idTraining/messages', element: <Mensajeria /> },
+          { path: ':idTraining/students', element: <Students /> },
+          { path: ':idTraining/statistics', element: <Statistics /> },
+        ],
+      },
+    ],
+  },
+  {
+    path: '/trainer',
+    element: <ProtectedLayout />,
+    loader: authLoader,
+    errorElement: <RouteError />,
+    children: [
+      {
+        element: <TrainerLayout />,
+        children: [
+          { index: true, element: <TrainerPanel /> },
+          { path: ':idTraining', element: <DetalleCapacitacion /> },
+          { path: ':idTraining/levels', element: <TrainingLevels /> },
           { path: ':idTraining/:nivelId/bibliogrhapy', element: <NivelBibliografia /> },
           { path: ':idTraining/:nivelId/training', element: <NivelCapacitacion /> },
           { path: ':idTraining/:nivelId/levelTest', element: <LevelTest /> },
