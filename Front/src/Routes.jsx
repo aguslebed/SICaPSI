@@ -19,6 +19,8 @@ const MisReportes = lazy(() => import('./Pages/UserPanel/Student/TrainingReports
 const NivelBibliografia = lazy(() => import('./Pages/UserPanel/Student/Levelbibliogrhapy'));
 const NivelCapacitacion = lazy(() => import('./Pages/UserPanel/Student/LevelTraining'));
 const LevelTest = lazy(() => import('./Pages/UserPanel/Student/LevelTest'));
+const Students = lazy(() => import('./Pages/UserPanel/Student/Students'));
+const Statistics = lazy(() => import('./Pages/UserPanel/Student/Statistics'));
 
 // Admin pages (placeholders)
 const AdminHome = lazy(() => import('./Pages/AdminPanel/Index'));
@@ -94,6 +96,8 @@ export const router = createBrowserRouter([
           { path: ':idTraining/:nivelId/training', element: <NivelCapacitacion /> },
           { path: ':idTraining/:nivelId/levelTest', element: <LevelTest /> },
           { path: ':idTraining/messages', element: <Mensajeria /> },
+          { path: ':idTraining/students', element: <Students /> },
+          { path: ':idTraining/statistics', element: <Statistics /> },
         ],
       },
     ],

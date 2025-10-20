@@ -1,7 +1,9 @@
 import React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import NavBar from '../Components/Student/NavBar';
-import SideBar from '../Components/Student/SideBar';
+import StudentSideBar from '../Components/Student/SideBar';
+import TrainerSideBar from '../Components/Trainer/sideBar';
+import { useUser } from '../context/UserContext';
 
 export default function StudentLayout() {
   const location = useLocation();
@@ -9,6 +11,12 @@ export default function StudentLayout() {
   const pathname = location.pathname.replace(/\/$/, '');
   const isUserPanelIndex = pathname === '/userPanel';
   const isMessagesRoute = pathname.startsWith('/userPanel') && pathname.includes('/messages');
+
+  const { userData } = useUser();
+  const role = userData?.user?.role;
+
+  // Decide which sidebar to show: trainer vs student
+  const SideBarComponent = role === 'Capacitador' ? TrainerSideBar : StudentSideBar;
 
   return (
     <>
@@ -18,7 +26,7 @@ export default function StudentLayout() {
           {/* Render SideBar for all userPanel child routes except the index (`/userPanel`) */}
           {!isUserPanelIndex && (
             <div className={(isMessagesRoute ? 'hidden lg:block ' : '') + 'lg:mt-10'}>
-              <SideBar />
+              <SideBarComponent />
             </div>
           )}
 
