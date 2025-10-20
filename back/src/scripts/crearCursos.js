@@ -84,11 +84,19 @@ async function initializeDatabase() {
     createdTrainings.forEach((training, tIdx) => {
       baseLevels.forEach((lvl, lIdx) => {
         // Personalizar bibliografía y training video por curso
-        const bibliography = (lvl.bibliography || []).map(b => ({
-          ...b,
-          title: `${b.title} - ${training.title}`,
-          createdAt: new Date()
-        }));
+        const bibliography = (lvl.bibliography || []).map(b => {
+          // bibliography.url puede venir como array en los samples; forzamos a string
+          let urlVal = '';
+          if (Array.isArray(b.url)) urlVal = b.url[0] || '';
+          else if (typeof b.url === 'string') urlVal = b.url;
+          return {
+            ...b,
+            url: urlVal,
+            title: `${b.title} - ${training.title}`,
+            createdAt: new Date()
+          };
+        });
+
         const trainingObj = {
           ...((lvl.training) || {}),
           url: (lvl.training && lvl.training.url) ? lvl.training.url : `https://www.youtube.com/embed/placeholder-${tIdx}-${lIdx}`,
@@ -96,6 +104,19 @@ async function initializeDatabase() {
           duration: (lvl.training && lvl.training.duration) ? lvl.training.duration : 30,
           createdAt: new Date()
         };
+        // Normalizar estructura de test: convertir scenes[].url -> scenes[].videoUrl
+        let testObj = null;
+        if (lvl.test) {
+          testObj = {
+            ...(lvl.test || {}),
+            scenes: (lvl.test.scenes || []).map(s => ({
+              ...s,
+              videoUrl: s.videoUrl || s.url || '',
+              // ensure description exists
+              description: s.description || '',
+            }))
+          };
+        }
 
         levelsData.push({
           levelNumber: lIdx + 1,
@@ -104,7 +125,7 @@ async function initializeDatabase() {
           description: lvl.description,
           bibliography,
           training: trainingObj,
-          test: lvl.test || [], // pruebas idénticas según tus instrucciones
+          test: testObj || {}, // pruebas normalizadas
           createdAt: new Date(),
           isActive: typeof lvl.isActive === 'boolean' ? lvl.isActive : true,
           trainingId: training._id
@@ -127,18 +148,18 @@ async function initializeDatabase() {
       });
     }
 
-  // Eliminar usuarios específicos que no queremos (Juan / María) y usuarios con rol "Alumno" obsoleto
+  // Eliminar usuarios específicos que no queremos (Juan / María) y usuarios con rol "Guardia" obsoleto
   await User.deleteMany({ 
     $or: [
       { email: { $in: ['juan.perez@email.com', 'maria.gonzalez@email.com'] } },
-      { role: 'Alumno' } // Eliminar usuarios con rol "Alumno" obsoleto
+      { role: 'Guardia' } // Eliminar usuarios con rol "Guardia" obsoleto
     ]
   });
 
   // Crear exactamente 3 alumnos globales y asignarlos a todos los trainings
-  info('🎓 Creando exactamente 3 guardias y asignándolos a todos los cursos...');
-  // obtener guardias existentes (si alguno otro existe)
-  let existingStudents = await User.find({ role: 'Guardia' }).exec();
+  info('🎓 Creando exactamente 3 alumnos y asignándolos a todos los cursos...');
+  // obtener alumnos existentes (si alguno otro existe)
+  let existingStudents = await User.find({ role: 'Alumno' }).exec();
     // Si hay más de 0 guardias (por la inserción anterior) los usamos; si no, los creamos
     const studentsToEnsure = [];
     if (existingStudents.length < 3) {
@@ -158,7 +179,7 @@ async function initializeDatabase() {
           areaCode: '0291',
           phone: `1540000${i}`,
           password: defaultPasswordPlain,
-          role: 'Guardia',
+          role: 'Alumno',
           status: 'available',
           profileImage: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400',
           assignedTraining: []
@@ -167,9 +188,9 @@ async function initializeDatabase() {
       // Hash ya disponible en defaultPasswordHash
       const preparedStudents = studentsToEnsure.map(s => ({ ...s, password: defaultPasswordHash }));
       const createdNewStudents = await User.insertMany(preparedStudents);
-  info(`✅ ${createdNewStudents.length} guardias creados`);
+  info(`✅ ${createdNewStudents.length} alumnos creados`);
       // registrar credenciales
-      studentsToEnsure.forEach(s => credentialsList.push({ email: s.email, password: defaultPasswordPlain, role: 'Guardia', name: s.firstName }));
+      studentsToEnsure.forEach(s => credentialsList.push({ email: s.email, password: defaultPasswordPlain, role: 'Alumno', name: s.firstName }));
       existingStudents = createdNewStudents;
     } else {
       info('✅ Ya existen guardias en la BD; usándolos');
@@ -196,7 +217,7 @@ async function initializeDatabase() {
   credentialsList.push({ email: teacher.email, password: defaultPasswordPlain, role: 'Capacitador', name: teacher.firstName || `Profesor ${training.title}` });
 
       // Obtener guardias asignados al curso (al menos 3 garantizados arriba)
-      const studentsInCourse = await User.find({ role: 'Guardia', assignedTraining: training._id }).select('_id firstName email').lean();
+  const studentsInCourse = await User.find({ role: 'Alumno', assignedTraining: training._id }).select('_id firstName email').lean();
       const studentIds = studentsInCourse.map(s => s._id);
 
   // Mensajes de bienvenida personalizados (teacher -> each student)
@@ -278,14 +299,14 @@ async function initializeDatabase() {
   const totalAdmins = await User.countDocuments({ role: 'Administrador' });
   const totalManagers = await User.countDocuments({ role: 'Directivo' });
   const totalTrainers = await User.countDocuments({ role: 'Capacitador' });
-  const totalStudents = await User.countDocuments({ role: 'Guardia' });
+  const totalStudents = await User.countDocuments({ role: 'Alumno' });
   info('✅ Base de datos inicializada exitosamente!');
   info('\n📊 RESUMEN:');
   info(`   Usuarios totales: ${totalUsers}`);
   info(`   - Administradores: ${totalAdmins}`);
   info(`   - Managers: ${totalManagers}`);
   info(`   - Trainers: ${totalTrainers}`);
-  info(`   - Guardias: ${totalStudents}`);
+  info(`   - Alumnos: ${totalStudents}`);
   info(`   Trainings: ${createdTrainings.length}`);
   info(`   Niveles: ${createdLevels.length}`);
   info(`   Mensajes: ${(await PrivateMessage.countDocuments())}`);

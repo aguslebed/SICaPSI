@@ -56,8 +56,9 @@ export function makeEnrollmentController({ enrollmentService }) {
 
     async getUsersNotEnrolledInTraining(req, res, next) {
       try {
-        const { trainingId } = req.body;
-      
+        // support trainingId in query (GET) or body (POST)
+        const trainingId = req.query?.trainingId || req.body?.trainingId;
+        
         const users = await enrollmentService.getUsersNotEnrolledInTraining(trainingId);
         res.status(200).json(users);
       } catch (err) {
@@ -67,8 +68,9 @@ export function makeEnrollmentController({ enrollmentService }) {
 
     async getUsersEnrolledInTraining(req, res, next) {
       try {
-        const { trainingId } = req.body;
-  
+        
+        const trainingId = req.query?.trainingId || req.body?.trainingId;
+        console.log("Training ID---------->",trainingId)
         const users = await enrollmentService.getUsersEnrolledInTraining(trainingId);
         res.status(200).json(users);
       } catch (err) {
@@ -104,7 +106,8 @@ export function makeEnrollmentController({ enrollmentService }) {
 
   async getTrainenrsNotEnrolledInTraining(req, res, next) {
     try {
-      const { trainingId } = req.body;
+      // support trainingId in query (GET) or body (POST)
+      const trainingId = req.query?.trainingId || req.body?.trainingId;
 
       const users = await enrollmentService.getTrainersNotEnrolledInTraining(trainingId);
       res.status(200).json(users);

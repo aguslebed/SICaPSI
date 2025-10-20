@@ -433,6 +433,26 @@ export async function getEnrolledStudents(trainingId) {
   }
 }
 
+// Obtener usuarios inscritos en una capacitación usando el servicio de enrollment
+export async function getUsersEnrolledInTraining(trainingId) {
+  try {
+  // Use query params for GET so backend can read req.query.trainingId
+  const { data } = await api.get(`/enrollment/getUsersEnrolledInTraining`, { params: { trainingId } });
+    return Array.isArray(data) ? data : (data?.items || []);
+  } catch (error) {
+    console.log(trainingId, "---desde request.js---");
+    console.error('Error obteniendo usuarios inscritos (enrollment):', error);
+    if (error.response) {
+      // If backend returns an object with message or errors, forward that message
+      throw new Error(error.response.data?.message || 'Error al obtener usuarios inscritos');
+    }
+    if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    }
+    throw new Error('Error en la configuración de la petición');
+  }
+}
+
 // --- CAPACITACIONES Y NIVELES ---
 
 // Crear una nueva capacitación
