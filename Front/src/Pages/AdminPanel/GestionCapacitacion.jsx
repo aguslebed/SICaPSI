@@ -2,7 +2,6 @@ import React from 'react';
 import { Link, Outlet } from 'react-router-dom';
 
 import NavBar from '../../Components/Student/NavBar';
-import OpenCohortModal from '../../Components/Modals/OpenCohortModal';
 import CreateTrainingModal from '../../Components/Modals/CreateTrainingModal';
 import { useState, useEffect, useRef } from 'react';
 import { getAllActiveTrainings, getAllTrainings, createTraining, updateTraining, addLevelsToTraining, updateLevelsInTraining, deleteTraining, getTrainingById, enrollStudentsToTraining } from '../../API/Request';
@@ -10,7 +9,6 @@ import LoadingOverlay from '../../Components/Shared/LoadingOverlay';
 import './AdminPanel.css';
 
 export default function GestionCapacitacion() {
-  const [openCohorte, setOpenCohorte] = useState(false);
   const [trainings, setTrainings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -61,8 +59,8 @@ export default function GestionCapacitacion() {
   ];
 
   const estadosOpciones = [
-    { label: 'Activo', value: 'activo' },
-    { label: 'Inactivo', value: 'inactivo' },
+    { label: 'Habilitado', value: 'activo' },
+    { label: 'Deshabilitado', value: 'inactivo' },
     { label: 'Asignado', value: 'asignado' },
     { label: 'Sin asignar', value: 'sin_asignar' },
   ];
@@ -294,6 +292,23 @@ export default function GestionCapacitacion() {
     if (!trainings) return [];
     
     let filtered = trainings;
+
+    // Helper: una capacitación se considera actualmente activa si está habilitada
+    // y la fecha actual está entre startDate y endDate (ambas deben existir)
+    const isTrainingActiveNow = (training) => {
+      try {
+        if (!training || !training.isActive) return false;
+        const s = training.startDate;
+        const e = training.endDate;
+        if (!s || !e) return false;
+        const now = new Date();
+        const start = new Date(s);
+        const end = new Date(e);
+        return now >= start && now <= end;
+      } catch (err) {
+        return false;
+      }
+    };
     
     // Filtro por término de búsqueda aplicado
     if (appliedSearch.trim()) {
@@ -308,8 +323,9 @@ export default function GestionCapacitacion() {
     // Filtro por estados aplicados
     if (appliedEstados.length > 0) {
       filtered = filtered.filter(training => {
-        const hasActivo = appliedEstados.includes('activo') && training.isActive;
-        const hasInactivo = appliedEstados.includes('inactivo') && !training.isActive;
+        const isNowActive = isTrainingActiveNow(training);
+        const hasActivo = appliedEstados.includes('activo') && isNowActive;
+        const hasInactivo = appliedEstados.includes('inactivo') && !isNowActive;
         const hasAsignado = appliedEstados.includes('asignado') && training.createdBy;
         const hasSinAsignar = appliedEstados.includes('sin_asignar') && !training.createdBy;
         return hasActivo || hasInactivo || hasAsignado || hasSinAsignar;
@@ -318,7 +334,7 @@ export default function GestionCapacitacion() {
     
     // Filtro por mostrar inactivas aplicado
     if (!appliedMostrarInactivas) {
-      filtered = filtered.filter(training => training.isActive);
+      filtered = filtered.filter(training => isTrainingActiveNow(training));
     }
     
     return filtered;
@@ -455,9 +471,6 @@ export default function GestionCapacitacion() {
             {/* Acciones - Botones a la derecha */}
             <div className="admin-filter-group" style={{ marginLeft: 'auto' }}>
               <div className="admin-actions">
-                <button onClick={() => setOpenCohorte(true)} className="admin-btn admin-btn-primary cursor-pointer" style={{ padding: '0.5rem 0.875rem', fontSize: '0.875rem' }}>
-                  Abrir Cohorte
-                </button>
                 <button onClick={() => setOpenCreateTraining(true)} className="admin-btn admin-btn-success cursor-pointer" style={{ padding: '0.5rem 0.875rem', fontSize: '0.875rem' }}>
                   Crear Capacitación
                 </button>
@@ -468,15 +481,15 @@ export default function GestionCapacitacion() {
           <section style={{ marginTop: '1.5rem' }}>
             <div className="admin-table-wrapper">
             {loading && <LoadingOverlay label="Cargando capacitaciones..." />}
-            <table className="admin-table">
+            <table className="admin-table" style={{ tableLayout: 'fixed', width: '100%' }}>
               <thead>
                 <tr>
-                  <th>Capacitación</th>
-                  <th>Niveles</th>
-                  <th>Profesor Asignado</th>
-                  <th>Estado</th>
-                  <th>Creado</th>
-                  <th>Acciones</th>
+                  <th style={{ width: '20%' }}>Capacitación</th>
+                  <th style={{ width: '15%' }}>Niveles</th>
+                  <th style={{ width: '20%' }}>Profesor Asignado</th>
+                  <th style={{ width: '15%', textAlign: 'center' }}>Estado</th>
+                  <th style={{ width: '15%' }}>Creado</th>
+                  <th style={{ width: '15%' }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -502,8 +515,8 @@ export default function GestionCapacitacion() {
                     const profesor = t.createdBy ? `${t.createdBy.firstName || ''} ${t.createdBy.lastName || ''}`.trim() : '-';
                     const estado = t.createdBy ? 'Asignado' : 'Sin asignar';
                     
-                    // Estado visual
-                    const estadoActivo = t.isActive ? 'Activa' : 'Inactiva';
+                    // Estado visual (mostrar Habilitado/Deshabilitado)
+                    const estadoActivo = t.isActive ? 'Habilitado' : 'Deshabilitado';
                     const estadoColor = t.isActive ? 'var(--success-color)' : 'var(--danger-color)';
                     
                     return (
@@ -517,20 +530,16 @@ export default function GestionCapacitacion() {
                         </td>
                         <td data-label="Niveles">{nivelesLabel}</td>
                         <td data-label="Profesor">{profesor || 'Sin asignar'}</td>
-                        <td data-label="Estado">
-                          <span style={{ 
-                            color: estadoColor, 
-                            fontWeight: '600',
-                            padding: '0.375rem 0.75rem',
-                            borderRadius: '0.375rem',
-                            backgroundColor: t.isActive ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                            fontSize: '0.75rem',
-                            textTransform: 'uppercase',
-                            width: '80px',
-                            textAlign: 'center',
-                            display: 'inline-block',
-                            border: `1px solid ${t.isActive ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
-                          }}>
+                        <td data-label="Estado" style={{ textAlign: 'center' }}>
+                          <span 
+                            className="inline-block px-3 py-1 rounded-full text-white text-xs font-medium text-center"
+                            style={{ 
+                              display: 'inline-block',
+                              width: '120px',
+                              textAlign: 'center',
+                              backgroundColor: t.isActive ? '#10b981' : '#ef4444'
+                            }}
+                          >
                             {estadoActivo}
                           </span>
                         </td>
@@ -538,70 +547,26 @@ export default function GestionCapacitacion() {
                           {t.createdAt ? new Date(t.createdAt).toLocaleDateString('es-AR') : '-'}
                         </td>
                         <td data-label="Acciones">
-                          <div className="admin-actions" style={{ gap: '0.5rem', justifyContent: 'center' }}>
+                          <div className="admin-actions">
                             <button 
-                              className="cursor-pointer" 
-                              style={{ 
-                                background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '0.375rem',
-                                padding: '0.375rem 0.75rem',
-                                fontSize: '0.8125rem',
-                                fontWeight: '500',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.25rem',
-                                transition: 'all 0.2s ease',
-                                boxShadow: '0 1px 3px rgba(59, 130, 246, 0.2)',
-                                minWidth: '70px',
-                                justifyContent: 'center',
-                                height: '32px'
-                              }}
+                              className="admin-action-btn" 
+                              title="Editar capacitación"
                               onClick={() => handleEditTraining(t._id)}
                               disabled={loading}
-                              onMouseEnter={(e) => {
-                                e.target.style.transform = 'translateY(-1px)';
-                                e.target.style.boxShadow = '0 3px 6px rgba(59, 130, 246, 0.3)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.target.style.transform = 'translateY(0)';
-                                e.target.style.boxShadow = '0 1px 3px rgba(59, 130, 246, 0.2)';
-                              }}
                             >
-                              ✏️ Editar
+                              📝
                             </button>
                             <button 
-                              className="cursor-pointer"
-                              style={{ 
-                                background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '0.375rem',
-                                padding: '0.375rem 0.75rem',
-                                fontSize: '0.8125rem',
-                                fontWeight: '500',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.25rem',
-                                transition: 'all 0.2s ease',
-                                boxShadow: '0 1px 3px rgba(239, 68, 68, 0.2)',
-                                minWidth: '80px',
-                                justifyContent: 'center',
-                                height: '32px'
-                              }}
+                              className="admin-action-btn"
+                              title="Eliminar capacitación"
                               onClick={() => handleDeleteTraining(t._id, t.title)}
                               disabled={loading}
-                              onMouseEnter={(e) => {
-                                e.target.style.transform = 'translateY(-1px)';
-                                e.target.style.boxShadow = '0 3px 6px rgba(239, 68, 68, 0.3)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.target.style.transform = 'translateY(0)';
-                                e.target.style.boxShadow = '0 1px 3px rgba(239, 68, 68, 0.2)';
-                              }}
                             >
-                              🗑️ Eliminar
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="black">
+                                <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-.14 0-.27.01-.4.04-.39.08-.74.28-1.01.55-.18.18-.33.4-.43.64-.1.23-.16.49-.16.77v14c0 .27.06.54.16.78.1.23.25.45.43.64.27.27.62.47 1.01.55.13.02.26.03.4.03h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7-.25c.41 0 .75.34.75.75s-.34.75-.75.75-.75-.34-.75-.75.34-.75.75-.75zM19 19H5V5h14v14z"/>
+                                <circle cx="17" cy="17" r="5" fill="black"/>
+                                <path d="M14.5 14.5l5 5M19.5 14.5l-5 5" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                              </svg>
                             </button>
                           </div>
                         </td>
@@ -618,13 +583,6 @@ export default function GestionCapacitacion() {
         <Outlet />
         </div>
       </main>
-      <OpenCohortModal
-        open={openCohorte}
-        onClose={() => setOpenCohorte(false)}
-        cursos={trainings}
-        profesores={sampleProfesores}
-        onSave={(payload) => console.log('Guardar cohorte', payload)}
-      />
       <CreateTrainingModal
         open={openCreateTraining}
         onClose={handleCloseModal}
