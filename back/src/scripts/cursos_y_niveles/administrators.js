@@ -15,7 +15,8 @@ export const sampleAdministrators = [
     areaCode: "011",
     phone: "12345678",
     password: "password123",
-    role: "Administrator",
+    role: "Administrador",
+    status: "available",
     profileImage: "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?w=400",
     assignedTraining: []
   }

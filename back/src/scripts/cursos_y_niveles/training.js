@@ -6,11 +6,6 @@ export const sampleCourses = [
   image: "/uploads/1.jpeg",
     isActive: true,
     createdBy: "64f1a3c5e2b8f7c9a12d3456", // ID ficticio de usuario
-    introduction: {
-      title: "Capacitación 1",
-      subtitle: "Edificio de departamentos",
-      welcomeMessage: "Introducción a la seguridad privada: funciones del guardia, patrullaje y control de accesos en edificios de departamentos"
-    },
     levels: [],
     totalLevels: 0,
     report: [
@@ -18,14 +13,14 @@ export const sampleCourses = [
         level: 1,
         score: 8.5,
         errorsCount: 2,
-        videoUrl: "https://example.com/security-patrullaje-1.mp4",
+        url: "https://example.com/security-patrullaje-1.mp4",
         description: "Buen desempeño en patrullaje y control de accesos en edificio: rutas correctas y comunicación efectiva."
       },
       {
         level: 2,
         score: 7.5,
         errorsCount: 4,
-        videoUrl: "https://example.com/security-comunicacion-1.mp4",
+        url: "https://example.com/security-comunicacion-1.mp4",
         description: "Mejorar en comunicación de incidentes y redacción de partes: faltaron detalles en reporte."
       }
     ],
@@ -38,11 +33,6 @@ export const sampleCourses = [
   image: "/uploads/2.jpeg",
     isActive: true,
     createdBy: "64f1a3c5e2b8f7c9a12d7890",
-    introduction: {
-      title: "Capacitación 2",
-      subtitle: "Barrio privado pequeño",
-      welcomeMessage: "Protocolos de respuesta ante incidentes y primeros auxilios básicos para guardias de seguridad"
-    },
     levels: [],
     totalLevels: 0,
     report: [
@@ -50,7 +40,7 @@ export const sampleCourses = [
         level: 1,
         score: 6.0,
         errorsCount: 5,
-        videoUrl: "https://example.com/security-primeros-auxilios-1.mp4",
+        url: "https://example.com/security-primeros-auxilios-1.mp4",
         description: "Dificultades en la aplicación de primeros auxilios: repasar RCP y control de hemorragias."
       }
     ],
@@ -63,11 +53,6 @@ export const sampleCourses = [
   image: "/uploads/3.jpeg",
     isActive: true,
     createdBy: "64f1a3c5e2b8f7c9a12d6543",
-    introduction: {
-      title: "Capacitación 3",
-      subtitle: "Barrio privado grande",
-      welcomeMessage: "Curso básico de procedimientos y protocolos de seguridad: patrullaje, comunicación y manejo de emergencias"
-    },
     levels: [],
     totalLevels: 0,
     report: [
@@ -75,7 +60,7 @@ export const sampleCourses = [
         level: 1,
         score: 9.0,
         errorsCount: 1,
-        videoUrl: "https://example.com/security-procedimientos-1.mp4",
+        url: "https://example.com/security-procedimientos-1.mp4",
         description: "Excelente comprensión de procedimientos de patrullaje y respuesta ante emergencias."
       }
     ],
@@ -88,11 +73,6 @@ export const sampleCourses = [
   image: "/uploads/4.jpeg",
     isActive: true,
     createdBy: "64f1a3c5e2b8f7c9a12d4321",
-    introduction: {
-      title: "Capacitación 4",
-      subtitle: "Garita de seguridad",
-      welcomeMessage: "Técnicas de control y monitoreo en garitas: gestión de visitas, comunicación con central y manejo de reportes"
-    },
     levels: [],
     totalLevels: 0,
     report: [
@@ -100,7 +80,7 @@ export const sampleCourses = [
         level: 1,
         score: 7.8,
         errorsCount: 3,
-        videoUrl: "https://example.com/security-garita-1.mp4",
+        url: "https://example.com/security-garita-1.mp4",
         description: "Buen manejo en control de garita: registro de visitas y comunicación con central."
       }
     ],
@@ -113,11 +93,6 @@ export const sampleCourses = [
   image: "/uploads/5.jpeg",
     isActive: true,
     createdBy: "64f1a3c5e2b8f7c9a12d5678",
-    introduction: {
-      title: "Capacitación 5",
-      subtitle: "Pubs y discotecas",
-      welcomeMessage: "Buenas prácticas para seguridad en locales nocturnos: control de acceso, manejo de conflictos y evacuación"
-    },
     levels: [],
     totalLevels: 0,
     report: [
@@ -125,7 +100,7 @@ export const sampleCourses = [
         level: 1,
         score: 8.0,
         errorsCount: 2,
-        videoUrl: "https://example.com/security-locales-1.mp4",
+        url: "https://example.com/security-locales-1.mp4",
         description: "Buen desempeño en control de acceso y manejo de conflictos en locales nocturnos."
       }
     ],

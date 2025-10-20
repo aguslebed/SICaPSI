@@ -1,6 +1,6 @@
 import React from "react";
 import { useParams } from "react-router-dom";
-import { FileText } from "lucide-react";
+import { FileText, ExternalLink } from "lucide-react";
 import { useUser } from "../../../context/UserContext";
 import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
 
@@ -42,23 +42,18 @@ const Levelbibliogrhapy = () => {
                       <p className="mb-2 text-gray-700 text-base italic">{biblio.description}</p>
                     )}
                     {/* Archivos / Descargas */}
-                    {Array.isArray(biblio.videoUrl) && biblio.videoUrl.length > 0 && (
+                    {(biblio.url || biblio.videoUrl) && (
                       <div className="mb-2">
-                        <h3 className="font-semibold text-blue-600 mb-2">Archivos descargables</h3>
-                        <ul className="space-y-2">
-                          {biblio.videoUrl.map((archivo, i) => (
-                            <li key={i} className="flex items-center gap-3">
-                              <a
-                                href={(typeof archivo === 'string') ? archivo : (archivo.url || archivo.href || '#')}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="px-3 py-1 bg-blue-100 rounded-lg text-blue-700 font-medium hover:bg-blue-200 transition"
-                              >
-                                {typeof archivo === 'string' ? archivo : (archivo.nombre || archivo.name || archivo.title || archivo.url || archivo.href || 'archivo')}
-                              </a>
-                            </li>
-                          ))}
-                        </ul>
+                        <h3 className="font-semibold text-blue-600 mb-2">Material</h3>
+                        <a
+                          href={biblio.url || biblio.videoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all"
+                        >
+                          <ExternalLink className="w-5 h-5" />
+                          <span>Acceder</span>
+                        </a>
                       </div>
                     )}
                     {/* Enlaces */}

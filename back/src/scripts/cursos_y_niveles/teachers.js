@@ -45,7 +45,8 @@ export async function ensureTeacherForTraining({ training, saltRounds = 12, inde
     phone: '123456',
     // Use provided hashed password if available, otherwise hash the default docente password
     password: defaultPasswordHash ? defaultPasswordHash : await bcrypt.hash('docente123', saltRounds),
-    role: 'Trainer',
+    role: 'Capacitador',
+    status: 'available',
     assignedTraining: [training._id],
   });
   return teacher;

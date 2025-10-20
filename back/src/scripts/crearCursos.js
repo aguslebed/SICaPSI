@@ -91,7 +91,7 @@ async function initializeDatabase() {
         }));
         const trainingObj = {
           ...((lvl.training) || {}),
-          videoUrl: (lvl.training && lvl.training.videoUrl) ? lvl.training.videoUrl : `https://www.youtube.com/embed/placeholder-${tIdx}-${lIdx}`,
+          url: (lvl.training && lvl.training.url) ? lvl.training.url : `https://www.youtube.com/embed/placeholder-${tIdx}-${lIdx}`,
           description: `${training.title} - Nivel ${lIdx + 1}: ${lvl.title}`,
           duration: (lvl.training && lvl.training.duration) ? lvl.training.duration : 30,
           createdAt: new Date()
@@ -127,24 +127,29 @@ async function initializeDatabase() {
       });
     }
 
-  // Eliminar usuarios específicos que no queremos (Juan / María) en caso de que existan
-  await User.deleteMany({ email: { $in: ['juan.perez@email.com', 'maria.gonzalez@email.com'] } });
+  // Eliminar usuarios específicos que no queremos (Juan / María) y usuarios con rol "Alumno" obsoleto
+  await User.deleteMany({ 
+    $or: [
+      { email: { $in: ['juan.perez@email.com', 'maria.gonzalez@email.com'] } },
+      { role: 'Alumno' } // Eliminar usuarios con rol "Alumno" obsoleto
+    ]
+  });
 
   // Crear exactamente 3 alumnos globales y asignarlos a todos los trainings
-  info('🎓 Creando exactamente 3 alumnos y asignándolos a todos los cursos...');
-  // obtener estudiantes existentes (si algun otro existe)
-  let existingStudents = await User.find({ role: 'Student' }).exec();
-    // Si hay más de 0 alumnos (por la inserción anterior) los usamos; si no, los creamos
+  info('🎓 Creando exactamente 3 guardias y asignándolos a todos los cursos...');
+  // obtener guardias existentes (si alguno otro existe)
+  let existingStudents = await User.find({ role: 'Guardia' }).exec();
+    // Si hay más de 0 guardias (por la inserción anterior) los usamos; si no, los creamos
     const studentsToEnsure = [];
     if (existingStudents.length < 3) {
       for (let i = 1; i <= 3; i++) {
         studentsToEnsure.push({
-          firstName: `Alumno${i}`,
+          firstName: `Guardia${i}`,
           lastName: `Demo`,
           documentType: 'DNI',
           documentNumber: `${Math.floor(20000000 + Math.random() * 80000000)}`,
           birthDate: new Date(2000, 0, 1),
-          email: `alumno${i}@sicapsi.com`,
+          email: `guardia${i}@sicapsi.com`,
           postalCode: '8000',
           address: 'Calle Demo',
           addressNumber: `${100 + i}`,
@@ -153,7 +158,8 @@ async function initializeDatabase() {
           areaCode: '0291',
           phone: `1540000${i}`,
           password: defaultPasswordPlain,
-          role: 'Student',
+          role: 'Guardia',
+          status: 'available',
           profileImage: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400',
           assignedTraining: []
         });
@@ -161,12 +167,12 @@ async function initializeDatabase() {
       // Hash ya disponible en defaultPasswordHash
       const preparedStudents = studentsToEnsure.map(s => ({ ...s, password: defaultPasswordHash }));
       const createdNewStudents = await User.insertMany(preparedStudents);
-  info(`✅ ${createdNewStudents.length} alumnos creados`);
+  info(`✅ ${createdNewStudents.length} guardias creados`);
       // registrar credenciales
-      studentsToEnsure.forEach(s => credentialsList.push({ email: s.email, password: defaultPasswordPlain, role: 'Student', name: s.firstName }));
+      studentsToEnsure.forEach(s => credentialsList.push({ email: s.email, password: defaultPasswordPlain, role: 'Guardia', name: s.firstName }));
       existingStudents = createdNewStudents;
     } else {
-      info('✅ Ya existen alumnos en la BD; usándolos');
+      info('✅ Ya existen guardias en la BD; usándolos');
     }
 
     // Asignar cada estudiante a todos los trainings
@@ -187,10 +193,10 @@ async function initializeDatabase() {
       teacherByTraining.set(training._id.toString(), teacher);
 
   // Registrar credenciales del docente (por defecto docente123)
-  credentialsList.push({ email: teacher.email, password: defaultPasswordPlain, role: 'Trainer', name: teacher.firstName || `Profesor ${training.title}` });
+  credentialsList.push({ email: teacher.email, password: defaultPasswordPlain, role: 'Capacitador', name: teacher.firstName || `Profesor ${training.title}` });
 
-      // Obtener alumnos asignados al curso (al menos 3 garantizados arriba)
-      const studentsInCourse = await User.find({ role: 'Student', assignedTraining: training._id }).select('_id firstName email').lean();
+      // Obtener guardias asignados al curso (al menos 3 garantizados arriba)
+      const studentsInCourse = await User.find({ role: 'Guardia', assignedTraining: training._id }).select('_id firstName email').lean();
       const studentIds = studentsInCourse.map(s => s._id);
 
   // Mensajes de bienvenida personalizados (teacher -> each student)
@@ -219,7 +225,7 @@ async function initializeDatabase() {
         });
       }
 
-      // Mensaje de consulta de un alumno distinto por curso hacia el profe (si existe al menos uno)
+      // Mensaje de consulta de un guardia distinto por curso hacia el profe (si existe al menos uno)
       if (studentIds.length) {
         const sid = studentIds[0];
         const inquiry = {
@@ -247,8 +253,8 @@ async function initializeDatabase() {
   // VERIFICACIÓN FINAL
     // (checks are run only in verbose mode)
     info('🔍 Verificando que todo esté correcto...');
-    // Verificar un alumno y sus trainings (solo si verbose)
-    const oneStudent = await User.findOne({ role: 'Student' }).populate('assignedTraining', 'title subtitle').exec();
+    // Verificar un guardia y sus trainings (solo si verbose)
+    const oneStudent = await User.findOne({ role: 'Guardia' }).populate('assignedTraining', 'title subtitle').exec();
     if (VERBOSE && oneStudent) {
       console.log(`📋 Trainings assigned to ${oneStudent.firstName} ${oneStudent.lastName}:`);
       (oneStudent.assignedTraining || []).forEach(training => {
@@ -269,17 +275,17 @@ async function initializeDatabase() {
 
   // Resumen usando conteos reales
   const totalUsers = await User.countDocuments();
-  const totalAdmins = await User.countDocuments({ role: 'Administrator' });
-  const totalManagers = await User.countDocuments({ role: 'Manager' });
-  const totalTrainers = await User.countDocuments({ role: 'Trainer' });
-  const totalStudents = await User.countDocuments({ role: 'Student' });
+  const totalAdmins = await User.countDocuments({ role: 'Administrador' });
+  const totalManagers = await User.countDocuments({ role: 'Directivo' });
+  const totalTrainers = await User.countDocuments({ role: 'Capacitador' });
+  const totalStudents = await User.countDocuments({ role: 'Guardia' });
   info('✅ Base de datos inicializada exitosamente!');
   info('\n📊 RESUMEN:');
   info(`   Usuarios totales: ${totalUsers}`);
   info(`   - Administradores: ${totalAdmins}`);
   info(`   - Managers: ${totalManagers}`);
   info(`   - Trainers: ${totalTrainers}`);
-  info(`   - Alumnos: ${totalStudents}`);
+  info(`   - Guardias: ${totalStudents}`);
   info(`   Trainings: ${createdTrainings.length}`);
   info(`   Niveles: ${createdLevels.length}`);
   info(`   Mensajes: ${(await PrivateMessage.countDocuments())}`);

@@ -224,6 +224,21 @@ export function makeUserController({ userService, trainingService, messageServic
         next(err);
       }
     },
+
+    /**
+     * Obtener guardias inscritos en una capacitación específica
+     */
+    async getEnrolledStudents(req, res, next) {
+      try {
+        const { trainingId } = req.params;
+        if (!trainingId) throw new AppError('ID de capacitación requerido', 400);
+        
+        const enrolledStudents = await userService.getEnrolledStudents(trainingId);
+        res.json(userFormatter.toPublicList(enrolledStudents));
+      } catch (err) {
+        next(err);
+      }
+    },
 }
 }
 

@@ -22,11 +22,11 @@ export default function GestionProfesores() {
   // filtros
   const [search, setSearch] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
-  const [filtrarDisponible, setFD] = useState(false);
-  const [filtrarDeshabilitado, setFDes] = useState(false);
+  const [filtrarDisponible, setFD] = useState(true);
+  const [filtrarDeshabilitado, setFDes] = useState(true);
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
-  const [appliedFilters, setAppliedFilters] = useState({ filtrarDisponible: false, filtrarDeshabilitado: false, desde: "", hasta: "" });
+  const [appliedFilters, setAppliedFilters] = useState({ filtrarDisponible: true, filtrarDeshabilitado: true, desde: "", hasta: "" });
 
   // Estados para el dropdown de fecha
   const [fechaMenu, setFechaMenu] = useState(false);
@@ -114,9 +114,9 @@ export default function GestionProfesores() {
     // filtros de estado y fechas solo cuando se aplican
     if (!appliedFilters.filtrarDisponible || !appliedFilters.filtrarDeshabilitado) {
       rows = rows.filter((r) => {
-        if (r.estado === "disponible" && !appliedFilters.filtrarDisponible) return false;
-        if (r.estado === "deshabilitado" && !appliedFilters.filtrarDeshabilitado) return false;
-        return true;
+        if (r.estado === "disponible" && appliedFilters.filtrarDisponible) return true;
+        if (r.estado === "deshabilitado" && appliedFilters.filtrarDeshabilitado) return true;
+        return false;
       });
     }
     if (appliedFilters.desde || appliedFilters.hasta) {

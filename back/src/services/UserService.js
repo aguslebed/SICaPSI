@@ -32,9 +32,20 @@ export class UserService extends IUserService {
     return await entity.save();
   }
 
-  async list(query) {
-    // Puedes agregar paginación si lo necesitas
-    return await this.User.find().sort({ createdAt: -1 }).exec();
+  async list(query = {}) {
+    const filter = {};
+    
+    // Filtrar por rol si se especifica
+    if (query.role) {
+      filter.role = query.role;
+    }
+    
+    // Filtrar por estado si se especifica
+    if (query.status) {
+      filter.status = query.status;
+    }
+    
+    return await this.User.find(filter).sort({ createdAt: -1 }).exec();
   }
 
   /**
@@ -109,7 +120,7 @@ export class UserService extends IUserService {
    */
   async getTeachers() {
     return await this.User.find({ 
-      role: { $in: ['Trainer', 'Manager'] } 
+      role: 'Capacitador'
     })
     .populate('assignedTraining', 'title subtitle')
     .sort({ createdAt: -1 })
@@ -123,7 +134,7 @@ export class UserService extends IUserService {
   async getTeacherById(id) {
     const teacher = await this.User.findOne({ 
       _id: id,
-      role: { $in: ['Trainer', 'Manager'] } 
+      role: 'Capacitador'
     })
     .populate('assignedTraining', 'title subtitle')
     .exec();
@@ -140,7 +151,7 @@ export class UserService extends IUserService {
     const teacher = await this.User.findOneAndUpdate(
       { 
         _id: id,
-        role: { $in: ['Trainer', 'Manager'] } 
+        role: 'Capacitador'
       },
       { status: status },
       { new: true }
@@ -149,6 +160,19 @@ export class UserService extends IUserService {
     .exec();
     
     return teacher;
+  }
+
+  /**
+   * Obtener guardias inscritos en una capacitación específica
+   */
+  async getEnrolledStudents(trainingId) {
+    return await this.User.find({
+      role: 'Guardia',
+      assignedTraining: trainingId
+    })
+    .select('firstName lastName email documentNumber status')
+    .sort({ firstName: 1, lastName: 1 })
+    .exec();
   }
 
   async delete(id) {

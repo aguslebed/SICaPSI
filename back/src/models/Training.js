@@ -8,11 +8,6 @@ const TrainingSchema = new mongoose.Schema({
   image: {type: String, required: true},
   isActive: {type: Boolean, default: true},
   createdBy: {type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true},
-  introduction: {
-    title: {type: String, required: true},
-    subtitle: {type: String, required: true},
-    welcomeMessage: {type: String, required: true}
-  },
   levels: [{type: mongoose.Schema.Types.ObjectId, ref: 'Level'}],
   totalLevels: {type: Number, default: 0},
   report: [{

@@ -6,19 +6,19 @@ const LevelSchema = new mongoose.Schema(
     trainingId: { type: mongoose.Schema.Types.ObjectId, ref: "Training", required: true },
     levelNumber: { type: Number, required: true, min: 1 },
     title: { type: String, required: true, trim: true },
-    description: { type: String, required: true },
+    description: { type: String, default: function() { return `Descripción del ${this.title}`; } },
 
     bibliography: [{
       title: { type: String, required: true },
       description: { type: String },
-      videoUrl: [{ type: String, required: true }],
+      url: { type: String, required: false },
       createdAt: { type: Date, default: Date.now }
     }],
 
     training: {
       title: { type: String, required: true },
       description: { type: String },
-      videoUrl: { type: String, required: true },
+      url: { type: String, required: true },
       duration: { type: Number },
       createdAt: { type: Date, default: Date.now }
     }, 

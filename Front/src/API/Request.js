@@ -96,15 +96,7 @@ export async function checkAuth() {
     };
   } catch (error) {
     console.error("❌ Error en checkAuth:", error);
-    
-    if (error.response) {
-      console.log("📋 Error del backend:", error.response.data);
-    } else if (error.request) {
-      console.log("🌐 Error de conexión");
-    } else {
-      console.log("⚙️ Error de configuración:", error.message);
-    }
-    
+   
     throw new Error('No autenticado');
   }
 }
@@ -353,11 +345,19 @@ export async function setTeacherStatus(id, status) {
 // Listar capacitaciones activas
 export async function getAllActiveTrainings() {
   try {
-    const { data } = await api.get('/training/getAllActiveTrainings');
-    console.log('Active trainings:', data);
+    const { data } = await api.get('/training/getAllActiveTrainings'); 
     return data;
   } catch (error) {
     // Re-lanzar error para que el caller lo maneje
+    throw error;
+  }
+}
+
+export async function getAllTrainings() {
+  try {
+    const { data } = await api.get('/training/getAllTrainings'); 
+    return data;
+  } catch (error) { 
     throw error;
   }
 }
@@ -383,6 +383,24 @@ export async function getAllUsers() {
   }
 }
 
+// Obtener solo guardias para inscripción en capacitaciones
+export async function getStudents() {
+  try {
+    // Solo filtrar por rol Guardia, permitir todos los status
+    const { data } = await api.get("/users?role=Guardia");
+    return Array.isArray(data) ? data : (data?.items || []);
+  } catch (error) {
+    console.error("Error obteniendo guardias:", error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al obtener guardias');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
 export async function deleteUser(userId) {
   try {
     const { data } = await api.delete(`/users/${userId}`);
@@ -391,6 +409,236 @@ export async function deleteUser(userId) {
     console.error("Error eliminando usuario:", error);
     if (error.response) {
       throw new Error(error.response.data?.message || 'Error al eliminar usuario');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+export async function getEnrolledStudents(trainingId) {
+  try {
+    const { data } = await api.get(`/users/training/${trainingId}/enrolled`);
+    return Array.isArray(data) ? data : (data?.items || []);
+  } catch (error) {
+    console.error("Error obteniendo guardias inscritos:", error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al obtener guardias inscritos');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+// --- CAPACITACIONES Y NIVELES ---
+
+// Crear una nueva capacitación
+export async function createTraining(trainingData) {
+  try {
+    const { data } = await api.post('/training/createTraining', trainingData);
+    return data;
+  } catch (error) {
+    console.error("❌ Error creando capacitación:", error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al crear capacitación');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+// Obtener todos los niveles de una capacitación
+export async function getAllLevelsInTraining(trainingId) {
+  try {
+    // Nota: El backend espera trainingId en el body, pero es GET request
+    // Necesitaríamos cambiar el backend o usar POST. Por ahora, usaremos POST.
+    const { data } = await api.post('/level/getAlllevelsInTraining', {
+      trainingId
+    });
+    return data;
+  } catch (error) {
+    console.error("❌ Error obteniendo niveles:", error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al obtener niveles');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+// Agregar niveles a una capacitación
+export async function addLevelsToTraining(trainingId, levels) {
+  try {
+    const { data } = await api.post('/level/addLevelsToTraining', {
+      trainingId,
+      levels
+    });
+    return data;
+  } catch (error) {
+    console.error("❌ Error agregando niveles:", error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al agregar niveles');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+// Actualizar niveles de una capacitación
+export async function updateLevelsInTraining(trainingId, levels) {
+  try {
+    const { data } = await api.put('/level/updateLevelsInTraining', {
+      trainingId,
+      levels
+    });
+    return data;
+  } catch (error) {
+    console.error("❌ Error actualizando niveles:", error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al actualizar niveles');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+// Subir imagen para capacitación
+export async function uploadTrainingImage(file) {
+  const form = new FormData();
+  form.append('image', file);
+  try {
+    const { data } = await api.post('/training/upload-image', form, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return data;
+  } catch (error) {
+    console.error("❌ Error subiendo imagen:", error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al subir imagen');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+// Subir archivo de video/material para training
+export async function uploadTrainingFile(file) {
+  const form = new FormData();
+  form.append('file', file);
+  try {
+    const { data } = await api.post('/training/upload-file', form, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return data;
+  } catch (error) {
+    console.error("❌ Error subiendo archivo:", error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al subir archivo');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+// Eliminar archivo subido
+export async function deleteTrainingFile(filePath) {
+  try {
+    const { data } = await api.delete('/training/delete-file', {
+      data: { filePath }
+    });
+    return data;
+  } catch (error) {
+    console.error("❌ Error eliminando archivo:", error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al eliminar archivo');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+// Obtener una capacitación por ID
+export async function getTrainingById(trainingId) {
+  try {
+    const { data } = await api.get(`/training/${trainingId}`);
+    return data;
+  } catch (error) {
+    console.error("❌ Error obteniendo capacitación:", error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al obtener capacitación');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+// Actualizar una capacitación
+export async function updateTraining(trainingId, trainingData) {
+  try {
+
+    const { data } = await api.patch(`/training/${trainingId}`, trainingData);
+    return data;
+  } catch (error) {
+    console.error("❌ Error actualizando capacitación:", error);
+    console.error("❌ Response data:", error.response?.data);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Datos inválidos');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+// Eliminar una capacitación
+export async function deleteTraining(trainingId) {
+  try {
+    const { data } = await api.delete(`/training/${trainingId}`);
+    return data;
+  } catch (error) {
+    console.error("❌ Error eliminando capacitación:", error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al eliminar capacitación');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+// Inscribir estudiantes a una capacitación
+export async function enrollStudentsToTraining(trainingId, studentIds) {
+  try {
+    const { data } = await api.post('/enrollment/enrollStudent', {
+      trainingId,
+      userIds: studentIds // El backend espera 'userIds', no 'studentIds'
+    });
+    return data;
+  } catch (error) {
+    console.error("❌ Error inscribiendo estudiantes:", error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al inscribir estudiantes');
     } else if (error.request) {
       throw new Error('Error de conexión con el servidor');
     } else {

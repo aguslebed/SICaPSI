@@ -28,8 +28,8 @@ export function UserProvider({ children }) {
   // Polling: refrescar datos del usuario periódicamente para detectar nuevos mensajes
   const pollRef = useRef(null);
   useEffect(() => {
-    // Solo hacemos polling cuando hay un usuario autenticado
-    if (!userData) return;
+    // Solo hacemos polling cuando hay un usuario autenticado con _id válido
+    if (!userData || !userData._id) return;
 
     let mounted = true;
     const POLL_INTERVAL = 20000; // 20 segundos
@@ -48,8 +48,14 @@ export function UserProvider({ children }) {
           setUserDataState(fresh);
         }
       } catch (e) {
-        // Silencioso: no rompemos la app por fallo de polling
-        console.debug('Polling getMe error:', e?.message || e);
+        // Si hay error de autenticación, limpiar los datos de usuario
+        if (e.message?.includes('No autenticado') || e.message?.includes('Usuario no encontrado')) {
+          console.warn('Sesión expirada, limpiando datos de usuario');
+          setUserDataState(null);
+        } else {
+          // Otros errores los logueamos pero no rompemos la app
+          console.debug('Polling getMe error:', e?.message || e);
+        }
       }
     };
 
@@ -80,7 +86,12 @@ export function UserProvider({ children }) {
     localStorage.removeItem("userData");
   }, []);
 
-  const contextValue = useMemo(() => ({ userData, setUserData, logoutUser }), [userData, setUserData, logoutUser]);
+  const contextValue = useMemo(() => ({ 
+    user: userData, // Alias para mantener consistencia
+    userData, 
+    setUserData, 
+    logoutUser 
+  }), [userData, setUserData, logoutUser]);
 
   return (
     <UserContext.Provider value={contextValue}>
@@ -92,3 +103,6 @@ export function UserProvider({ children }) {
 export function useUser() {
   return useContext(UserContext);
 }
+
+// Mantener compatibilidad con el código existente
+export { UserContext };

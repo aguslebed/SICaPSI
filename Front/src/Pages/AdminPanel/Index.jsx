@@ -47,8 +47,8 @@ export default function AdminPanel() {
       },
     },
     {
-      title: "Gestión de Cursos",
-      link: "/adminPanel/gestionCursos",
+      title: "Gestión de Capacitacion",
+      link: "/adminPanel/gestionCapacitacion",
       isImage: true,
       image: cursoImg,
     },
@@ -85,10 +85,10 @@ export default function AdminPanel() {
                 className="admin-grid-card"
                 onClick={async () => {
                   try {
-                    // If this is the Gestion Cursos card, fetch active trainings first
-                    if (option.link.includes('gestionCursos')) {
+                    // If this is the Gestion Capacitacion card, fetch active trainings first
+                    if (option.link.includes('gestionCapacitacion')) {
                       await getAllActiveTrainings();
-                      navigate('/adminPanel/gestionCursos');
+                      navigate('/adminPanel/gestionCapacitacion');
                       return;
                     }
                     // otherwise navigate to the configured link

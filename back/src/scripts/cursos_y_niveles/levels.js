@@ -10,19 +10,19 @@ export const sampleLevels = [
       {
         title: "Manual de Patrullaje",
         description: "Procedimientos estándar para patrullaje efectivo",
-        videoUrl: ["https://example.com/manual-patrullaje.pdf"],
+        url: ["https://example.com/manual-patrullaje.pdf"],
         createdAt: new Date()
       },
       {
         title: "Control de Accesos 101",
         description: "Guía práctica sobre identificaciones, registros y verificaciones",
-        videoUrl: ["https://example.com/control-accesos.pdf"],
+        url: ["https://example.com/control-accesos.pdf"],
         createdAt: new Date()
       }
     ],
     training: {
       title: "Patrullaje y Control de Accesos (Training)",
-      videoUrl: "https://www.youtube.com/embed/security-patrol-example",
+      url: "https://www.youtube.com/embed/security-patrol-example",
       description: "Video demostrativo sobre rutinas de patrullaje y gestión de accesos.",
       duration: 40,
       createdAt: new Date()
@@ -41,19 +41,19 @@ export const sampleLevels = [
       {
         title: "Guía de Redacción de Informes",
         description: "Plantillas y ejemplos de partes de incidente",
-        videoUrl: ["https://example.com/reportes-guia.pdf"],
+        url: ["https://example.com/reportes-guia.pdf"],
         createdAt: new Date()
       },
       {
         title: "Toma de Evidencia Básica",
         description: "Buenas prácticas para fotografiar y documentar una escena",
-        videoUrl: ["https://example.com/evidencia.pdf"],
+        url: ["https://example.com/evidencia.pdf"],
         createdAt: new Date()
       }
     ],
     training: {
       title: "Detección y Reporte de Incidentes (Training)",
-      videoUrl: "https://www.youtube.com/embed/security-reporting-example",
+      url: "https://www.youtube.com/embed/security-reporting-example",
       description: "Tutorial sobre cómo detectar, documentar y reportar incidentes correctamente.",
       duration: 35,
       createdAt: new Date()
@@ -71,19 +71,19 @@ export const sampleLevels = [
       {
         title: "RCP y Primeros Auxilios",
         description: "Guía práctica sobre RCP y manejo de heridas",
-        videoUrl: ["https://example.com/rcp-guia.pdf"],
+        url: ["https://example.com/rcp-guia.pdf"],
         createdAt: new Date()
       },
       {
         title: "Coordinación con Emergencias",
         description: "Protocolos para notificar y asistir a bomberos/ambulancias",
-        videoUrl: ["https://example.com/emergencias.pdf"],
+        url: ["https://example.com/emergencias.pdf"],
         createdAt: new Date()
       }
     ],
     training: {
       title: "Primeros Auxilios y Respuesta a Emergencias (Training)",
-      videoUrl: "https://www.youtube.com/embed/security-first-aid-example",
+      url: "https://www.youtube.com/embed/security-first-aid-example",
       description: "Demostraciones prácticas de RCP y atención inicial a víctimas.",
       duration: 60,
       createdAt: new Date()
@@ -101,19 +101,19 @@ export const sampleLevels = [
       {
         title: "Procedimientos de Garita",
         description: "Protocolos para el puesto de control",
-        videoUrl: ["https://example.com/garita.pdf"],
+        url: ["https://example.com/garita.pdf"],
         createdAt: new Date()
       },
       {
         title: "Sistemas de Control de Acceso",
         description: "Uso de software y hardware para control de accesos",
-        videoUrl: ["https://example.com/sistemas-acceso.pdf"],
+        url: ["https://example.com/sistemas-acceso.pdf"],
         createdAt: new Date()
       }
     ],
     training: {
       title: "Control de Garitas y Gestión de Visitas (Training)",
-      videoUrl: "https://www.youtube.com/embed/security-guardhouse-example",
+      url: "https://www.youtube.com/embed/security-guardhouse-example",
       description: "Videos y prácticas sobre gestión de garitas y sistemas de acceso.",
       duration: 45,
       createdAt: new Date()

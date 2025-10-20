@@ -33,6 +33,24 @@ export function makeLevelController({ levelService }) {
       } catch (err) {
         next(err);
       }
+    },
+
+    async updateLevelsInTraining(req, res, next) {
+      try {
+        const { trainingId, levels } = req.body;
+        if (!trainingId || !Array.isArray(levels) || levels.length === 0) {
+          throw new AppError('Faltan datos obligatorios o el arreglo de niveles está vacío', 400);
+        }
+        // Validar que todos los niveles sean de la misma capacitación
+        const allSameTraining = levels.every(lvl => lvl.trainingId === trainingId);
+        if (!allSameTraining) {
+          throw new AppError('Todos los niveles deben pertenecer a la misma capacitación', 400);
+        }
+        const result = await levelService.updateLevelsInTraining(trainingId, levels);
+        res.status(200).json(result);
+      } catch (err) {
+        next(err);
+      }
     }
 
   }

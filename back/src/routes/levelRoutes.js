@@ -28,6 +28,7 @@ const controller = makeLevelController({
 
  router.get("/getAlllevelsInTraining", controller.getAlllevelsInTraining);
 router.post("/addLevelsToTraining", controller.addLevelsToTraining);
+router.put("/updateLevelsInTraining", controller.updateLevelsInTraining);
  /*router.put("/updateLevelInTraining", controller.updateLevelInTraining);
  router.delete("/deleteLevelInTraining", controller.deleteLevelInTraining);*/
 

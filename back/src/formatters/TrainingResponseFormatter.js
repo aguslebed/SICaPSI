@@ -8,7 +8,6 @@ export class TrainingResponseFormatter {
       image: training.image,
       isActive: training.isActive,
       totalLevels: training.totalLevels,
-      introduction: training.introduction,
       createdBy: training.createdBy,
       levels: training.levels,
       report: training.report,

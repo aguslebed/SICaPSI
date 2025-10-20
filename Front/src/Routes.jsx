@@ -24,7 +24,7 @@ const LevelTest = lazy(() => import('./Pages/UserPanel/Student/LevelTest'));
 const AdminHome = lazy(() => import('./Pages/AdminPanel/Index'));
 const AdmisionUsuario = lazy(() => import('./Pages/AdminPanel/AdmisionUsuario'));
 const GestionUsuario = lazy(() => import('./Pages/AdminPanel/GestionUsuario'));
-const GestionCursos = lazy(() => import('./Pages/AdminPanel/GestionCursos'));
+const GestionCapacitacion = lazy(() => import('./Pages/AdminPanel/GestionCapacitacion'));
 const GestionProfesores = lazy(() => import('./Pages/AdminPanel/GestionProfesores'));
 const ProfesorEditar = lazy(() => import('./Pages/AdminPanel/ProfesorEditar'));
 
@@ -68,7 +68,7 @@ export const router = createBrowserRouter([
       // Secciones solicitadas
       { path: 'admisionUsuario', element: <AdmisionUsuario /> },
       { path: 'gestionUsuario', element: <GestionUsuario /> },
-      { path: 'gestionCursos', element: <GestionCursos /> },
+      { path: 'gestionCapacitacion', element: <GestionCapacitacion /> },
   { path: 'gestionProfesores', element: <GestionProfesores /> },
   { path: 'profesorEditar/:id', element: <ProfesorEditar /> },
       // Crear Usuario: debe renderizar el Register.jsx

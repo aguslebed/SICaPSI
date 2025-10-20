@@ -15,7 +15,7 @@ export class TrainingService extends ITrainingService {
    
       .populate({
         path: 'assignedTraining',
-        select: 'title subtitle description image isActive totalLevels introduction levels createdBy report progressPercentage',
+        select: 'title subtitle description image isActive totalLevels levels createdBy report progressPercentage',
         populate: [
           { path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level },
           { path: 'createdBy', select: 'firstName lastName email', model: this.User }
@@ -49,6 +49,75 @@ export class TrainingService extends ITrainingService {
      .populate({ path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level })
      .exec();
    return trainings;
+ }
+
+ //Devuelve TODAS las capacitaciones (activas e inactivas)
+ async getAllTrainings() {
+   const trainings = await this.Training.find({})
+     .populate({ path: 'createdBy', select: 'firstName lastName email', model: this.User })
+     .populate({ path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level })
+     .sort({ createdAt: -1 }) // Más recientes primero
+     .exec();
+   return trainings;
+ }
+
+ // Obtener una capacitación por ID
+ async getTrainingById(trainingId) {
+   const training = await this.Training.findById(trainingId)
+     .populate({ path: 'createdBy', select: 'firstName lastName email', model: this.User })
+     .populate({ 
+       path: 'levels', 
+       select: 'levelNumber title description bibliography training test isActive', 
+       model: this.Level 
+     })
+     .exec();
+   
+   return training;
+ }
+
+ // Actualizar una capacitación
+ async updateTraining(trainingId, trainingData) {
+   // Verificar si existe otra capacitación con el mismo título (si se está cambiando)
+   if (trainingData.title) {
+     const existingTraining = await this.Training.findOne({ 
+       title: trainingData.title, 
+       _id: { $ne: trainingId } 
+     });
+     if (existingTraining) {
+       throw new Error("Ya existe otra capacitación con ese título");
+     }
+   }
+
+   const updatedTraining = await this.Training.findByIdAndUpdate(
+     trainingId, 
+     trainingData, 
+     { new: true, runValidators: true }
+   )
+   .populate({ path: 'createdBy', select: 'firstName lastName email', model: this.User })
+   .populate({ path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level })
+   .exec();
+
+   if (!updatedTraining) {
+     throw new Error("Capacitación no encontrada");
+   }
+
+   return updatedTraining;
+ }
+
+ // Eliminar una capacitación
+ async deleteTraining(trainingId) {
+   const training = await this.Training.findById(trainingId);
+   if (!training) {
+     throw new Error("Capacitación no encontrada");
+   }
+
+   // Eliminar todos los niveles asociados
+   await this.Level.deleteMany({ trainingId: trainingId });
+
+   // Eliminar la capacitación
+   await this.Training.findByIdAndDelete(trainingId);
+
+   return { message: "Capacitación y niveles asociados eliminados exitosamente" };
  }
 
 
