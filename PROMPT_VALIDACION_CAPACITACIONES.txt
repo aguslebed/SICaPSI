@@ -1,0 +1,297 @@
+# 📋 Prompt para Implementar Sistema de Validación de Capacitaciones
+
+## 🎯 Objetivo
+Implementar un sistema completo de validación para capacitaciones en el archivo Front/src/Components/Modals/CreateTrainingModal.jsx que garantice que todos los datos mínimos estén completos antes de permitir la activación, con feedback visual claro y manejo de errores/éxitos mediante modales reutilizables.
+
+---
+
+## 📝 Requisitos de Validación
+
+### 1. Datos Mínimos de Capacitación (Sección "Capacitación")
+Para guardar una capacitación (modo Deshabilitada), se requiere como mínimo:
+- Título (no vacío, max 50 caracteres)
+- Subtítulo (no vacío, max 100 caracteres)
+- Descripción (no vacía, max 1000 caracteres)
+- Imagen (URL o archivo subido)
+- Fecha de inicio (formato válido)
+- Fecha de fin (formato válido, debe ser posterior a fecha de inicio)
+
+### 2. Requisitos para Habilitar Capacitación (checkbox "Habilitar Capacitación")
+Para marcar isActive: true, la capacitación debe cumplir:
+
+#### A. Datos básicos completos (del punto 1)
+
+#### B. Al menos 1 nivel creado con TODOS estos datos:
+
+Clase Magistral (training):
+- Título (no vacío)
+- Descripción (no vacía)
+- URL o archivo de video (no vacío)
+- Duración en minutos (mayor a 0)
+
+Bibliografía (bibliography):
+- Al menos 1 elemento bibliográfico con:
+  - Título (no vacío)
+  - Descripción (no vacía)
+  - Archivo PDF o enlace (no vacío)
+
+Evaluación (test):
+- Título (no vacío)
+- Descripción (no vacía)
+- Imagen (URL o archivo)
+- Estado activo (isActive: true)
+- Al menos 1 escena creada con:
+  - ID único
+  - Descripción (no vacía)
+  - Video o URL (no vacío)
+  - Al menos 2 botones/opciones creados con:
+    - Texto del botón (no vacío)
+    - Puntos asignados (número)
+    - ID de siguiente escena (puede ser null para final)
+
+#### C. Asignaciones obligatorias:
+- 1 Profesor asignado (assignedTeacher no vacío)
+- Al menos 1 estudiante inscrito (selectedStudents.length >= 1)
+
+---
+
+## 🛠️ Implementación Requerida
+
+### 1. Función de Validación Central
+
+Crear función validateTrainingForActivation() en Front/src/Components/Modals/CreateTrainingModal.jsx que retorne un objeto con:
+
+{
+  isValid: boolean,
+  errors: string[]
+}
+
+La función debe validar:
+- Datos básicos de capacitación (título, subtítulo, descripción, imagen, fechas)
+- Que la fecha de fin sea posterior a la fecha de inicio
+- Que exista al menos 1 nivel
+- Por cada nivel, validar:
+  - Training: título, descripción, url, duration mayor a 0
+  - Bibliography: al menos 1 elemento con título, descripción y url
+  - Test: título, descripción, imageUrl, isActive true
+  - Test scenes: al menos 1 escena con description, videoUrl
+  - Test options: cada escena debe tener al menos 2 opciones con text no vacío
+- Que assignedTeacher no esté vacío
+- Que selectedStudents tenga al menos 1 elemento
+
+Los mensajes de error deben ser descriptivos, por ejemplo:
+- "Falta el título de la capacitación"
+- "La fecha de fin debe ser posterior a la fecha de inicio"
+- "Nivel 1: Falta el video de la clase magistral"
+- "Nivel 2: No hay elementos bibliográficos agregados"
+- "Nivel 1, Escena 2: Debe tener al menos 2 botones de navegación"
+- "Debe asignar un profesor a la capacitación"
+- "Debe inscribir al menos 1 estudiante"
+
+### 2. Función Auxiliar isLevelComplete
+
+Crear función isLevelComplete(levelIndex) que retorne boolean indicando si un nivel específico cumple todos los requisitos. Esta función será usada para los badges visuales.
+
+### 3. Estados para Modales
+
+Agregar los siguientes estados en CreateTrainingModal.jsx:
+
+const [showErrorModal, setShowErrorModal] = useState(false);
+const [showSuccessModal, setShowSuccessModal] = useState(false);
+const [errorMessages, setErrorMessages] = useState([]);
+
+### 4. Modificar Lógica del Botón Guardar
+
+Actualizar la función handleSave() con esta lógica:
+
+1. Validar datos básicos SIEMPRE (requeridos para guardar):
+   - Si faltan datos básicos, mostrar modal de error con lista de campos faltantes
+   - Retornar sin guardar
+
+2. Validar fechas:
+   - Si fecha fin <= fecha inicio, mostrar modal de error
+   - Retornar sin guardar
+
+3. Si el checkbox isActive está marcado:
+   - Ejecutar validateTrainingForActivation()
+   - Si no es válido (isValid === false):
+     - Setear errorMessages con el array de errores
+     - Mostrar modal de error (setShowErrorModal(true))
+     - Retornar sin guardar
+
+4. Si pasa todas las validaciones:
+   - Proceder con el guardado actual (mantener lógica existente)
+   - Después de guardar exitosamente, mostrar modal de éxito (setShowSuccessModal(true))
+
+### 5. Validación en Tiempo Real del Checkbox
+
+Modificar el checkbox "Habilitar Capacitación" en PresentationForm.jsx:
+
+- Calcular si se puede activar usando validateTrainingForActivation()
+- Pasar como prop canActivate al componente PresentationForm
+- Deshabilitar el checkbox (disabled={!canActivate}) cuando no se cumplan requisitos
+- Agregar clase CSS para mostrar visualmente que está deshabilitado (opacity-50, cursor-not-allowed)
+- Mostrar mensaje de ayuda debajo del checkbox cuando esté deshabilitado: "Complete todos los requisitos para habilitar" en texto pequeño rojo
+
+### 6. Badges Visuales de Completitud
+
+#### A. Badge por Nivel
+En LevelsEditor.jsx, agregar badge junto al selector de nivel que muestre:
+- Fondo verde con texto "✓ Completo" si isLevelComplete(selectedLevel) es true
+- Fondo amarillo con texto "⚠ Incompleto" si isLevelComplete(selectedLevel) es false
+- Clases: text-xs font-semibold px-2 py-0.5 rounded
+- Verde: bg-green-100 text-green-700
+- Amarillo: bg-yellow-100 text-yellow-700
+
+#### B. Actualizar Badges en Pestañas de Navegación
+En CreateTrainingModal.jsx, modificar los badges de las pestañas:
+
+Pestaña Niveles:
+- Mantener el badge circular verde con el número de niveles
+- El badge siempre debe mostrarse (no condicional)
+
+Pestaña Asignar Profesor:
+- Agregar badge circular verde con ✓ si assignedTeacher no está vacío
+- No mostrar badge si está vacío
+- Clases: inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-green-600 text-white rounded-full text-xs font-semibold
+
+Pestaña Inscribir guardias:
+- El badge ya existe y está correcto (muestra selectedStudents.length)
+- Asegurar que siempre se muestre
+
+### 7. Modales de Error y Éxito
+
+IMPORTANTE: Antes de crear nuevos modales, revisar si existen modales reutilizables en:
+- Front/src/Components/Modals/
+- Front/src/Components/
+
+Si existen modales genéricos de Success, Error o Confirmation, REUTILIZARLOS sin modificarlos. Cuidado al adaptarlos que otros componentes usan esos modales.
+
+Si NO existen o no sirven para este propósito, crear los siguientes componentes nuevos:
+
+#### A. Modal de Errores (ErrorListModal.jsx)
+Crear en Front/src/Components/Modals/ si no existe modal reutilizable.
+
+Estructura:
+- Fondo transparente
+- Tarjeta centrada (max-w-md, bg-white, shadow-2xl) cuadrada sin bordes redondeados.
+- Header rojo con ícono de alerta y título "No se puede habilitar la capacitación"
+- Cuerpo con:
+  - Texto: "Complete los siguientes requisitos antes de habilitar"
+  - Lista scrolleable (max-h-64 overflow-y-auto) con cada error
+  - Cada error con bullet point rojo
+- Footer con botón "Entendido" (bg-red-600, hover:bg-red-700)
+- Al hacer click en "Entendido" o backdrop, cerrar modal
+
+Props:
+- show (boolean)
+- onClose (function)
+- errors (string[])
+
+#### B. Modal de Éxito (SuccessModal.jsx)
+Crear en Front/src/Components/Modals/ si no existe modal reutilizable.
+
+Estructura:
+- Fondo transparente
+- Tarjeta centrada (max-w-md, bg-white, shadow-2xl) cuadrada sin bordes redondeados.
+- Header verde con ícono de check y título "¡Capacitación guardada exitosamente!"
+- Cuerpo con:
+  - Mensaje: "Los cambios han sido actualizados correctamente" (si isEditing) o "La capacitación ha sido creada correctamente"
+  - Si isActive es true: mostrar badge verde "✓ La capacitación está HABILITADA" con subtexto "Los estudiantes pueden acceder ahora"
+  - Si isActive es false: mostrar badge azul "ℹ La capacitación está en modo borrador" con subtexto "Complete los requisitos para habilitarla"
+- Footer con botón "Aceptar" (bg-green-600, hover:bg-green-700)
+- Al hacer click en "Aceptar", cerrar modal Y cerrar el modal de edición (ejecutar onClose del CreateTrainingModal)
+
+Props:
+- show (boolean)
+- onClose (function)
+- isEditing (boolean)
+- isActive (boolean)
+
+### 8. Renderizar Modales
+
+En CreateTrainingModal.jsx, al final del return (después del div de preview), agregar:
+
+{showErrorModal && (
+  <ErrorListModal
+    show={showErrorModal}
+    onClose={() => setShowErrorModal(false)}
+    errors={errorMessages}
+  />
+)}
+
+{showSuccessModal && (
+  <SuccessModal
+    show={showSuccessModal}
+    onClose={() => {
+      setShowSuccessModal(false);
+      onClose(); // Cerrar el modal de edición también
+    }}
+    isEditing={isEditing}
+    isActive={isActive}
+  />
+)}
+
+---
+
+## 📦 Archivos a Crear/Modificar
+
+### Nuevos Componentes (SOLO si no existen modales reutilizables):
+1. Front/src/Components/Modals/ErrorListModal.jsx
+2. Front/src/Components/Modals/SuccessModal.jsx
+
+### Modificar:
+1. Front/src/Components/Modals/CreateTrainingModal.jsx (lógica principal, estados, badges, renderizado de modales)
+2. Front/src/Components/Modals/CreateTrainingModal/PresentationForm.jsx (recibir y usar canActivate prop en checkbox)
+3. Front/src/Components/Modals/CreateTrainingModal/LevelsEditor.jsx (agregar badge de completitud por nivel)
+
+---
+
+## ✅ Checklist de Implementación
+
+- [ ] Verificar si existen modales reutilizables en el proyecto
+- [ ] Crear función validateTrainingForActivation() en Front/src/Components/Modals/CreateTrainingModal.jsx
+- [ ] Crear función isLevelComplete(levelIndex) en Front/src/Components/Modals/CreateTrainingModal.jsx
+- [ ] Agregar estados showErrorModal, showSuccessModal, errorMessages
+- [ ] Modificar lógica de handleSave() con validaciones
+- [ ] Calcular canActivate y pasar como prop a PresentationForm
+- [ ] Modificar checkbox en PresentationForm para usar canActivate
+- [ ] Agregar badge de completitud en LevelsEditor junto al selector de nivel
+- [ ] Actualizar badge de "Asignar Profesor" en navegación
+- [ ] Si no existen modales reutilizables: crear ErrorListModal.jsx
+- [ ] Si no existen modales reutilizables: crear SuccessModal.jsx
+- [ ] Renderizar modales condicionalmente en CreateTrainingModal
+- [ ] Probar flujo completo: guardar con errores, corregir, guardar con éxito
+- [ ] Probar flujo: intentar activar sin cumplir requisitos
+- [ ] Probar flujo: activar cuando se cumplen todos los requisitos
+- [ ] Verificar que badges cambien de color correctamente
+- [ ] Verificar que mensajes de error sean descriptivos y claros
+
+---
+
+## 🎨 Consideraciones de UX
+
+1. Los mensajes de error deben ser específicos, indicando exactamente qué nivel/sección/campo tiene el problema
+2. El checkbox debe estar visualmente deshabilitado (gris, con cursor not-allowed) cuando no se pueden cumplir requisitos
+3. Los badges deben actualizarse en tiempo real conforme el usuario complete campos
+4. El modal de éxito debe cerrar automáticamente tanto el modal de éxito como el modal de edición al hacer click en "Aceptar"
+5. El modal de error debe permitir al usuario ver la lista completa de problemas con scroll si hay muchos
+6. Los colores deben ser consistentes: verde para éxito/completo, rojo para error, amarillo para advertencia/incompleto
+
+---
+
+## 🚀 Orden de Implementación Sugerido
+
+1. Verificar modales reutilizables existentes
+2. Crear funciones de validación (validateTrainingForActivation, isLevelComplete)
+3. Agregar estados para modales
+4. Modificar handleSave con validaciones
+5. Implementar checkbox deshabilitado en PresentationForm
+6. Agregar badges visuales de completitud
+7. Crear o reutilizar modales (ErrorListModal, SuccessModal)
+8. Integrar y renderizar modales en CreateTrainingModal
+9. Pruebas exhaustivas de todos los flujos
+
+---
+
+Procede con la implementación siguiendo este orden de prioridad. Comienza verificando si existen modales reutilizables y notifícame qué encontraste antes de crear nuevos componentes.

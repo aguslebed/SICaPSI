@@ -15,8 +15,8 @@ function PreviewPresentacion({ title, subtitle, description, image }) {
               : 'linear-gradient(to bottom right, #3b82f6, #1d4ed8)'
           }}
         >
-          <h1 className="text-3xl font-bold">{title || 'Título de la capacitación'}</h1>
-          <p className="text-lg">{subtitle || 'Subtítulo de la capacitación'}</p>
+          <h1 className="text-3xl font-bold break-words whitespace-normal">{title || 'Título de la capacitación'}</h1>
+          <p className="text-lg break-words whitespace-normal">{subtitle || 'Subtítulo de la capacitación'}</p>
         </div>
         {/* Barra de progreso */}
         <div className="w-full bg-gray-200 h-6">
@@ -30,7 +30,7 @@ function PreviewPresentacion({ title, subtitle, description, image }) {
         {/* Descripción */}
         <div className="p-6">
           <h2 className="font-semibold mb-2">Descripción de la capacitación</h2>
-          <p className="text-gray-700 leading-relaxed whitespace-pre-line">
+          <p className="text-gray-700 leading-relaxed whitespace-normal break-words">
             {description || 'Descripción de la capacitación...'}
           </p>
         </div>
@@ -40,10 +40,10 @@ function PreviewPresentacion({ title, subtitle, description, image }) {
 }
 
 // Subcomponente para Preview de Niveles
-function PreviewNiveles({ levels, selectedLevel, onLevelClick }) {
+function PreviewNiveles({ levels, selectedLevel, onLevelClick, onBibliografiaClick, onTrainingClick, onTestClick }) {
   return (
     <div className="p-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">Niveles</h1>
+  <h1 className="text-3xl font-bold text-gray-800 mb-6">Niveles</h1>
       <div className="space-y-4">
         {levels.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
@@ -59,7 +59,7 @@ function PreviewNiveles({ levels, selectedLevel, onLevelClick }) {
                 }`}
                 onClick={() => onLevelClick && onLevelClick(index)}
               >
-                <span className="font-semibold text-gray-800">
+                <span className="font-semibold text-gray-800 break-words whitespace-normal">
                   Capacitación {level.levelNumber} - Nivel {level.levelNumber}: {level.title || `Nivel ${level.levelNumber}`}
                 </span>
                 <svg 
@@ -77,15 +77,24 @@ function PreviewNiveles({ levels, selectedLevel, onLevelClick }) {
               {/* Contenido desplegable */}
               {index === selectedLevel && (
                 <div className="px-6 py-4 space-y-3 bg-blue-50">
-                  <button className="w-full flex items-center gap-2 p-3 rounded-md bg-blue-200 hover:bg-blue-300 transition text-left">
+                  <button 
+                    className="w-full flex items-center gap-2 p-3 rounded-md bg-blue-200 hover:bg-blue-300 transition text-left cursor-pointer"
+                    onClick={() => onBibliografiaClick && onBibliografiaClick(index)}
+                  >
                     <BookOpen className="w-5 h-5" />
                     Bibliografía
                   </button>
-                  <button className="w-full flex items-center gap-2 p-3 rounded-md bg-blue-200 hover:bg-blue-300 transition text-left">
+                  <button 
+                    className="w-full flex items-center gap-2 p-3 rounded-md bg-blue-200 hover:bg-blue-300 transition text-left cursor-pointer"
+                    onClick={() => onTrainingClick && onTrainingClick(index)}
+                  >
                     <PlayCircle className="w-5 h-5" />
                     Capacitación
                   </button>
-                  <button className="w-full flex items-center gap-2 p-3 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition text-left">
+                  <button 
+                    className="w-full flex items-center gap-2 p-3 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition text-left cursor-pointer"
+                    onClick={() => onTestClick && onTestClick(index)}
+                  >
                     Iniciar evaluación del {level.title || `Nivel ${level.levelNumber}`}
                   </button>
                 </div>
@@ -275,7 +284,7 @@ function PreviewBibliografia({ level }) {
 
   return (
     <div className="p-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">Bibliografía</h1>
+          <h1 className="text-3xl font-bold text-gray-800 mb-6">Bibliografía</h1>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {bibliographyToShow.map((item, index) => (
@@ -289,7 +298,7 @@ function PreviewBibliografia({ level }) {
           >
             <div className="flex items-center gap-4 mb-2">
               <FileText className={`w-10 h-10 ${item.isPlaceholder ? 'text-gray-400' : 'text-blue-400'}`} />
-              <h2 className={`font-bold text-xl ${item.isPlaceholder ? 'text-gray-600' : 'text-blue-700'}`}>
+              <h2 className={`font-bold text-xl ${item.isPlaceholder ? 'text-gray-600' : 'text-blue-700'} break-words whitespace-normal`}>
                 {item.title || `Material ${index + 1}`}
               </h2>
             </div>
@@ -336,7 +345,7 @@ function PreviewInscripcion({ selectedStudents, students }) {
 
   return (
     <div className="p-8 space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">Guardias Inscritos</h1>
+          <h1 className="text-3xl font-bold text-gray-800 mb-6">Guardias Inscritos</h1>
 
       {/* Contador */}
       <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-8 shadow-lg">
@@ -366,7 +375,7 @@ function PreviewInscripcion({ selectedStudents, students }) {
                   {index + 1}
                 </div>
                 <div className="flex-1">
-                  <div className="font-medium text-gray-800">
+                  <div className="font-medium text-gray-800 break-words whitespace-normal">
                     {student.firstName} {student.lastName}
                   </div>
                   <div className="text-sm text-gray-500">
@@ -620,7 +629,10 @@ export default function TrainingPreview({
   selectedScene,
   selectedStudents,
   students,
-  onLevelClick
+  onLevelClick,
+  onBibliografiaClick,
+  onTrainingClick,
+  onTestClick
 }) {
   const renderContent = () => {
     switch (activeSection) {
@@ -640,6 +652,9 @@ export default function TrainingPreview({
             levels={levels}
             selectedLevel={selectedLevel}
             onLevelClick={onLevelClick}
+            onBibliografiaClick={onBibliografiaClick}
+            onTrainingClick={onTrainingClick}
+            onTestClick={onTestClick}
           />
         );
       
