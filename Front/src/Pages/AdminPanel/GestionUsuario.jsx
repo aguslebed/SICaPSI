@@ -15,7 +15,7 @@ function getEstadoLabel(status) {
 
 function getRoleLabel(role) {
   if (role === 'Capacitador') return 'Capacitador';
-  if (role === 'Alumno') return 'Guardia';
+  if (role === 'Alumno') return 'Alumno';
   if (role === 'Directivo') return 'Directivo';
   if (role === 'Administrador') return 'Administrador';
   return role;
@@ -64,6 +64,9 @@ export default function GestionUsuario() {
   const [search, setSearch] = useState('');
   const [searchApplied, setSearchApplied] = useState(''); // Nuevo estado
   const [loading, setLoading] = useState(false);
+  // Paginación
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 10;
   
   // Estados para modal de eliminar
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -169,6 +172,8 @@ export default function GestionUsuario() {
     }
 
     setFilteredUsers(result);
+    // Resetear página cuando cambian filtros o usuarios
+    setPage(1);
   }, [users, searchApplied, tipo, estado, fechaDesde, fechaHasta, filtersApplied, tiposSeleccionados, estadosSeleccionados]);
 
   // Aplica los filtros (excepto búsqueda)
@@ -234,7 +239,7 @@ export default function GestionUsuario() {
 
   const tipos = [
     { label: 'Capacitador', value: 'Capacitador' },
-    { label: 'Guardia', value: 'Guardia' },
+    { label: 'Alumno', value: 'Alumno' },
     { label: 'Administrador', value: 'Administrador' },
     { label: 'Directivo', value: 'Directivo' },
   ];
@@ -465,74 +470,100 @@ export default function GestionUsuario() {
                   <td colSpan={8} className="admin-empty">No hay usuarios para mostrar.</td>
                 </tr>
               ) : (
-                filteredUsers.map(u => {
-                  const estado = getEstadoLabel(u.status);
-                  return (
-                    <tr key={u._id}>
-                      <td data-label="Nombre">{u.firstName}</td>
-                      <td data-label="Apellido">{u.lastName}</td>
-                      <td data-label="Email">{u.email}</td>
-                      <td data-label="DNI">{u.documentNumber}</td>
-                      <td data-label="Estado">
-                        <span 
-                          className="inline-block px-3 py-1 rounded-full text-white text-xs font-medium text-center"
-                          style={{ minWidth: '110px', backgroundColor: 
-                            estado.color === 'bg-green-500' ? '#10b981' : 
-                            estado.color === 'bg-yellow-400' ? '#facc15' : '#ef4444' }}
-                        >
-                          {estado.label}
-                        </span>
-                      </td>
-                      <td data-label="Fecha">{formatDate(u.createdAt)}</td>
-                      <td data-label="Tipo">
-                        <span 
-                          className="inline-block px-3 py-1 rounded-full text-white text-xs font-medium text-center"
-                          style={{ minWidth: '110px', backgroundColor: getRoleColor(u.role) === 'bg-green-500' ? '#10b981' :
-                                   getRoleColor(u.role) === 'bg-purple-500' ? '#a855f7' :
-                                   getRoleColor(u.role) === 'bg-blue-500' ? '#3b82f6' :
-                                   getRoleColor(u.role) === 'bg-orange-500' ? '#f97316' : '#6b7280' }}
-                        >
-                          {getRoleLabel(u.role)}
-                        </span>
-                      </td>
-                      <td data-label="Acciones">
-                        <div className="admin-actions">
-                          <Link to="/adminPanel/gestionUsuario/modificarUsuario"
-                            state={{ user: u }}
-                            className="admin-action-btn"
-                            title="Editar usuario"
+                (() => {
+                  const total = filteredUsers.length;
+                  const totalPages = Math.max(1, Math.ceil(total / itemsPerPage));
+                  const start = (page - 1) * itemsPerPage;
+                  const slice = filteredUsers.slice(start, start + itemsPerPage);
+                  return slice.map(u => {
+                    const estado = getEstadoLabel(u.status);
+                    return (
+                      <tr key={u._id}>
+                        <td data-label="Nombre">{u.firstName}</td>
+                        <td data-label="Apellido">{u.lastName}</td>
+                        <td data-label="Email">{u.email}</td>
+                        <td data-label="DNI">{u.documentNumber}</td>
+                        <td data-label="Estado">
+                          <span 
+                            className="inline-block px-3 py-1 rounded-full text-white text-xs font-medium text-center"
+                            style={{ minWidth: '110px', backgroundColor: 
+                              estado.color === 'bg-green-500' ? '#10b981' : 
+                              estado.color === 'bg-yellow-400' ? '#facc15' : '#ef4444' }}
                           >
-                            📝
-                          </Link>
-                          <button 
-                            className="admin-action-btn" 
-                            title="Eliminar usuario" 
-                            onClick={() => openDeleteModal(u)}
+                            {estado.label}
+                          </span>
+                        </td>
+                        <td data-label="Fecha">{formatDate(u.createdAt)}</td>
+                        <td data-label="Tipo">
+                          <span 
+                            className="inline-block px-3 py-1 rounded-full text-white text-xs font-medium text-center"
+                            style={{ minWidth: '110px', backgroundColor: getRoleColor(u.role) === 'bg-green-500' ? '#10b981' :
+                                     getRoleColor(u.role) === 'bg-purple-500' ? '#a855f7' :
+                                     getRoleColor(u.role) === 'bg-blue-500' ? '#3b82f6' :
+                                     getRoleColor(u.role) === 'bg-orange-500' ? '#f97316' : '#6b7280' }}
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="black">
-                              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                              <circle cx="17" cy="17" r="5" fill="black"/>
-                              <path d="M14.5 14.5l5 5M19.5 14.5l-5 5" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-                            </svg>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })
+                            {getRoleLabel(u.role)}
+                          </span>
+                        </td>
+                        <td data-label="Acciones">
+                          <div className="admin-actions">
+                            <Link to="/adminPanel/gestionUsuario/modificarUsuario"
+                              state={{ user: u }}
+                              className="admin-action-btn"
+                              title="Editar usuario"
+                            >
+                              📝
+                            </Link>
+                            <button 
+                              className="admin-action-btn" 
+                              title="Eliminar usuario" 
+                              onClick={() => openDeleteModal(u)}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="black">
+                                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                                <circle cx="17" cy="17" r="5" fill="black"/>
+                                <path d="M14.5 14.5l5 5M19.5 14.5l-5 5" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })
+                })()
               )}
             </tbody>
           </table>
         </div>
         
         {/* Paginación */}
-        <div className="admin-pagination">
-          <span className="admin-pagination-text">Anterior</span>
-          <button className="admin-page-btn active">1</button>
-          <button className="admin-page-btn">2</button>
-          <button className="admin-page-btn">3</button>
-          <span className="admin-pagination-text">Siguiente</span>
-        </div>
+        {filteredUsers.length > itemsPerPage && (
+          <div className="admin-pagination">
+            <button
+              className="admin-pagination-text"
+              onClick={() => setPage(prev => Math.max(1, prev - 1))}
+              disabled={page === 1}
+            >
+              Anterior
+            </button>
+            {Array.from({ length: Math.max(1, Math.ceil(filteredUsers.length / itemsPerPage)) }).map((_, i) => (
+              <button
+                key={i}
+                className={`admin-page-btn ${page === i + 1 ? 'active' : ''}`}
+                onClick={() => setPage(i + 1)}
+              >
+                {i + 1}
+              </button>
+            ))}
+            <button
+              className="admin-pagination-text"
+              onClick={() => setPage(prev => Math.min(Math.max(1, Math.ceil(filteredUsers.length / itemsPerPage)), prev + 1))}
+              disabled={page === Math.max(1, Math.ceil(filteredUsers.length / itemsPerPage))}
+            >
+              Siguiente
+            </button>
+          </div>
+        )}
       </section>
         <Outlet />
         </div>

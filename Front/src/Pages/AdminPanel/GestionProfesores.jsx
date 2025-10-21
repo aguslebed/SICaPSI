@@ -375,7 +375,13 @@ export default function GestionProfesores() {
           </table>
 
           <div className="admin-pagination">
-            <span className="admin-pagination-text">Anterior</span>
+            <button
+              className="admin-pagination-text"
+              onClick={() => setPage(prev => Math.max(1, prev - 1))}
+              disabled={page === 1}
+            >
+              Anterior
+            </button>
             {[...Array(pages)].map((_, i) => (
               <button
                 key={i}
@@ -385,7 +391,13 @@ export default function GestionProfesores() {
                 {i + 1}
               </button>
             ))}
-            <span className="admin-pagination-text">Siguiente</span>
+            <button
+              className="admin-pagination-text"
+              onClick={() => setPage(prev => Math.min(pages, prev + 1))}
+              disabled={page === pages}
+            >
+              Siguiente
+            </button>
           </div>
         </div>
       </section>

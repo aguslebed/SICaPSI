@@ -754,7 +754,6 @@ export default function ModalShowcase() {
         confirmLabel="Eliminar"
         cancelLabel="Cancelar"
         onConfirm={() => {
-          console.log('Acción confirmada');
           setShowConfirm(false);
         }}
       />
@@ -779,7 +778,7 @@ export default function ModalShowcase() {
           onClose={() => setShowImageCrop(false)}
           imageSrc={cropImage}
           onCropComplete={(blob) => {
-            console.log('Imagen recortada:', blob);
+            // handled in demo: image cropped
             setShowImageCrop(false);
           }}
         />

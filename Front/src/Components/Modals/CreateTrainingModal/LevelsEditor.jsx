@@ -27,13 +27,7 @@ export default function LevelsEditor(props) {
     onBibliographyTempChange // Nueva prop para pasar valores temporales al preview
   } = props;
 
-  // Log para debug
-  React.useEffect(() => {
-    if (levels && levels[selectedLevel]) {
-      console.log(`🔍 LevelsEditor - Nivel ${selectedLevel} bibliografía:`, levels[selectedLevel].bibliography);
-      console.log(`🔍 LevelsEditor - Nivel ${selectedLevel} completo:`, levels[selectedLevel]);
-    }
-  }, [levels, selectedLevel]);
+  // (Removed debug logs) - previously logged level data for debugging
 
   return (
     <div className="p-2 md:p-3 bg-white">

@@ -23,7 +23,7 @@ const UserSchema = new mongoose.Schema({
   areaCode: { type: String, required: true },
   phone: { type: String, required: true },
   password: { type: String, required: true },
-  role: { type: String, enum: ["Administrador", "Capacitador", "Directivo", "Alumno", "Guardia"], default: "Guardia", required: true },
+  role: { type: String, enum: ["Administrador", "Capacitador", "Directivo", "Alumno"], default: "Alumno", required: true },
   // CAMBIO: Campo agregado para manejar el estado de usuarios
   // Permite manejar aprobación de usuarios y disponibilidad
   status: { type: String, enum: ["available", "disabled", "pendiente"], default: "pendiente" },

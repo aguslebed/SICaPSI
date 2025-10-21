@@ -333,9 +333,8 @@ export default function GestionCapacitacion() {
       // Limpiar estado anterior primero
       setEditingTraining(null);
       
-      // Obtener datos frescos del backend
-      const trainingData = await getTrainingById(trainingId);
-      console.log('Datos de capacitación cargados:', trainingData);
+  // Obtener datos frescos del backend
+  const trainingData = await getTrainingById(trainingId);
       
       setEditingTraining(trainingData);
       setOpenCreateTraining(true);

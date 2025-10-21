@@ -384,15 +384,15 @@ export async function getAllUsers() {
 }
 
 // Obtener solo guardias para inscripción en capacitaciones
-export async function getStudents() {
+export async function getStudents(role = 'Alumno') {
   try {
-    // Solo filtrar por rol Guardia, permitir todos los status
-    const { data } = await api.get("/users?role=Guardia");
+    // Filtrar por rol (por defecto 'Alumno'). Antes se usaba 'Guardia'.
+    const { data } = await api.get(`/users?role=${encodeURIComponent(role)}`);
     return Array.isArray(data) ? data : (data?.items || []);
   } catch (error) {
-    console.error("Error obteniendo guardias:", error);
+    console.error("Error obteniendo usuarios por rol:", error);
     if (error.response) {
-      throw new Error(error.response.data?.message || 'Error al obtener guardias');
+      throw new Error(error.response.data?.message || 'Error al obtener usuarios');
     } else if (error.request) {
       throw new Error('Error de conexión con el servidor');
     } else {

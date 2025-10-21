@@ -13,7 +13,7 @@ export default function AdminPanel() {
   const navigate = useNavigate();
   const options = [
     {
-      title: "Admision de Usuarios",
+      title: "Admisión de Usuarios",
       link: "adminPanel/admisionUsuario",
       isImage: true,
       image: admisionImg,
@@ -47,7 +47,7 @@ export default function AdminPanel() {
       },
     },
     {
-      title: "Gestión de Capacitacion",
+      title: "Gestión de Capacitación",
       link: "/adminPanel/gestionCapacitacion",
       isImage: true,
       image: cursoImg,
