@@ -73,7 +73,7 @@ export class UserService extends IUserService {
     // Compañeros: estudiantes que comparten al menos un training del scope
     const classmates = await this.User.find({
       _id: { $ne: senderId },
-      role: 'Student',
+      role: 'Alumno',
       assignedTraining: { $in: trainingScope }
     }).select('firstName lastName email role assignedTraining').lean();
 
