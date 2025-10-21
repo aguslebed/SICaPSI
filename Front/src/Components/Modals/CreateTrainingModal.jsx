@@ -609,7 +609,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
     setAppliedFilter('');
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     // 1. Validar datos básicos SIEMPRE (requeridos para guardar)
     const imageValue = typeof image === 'string' ? image.trim() : image;
     const basicErrors = [];
@@ -715,10 +715,20 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
       ) || []
     }));
     
-    if (onSave) onSave(payload, cleanedLevels, additionalData); // Enviamos los niveles limpios y datos adicionales por separado
-    
-    // Mostrar modal de éxito
-    setShowSuccessModal(true);
+    if (onSave) {
+      try {
+        // Esperar a que la operación del padre (crear/actualizar) termine
+        await onSave(payload, cleanedLevels, additionalData);
+
+        // Mostrar modal de éxito SOLO si la operación fue exitosa
+        setShowSuccessModal(true);
+      } catch (err) {
+        // Si ocurre un error, no mostrar el modal de éxito.
+        // El componente padre (p. ej. Gestión) ya muestra su propio modal de error,
+        // así que aquí solo evitamos mostrar éxito prematuro.
+        console.warn('CreateTrainingModal: onSave falló:', err);
+      }
+    }
   };
 
   return (

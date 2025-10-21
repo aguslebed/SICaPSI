@@ -285,6 +285,9 @@ export default function GestionCapacitacion() {
       setErrorModalTitle(isEditing ? 'No se puede actualizar la capacitación' : 'No se puede crear la capacitación');
       setErrorModalMessageText('Revise los siguientes detalles e intente nuevamente:');
       setShowErrorModal(true);
+      // Propagar el error al llamador (p. ej. CreateTrainingModal) para que
+      // pueda decidir no mostrar su modal de éxito cuando la operación falla.
+      throw error;
     } finally {
       setLoading(false);
     }
