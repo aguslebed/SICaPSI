@@ -23,7 +23,7 @@ export default function Statistics() {
                         letterSpacing: '0.05em'
                     }}
                 >
-                    En desarrollo
+                    A desarrollar
                 </span>
             </div>
         </div>
