@@ -1,17 +1,17 @@
 import React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import NavBar from '../Components/Student/NavBar';
-import StudentSideBar from '../Components/Student/SideBar';
+import TrainerSideBar from '../Components/Trainer/sideBar';
 
-export default function StudentLayout() {
+export default function TrainerLayout() {
   const location = useLocation();
   // Normalize pathname (remove trailing slash) and detect the index route for userPanel.
   const pathname = location.pathname.replace(/\/$/, '');
-  const isUserPanelIndex = pathname === '/userPanel';
-  const isMessagesRoute = pathname.startsWith('/userPanel') && pathname.includes('/messages');
+  const isUserPanelIndex = pathname === '/trainer';
+  const isMessagesRoute = pathname.startsWith('/trainer') && pathname.includes('/messages');
 
-  // StudentLayout always shows the StudentSideBar
-  const SideBarComponent = StudentSideBar;
+  // TrainerLayout always shows the TrainerSideBar
+  const SideBarComponent = TrainerSideBar;
 
   return (
     <>

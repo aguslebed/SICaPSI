@@ -9,7 +9,7 @@ export class EnrollmentService extends IEnrollmentService {
  //Inscribir alumno en la capacitacion
   async enrollUserToTraining(userId, trainingId) {
     const user = await this.user.findById(userId);
-
+    
     if (!user) throw new Error("Alumno no encontrado");
 
     const training = await this.training.findById(trainingId);
@@ -62,7 +62,7 @@ export class EnrollmentService extends IEnrollmentService {
   async getUserEnrollments(userId) {
     const user = await this.user.findByIdWithTrainings(userId);
     if (!user) throw new Error("Usuario no encontrado");
-
+    
     return user.assignedTraining;
   }
 
@@ -70,8 +70,9 @@ export class EnrollmentService extends IEnrollmentService {
   async getUsersEnrolledInTraining(trainingId) {
 
     const training = await this.training.findById(trainingId);
+    
     if (!training) throw new Error("Capacitacion no encontrado");
-
+    
     const users = await this.user.find({
       role: "Alumno",
       assignedTraining: trainingId

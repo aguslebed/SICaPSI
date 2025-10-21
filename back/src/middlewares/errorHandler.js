@@ -18,14 +18,18 @@
  */
 export const errorHandler = (err, req, res, next) => {
   console.error(`Error en ${req.method} ${req.path}:`, err?.stack || err);
+  // Log details if any (validation arrays, etc.)
+  if (err?.details && Array.isArray(err.details) && err.details.length) {
+    console.error('Error details:', JSON.stringify(err.details, null, 2));
+  }
 
   const statusCode = err.statusCode || 500;
   const message = err.message || "Error interno del servidor";
-  const details = err.details || null;
+  const details = (err.details && err.details.length) ? err.details : null;
 
   res.status(statusCode).json({
     success: false,
-    code: statusCode,
+    code: err.code || statusCode,
     message,
     details
   });
