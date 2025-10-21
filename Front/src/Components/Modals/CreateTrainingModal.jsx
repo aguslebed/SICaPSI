@@ -31,7 +31,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
   const [teachers, setTeachers] = useState([]);
   const [loadingTeachers, setLoadingTeachers] = useState(false);
   
-  // Estados para inscripción de guardias
+  // Estados para inscripción de Alumnos
   const [students, setStudents] = useState([]);
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
@@ -242,14 +242,10 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
   const handleIsActiveChange = (checked) => {
     // Si está intentando activar (checked === true)
     if (checked) {
-      // Debug: Ver estructura de datos antes de validar
-      console.log('🔍 Validando capacitación...');
-      console.log('📊 Estructura completa de levels:', JSON.stringify(levels, null, 2));
-      
+      // Validar antes de activar (logs removed)
       const validation = validateTrainingForActivation();
-      
+
       if (!validation.isValid) {
-        console.log('❌ Errores encontrados:', validation.errors);
         // Mostrar modal de errores
         setErrorMessages(validation.errors);
         setErrorModalTitle('No se puede habilitar la capacitación');
@@ -258,8 +254,6 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
         // No activar
         return;
       }
-      
-      console.log('✅ Validación exitosa - activando capacitación');
     }
     
     // Si la validación pasa o está desactivando, actualizar el estado
@@ -349,8 +343,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
   // Efecto para cargar datos cuando está editando
   useEffect(() => {
     if (editingTraining && open) {
-      console.log('📝 Cargando datos de capacitación para edición:', editingTraining);
-      
+      // Cargando datos de capacitación para edición
       // Cargar datos del training
       setTitle(editingTraining.title || '');
       setSubtitle(editingTraining.subtitle || '');
@@ -363,23 +356,14 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
       
       // Cargar niveles si existen
       if (editingTraining.levels && editingTraining.levels.length > 0) {
-        console.log('📚 Cargando niveles:', editingTraining.levels.length);
-        console.log('📦 Datos completos de niveles:', JSON.stringify(editingTraining.levels, null, 2));
+        // Cargar y normalizar niveles
         setLevels(editingTraining.levels.map((level, idx) => {
-          console.log(`📖 Nivel ${idx + 1} - Bibliografía RAW:`, level.bibliography);
-          console.log(`📖 Nivel ${idx + 1} - Level completo:`, level);
-          
-          const bibliographyData = level.bibliography ? level.bibliography.map(bibItem => {
-            console.log('📄 Item de bibliografía:', bibItem);
-            return {
-              title: bibItem.title || '',
-              description: bibItem.description || '',
-              // Compatibilidad con datos legacy que podrían tener videoUrl en lugar de url
-              url: bibItem.url || bibItem.videoUrl || ''
-            };
-          }) : [];
-          
-          console.log(`✅ Bibliografía procesada para nivel ${idx + 1}:`, bibliographyData);
+          const bibliographyData = level.bibliography ? level.bibliography.map(bibItem => ({
+            title: bibItem.title || '',
+            description: bibItem.description || '',
+            // Compatibilidad con datos legacy que podrían tener videoUrl en lugar de url
+            url: bibItem.url || bibItem.videoUrl || ''
+          })) : [];
           
           return {
             levelNumber: level.levelNumber,
@@ -411,7 +395,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
       // Cargar report si existe
       setReport(editingTraining.report || []);
       
-      // Cargar guardias inscritos si existe el ID del training
+      // Cargar Alumnos inscritos si existe el ID del training
       if (editingTraining._id) {
         loadEnrolledStudents(editingTraining._id);
       }
@@ -445,11 +429,11 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
       }]);
       setReport([]);
       setSelectedLevel(0);
-      setSelectedStudents([]); // Limpiar guardias seleccionados para nuevo training
+      setSelectedStudents([]); // Limpiar Alumnos seleccionados para nuevo training
     }
   }, [editingTraining, open]);
 
-  // Efecto para cargar guardias cuando se abre el modal
+  // Efecto para cargar Alumnos cuando se abre el modal
   useEffect(() => {
     if (open) {
       loadStudents();
@@ -465,8 +449,8 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
 
       setStudents(studentsData);
     } catch (error) {
-      console.error('❌ Error cargando guardias:', error);
-      setWarningMessage('Error al cargar la lista de guardias');
+      console.error('❌ Error cargando Alumnos:', error);
+      setWarningMessage('Error al cargar la lista de Alumnos');
       setShowWarningModal(true);
     } finally {
       setLoadingStudents(false);
@@ -504,7 +488,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
 
       setSelectedStudents(enrolledIds);
     } catch (error) {
-      console.error('Error cargando guardias inscritos:', error);
+      console.error('Error cargando Alumnos inscritos:', error);
       // No mostrar alert aquí para no interrumpir la carga del modal
     }
   };
@@ -569,7 +553,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
     });
   };
 
-  // Funciones para manejar selección de guardias
+  // Funciones para manejar selección de Alumnos
   const handleStudentSelection = (studentId, isSelected) => {
     setSelectedStudents(prev => {
       if (isSelected) {
@@ -609,7 +593,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
     setAppliedFilter('');
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     // 1. Validar datos básicos SIEMPRE (requeridos para guardar)
     const imageValue = typeof image === 'string' ? image.trim() : image;
     const basicErrors = [];
@@ -715,10 +699,20 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
       ) || []
     }));
     
-    if (onSave) onSave(payload, cleanedLevels, additionalData); // Enviamos los niveles limpios y datos adicionales por separado
-    
-    // Mostrar modal de éxito
-    setShowSuccessModal(true);
+    if (onSave) {
+      try {
+        // Esperar a que la operación del padre (crear/actualizar) termine
+        await onSave(payload, cleanedLevels, additionalData);
+
+        // Mostrar modal de éxito SOLO si la operación fue exitosa
+        setShowSuccessModal(true);
+      } catch (err) {
+        // Si ocurre un error, no mostrar el modal de éxito.
+        // El componente padre (p. ej. Gestión) ya muestra su propio modal de error,
+        // así que aquí solo evitamos mostrar éxito prematuro.
+        console.warn('CreateTrainingModal: onSave falló:', err);
+      }
+    }
   };
 
   return (
@@ -855,7 +849,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
                   <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                   </svg>
-                  <span>Guardias</span>
+                  <span>Alumnos</span>
                   <span className="inline-flex items-center justify-center min-w-[18px] md:min-w-[20px] h-4 md:h-5 px-1 md:px-1.5 bg-green-600 text-white rounded-full text-[10px] md:text-xs font-semibold">
                     {selectedStudents.length}
                   </span>

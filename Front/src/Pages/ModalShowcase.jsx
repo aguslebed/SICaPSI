@@ -104,11 +104,32 @@ export default function ModalShowcase() {
                 </div>
               </div>
               <p className="text-sm text-gray-600 mb-3 leading-relaxed">
-                Modal rojo para mostrar lista de errores de validación. Usado cuando no se puede activar una capacitación.
+                Modal rojo para mostrar una lista de errores de validación.
+                Muestra una lista scrolleable y un único botón para cerrar.
               </p>
-              <div className="bg-red-50 rounded-lg p-2.5 mb-4 border border-red-200">
+              <div className="bg-red-50 rounded-lg p-3 mb-4 border border-red-200">
                 <p className="text-xs text-red-800 font-medium">🎨 Color: Rojo (#EF4444)</p>
                 <p className="text-xs text-red-800 mt-1">📋 Lista scrolleable de errores</p>
+
+                <div className="mt-3 text-left">
+                  <p className="text-xs font-semibold text-gray-700">Usado en:</p>
+                  <ul className="text-xs text-gray-600 ml-4 list-disc">
+                    <li><code>Front/src/Components/Modals/CreateTrainingModal.jsx</code></li>
+                    <li><code>Front/src/Pages/AdminPanel/GestionCapacitacion.jsx</code></li>
+                    <li><code>Front/src/Pages/ModalShowcase.jsx</code> (demo)</li>
+                  </ul>
+
+                  <p className="text-xs font-semibold text-gray-700 mt-2">Props</p>
+                  <ul className="text-xs text-gray-600 ml-4 list-disc">
+                    <li><strong>show</strong> (boolean) — controla visibilidad</li>
+                    <li><strong>onClose</strong> (function) — callback al cerrar</li>
+                    <li><strong>errors</strong> (string[]) — lista de mensajes</li>
+                    <li><strong>title</strong> (string, opcional) — título del modal</li>
+                    <li><strong>messageText</strong> (string, opcional) — texto descriptivo principal</li>
+                  </ul>
+                  <p className="text-xs font-semibold text-gray-700 mt-2">Cómo usar</p>
+                  <pre className="text-xs bg-gray-100 p-2 rounded mt-1 overflow-x-auto"><code>{`<ErrorListModal show={open} errors={errors} title="Mi título" messageText="Mi mensaje" />`}</code></pre>
+                </div>
               </div>
               <button
                 onClick={() => setShowErrorList(true)}
@@ -138,11 +159,32 @@ export default function ModalShowcase() {
                 </div>
               </div>
               <p className="text-sm text-gray-600 mb-3 leading-relaxed">
-                Modal verde de éxito. Confirma que la capacitación fue guardada y está habilitada.
+                Modal verde de éxito. Confirma que la capacitación fue guardada y/o habilitada.
+                Se usa tanto para confirmaciones de creación, edición y activación.
               </p>
-              <div className="bg-green-50 rounded-lg p-2.5 mb-4 border border-green-200">
+              <div className="bg-green-50 rounded-lg p-3 mb-4 border border-green-200">
                 <p className="text-xs text-green-800 font-medium">🎨 Color: Verde (#10B981)</p>
-                <p className="text-xs text-green-800 mt-1">✅ Estado: Habilitada</p>
+                <p className="text-xs text-green-800 mt-1">✅ Estado: Éxito / Habilitada</p>
+
+                <div className="mt-3 text-left">
+                  <p className="text-xs font-semibold text-gray-700">Usado en:</p>
+                  <ul className="text-xs text-gray-600 ml-4 list-disc">
+                    <li><code>Front/src/Components/Modals/CreateTrainingModal.jsx</code></li>
+                    <li><code>Front/src/Pages/AdminPanel/GestionCapacitacion.jsx</code></li>
+                    <li><code>Front/src/Pages/ModalShowcase.jsx</code> (demo)</li>
+                  </ul>
+
+                  <p className="text-xs font-semibold text-gray-700 mt-2">Props</p>
+                  <ul className="text-xs text-gray-600 ml-4 list-disc">
+                    <li><strong>show</strong> (boolean)</li>
+                    <li><strong>onClose</strong> (function)</li>
+                    <li><strong>message</strong> (string, opcional) — mensaje personalizado</li>
+                    <li><strong>isEditing</strong> (boolean, opcional) — altera el texto</li>
+                    <li><strong>isActive</strong> (boolean, opcional) — muestra badge de HABILITADA</li>
+                  </ul>
+                <p className="text-xs font-semibold text-gray-700 mt-2">Cómo usar</p>
+                <pre className="text-xs bg-gray-100 p-2 rounded mt-1 overflow-x-auto"><code>{`<SuccessModal show={open} isEditing={false} isActive={true} message="Guardado" />`}</code></pre>
+                </div>
               </div>
               <button
                 onClick={() => setShowSuccessActive(true)}
@@ -153,74 +195,6 @@ export default function ModalShowcase() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
                 <span>SuccessModal.jsx (Activa)</span>
-              </button>
-            </div>
-          </div>
-
-          {/* SuccessModal - Borrador */}
-          <div className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-blue-100 hover:border-blue-300">
-            <div className="p-6">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-base font-bold text-gray-900">SuccessModal</h3>
-                  <p className="text-xs text-gray-500 font-mono">SuccessModal.jsx</p>
-                </div>
-              </div>
-              <p className="text-sm text-gray-600 mb-3 leading-relaxed">
-                Modal verde de éxito. Muestra que la capacitación fue guardada como borrador.
-              </p>
-              <div className="bg-blue-50 rounded-lg p-2.5 mb-4 border border-blue-200">
-                <p className="text-xs text-blue-800 font-medium">🎨 Color: Verde/Azul</p>
-                <p className="text-xs text-blue-800 mt-1">📝 Estado: Borrador</p>
-              </div>
-              <button
-                onClick={() => setShowSuccessDraft(true)}
-                className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors shadow-md hover:shadow-lg cursor-pointer flex items-center justify-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                <span>SuccessModal.jsx (Borrador)</span>
-              </button>
-            </div>
-          </div>
-
-          {/* SuccessModal - Nueva */}
-          <div className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-green-100 hover:border-green-300">
-            <div className="p-6">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                  <svg className="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-base font-bold text-gray-900">SuccessModal</h3>
-                  <p className="text-xs text-gray-500 font-mono">SuccessModal.jsx</p>
-                </div>
-              </div>
-              <p className="text-sm text-gray-600 mb-3 leading-relaxed">
-                Modal verde confirmando la creación de una nueva capacitación habilitada.
-              </p>
-              <div className="bg-green-50 rounded-lg p-2.5 mb-4 border border-green-200">
-                <p className="text-xs text-green-800 font-medium">🎨 Color: Verde (#10B981)</p>
-                <p className="text-xs text-green-800 mt-1">✨ Nueva capacitación</p>
-              </div>
-              <button
-                onClick={() => setShowSuccessNew(true)}
-                className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors shadow-md hover:shadow-lg cursor-pointer flex items-center justify-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                <span>SuccessModal.jsx (Nueva)</span>
               </button>
             </div>
           </div>
@@ -242,9 +216,26 @@ export default function ModalShowcase() {
               <p className="text-sm text-gray-600 mb-3 leading-relaxed">
                 Modal amarillo para advertencias. Usado para validaciones de archivos, tamaños, formatos, etc.
               </p>
-              <div className="bg-yellow-50 rounded-lg p-2.5 mb-4 border border-yellow-200">
+              <div className="bg-yellow-50 rounded-lg p-3 mb-4 border border-yellow-200">
                 <p className="text-xs text-yellow-800 font-medium">🎨 Color: Amarillo (#F59E0B)</p>
                 <p className="text-xs text-yellow-800 mt-1">⚠️ Advertencias no críticas</p>
+
+                <div className="mt-3 text-left">
+                  <p className="text-xs font-semibold text-gray-700">Usado en:</p>
+                  <ul className="text-xs text-gray-600 ml-4 list-disc">
+                    <li><code>Front/src/Components/Modals/CreateTrainingModal.jsx</code></li>
+                    <li><code>Front/src/Pages/AdminPanel/GestionCapacitacion.jsx</code></li>
+                    <li><code>Front/src/Pages/ModalShowcase.jsx</code> (demo)</li>
+                  </ul>
+
+                  <p className="text-xs font-semibold text-gray-700 mt-2">Props</p>
+                  <ul className="text-xs text-gray-600 ml-4 list-disc">
+                    <li><strong>show</strong> (boolean)</li>
+                    <li><strong>onClose</strong> (function)</li>
+                    <li><strong>message</strong> (string)</li>
+                    <li><strong>title</strong> (string, opcional)</li>
+                  </ul>
+                </div>
               </div>
               <button
                 onClick={() => setShowWarning(true)}
@@ -276,9 +267,31 @@ export default function ModalShowcase() {
               <p className="text-sm text-gray-600 mb-3 leading-relaxed">
                 Modal de confirmación para acciones destructivas. Tiene botones de Confirmar y Cancelar.
               </p>
-              <div className="bg-orange-50 rounded-lg p-2.5 mb-4 border border-orange-200">
+              <div className="bg-orange-50 rounded-lg p-3 mb-4 border border-orange-200">
                 <p className="text-xs text-orange-800 font-medium">🎨 Color: Rojo/Gris</p>
                 <p className="text-xs text-orange-800 mt-1">❓ Confirmación de acción</p>
+
+                <div className="mt-3 text-left">
+                  <p className="text-xs font-semibold text-gray-700">Usado en:</p>
+                  <ul className="text-xs text-gray-600 ml-4 list-disc">
+                    <li><code>Front/src/Pages/AdminPanel/GestionCapacitacion.jsx</code></li>
+                    <li><code>Front/src/Components/Mensajeria/BuzonEnviados.jsx</code></li>
+                    <li><code>Front/src/Components/Mensajeria/BuzonEntrada.jsx</code></li>
+                    <li><code>Front/src/Components/Mensajeria/BuzonEliminados.jsx</code></li>
+                    <li><code>Front/src/Pages/ModalShowcase.jsx</code> (demo)</li>
+                  </ul>
+
+                  <p className="text-xs font-semibold text-gray-700 mt-2">Props</p>
+                  <ul className="text-xs text-gray-600 ml-4 list-disc">
+                    <li><strong>open</strong> (boolean)</li>
+                    <li><strong>title</strong> (string) — título del modal</li>
+                    <li><strong>message</strong> (string) — descripción</li>
+                    <li><strong>confirmLabel</strong> (string)</li>
+                    <li><strong>cancelLabel</strong> (string)</li>
+                    <li><strong>onConfirm</strong> (function)</li>
+                    <li><strong>onClose</strong> (function)</li>
+                  </ul>
+                </div>
               </div>
               <button
                 onClick={() => setShowConfirm(true)}
@@ -310,9 +323,25 @@ export default function ModalShowcase() {
               <p className="text-sm text-gray-600 mb-3 leading-relaxed">
                 Modal para errores de validación de formularios. Usado en registro y actualización de usuarios.
               </p>
-              <div className="bg-pink-50 rounded-lg p-2.5 mb-4 border border-pink-200">
+              <div className="bg-pink-50 rounded-lg p-3 mb-4 border border-pink-200">
                 <p className="text-xs text-pink-800 font-medium">🎨 Color: Rosa/Rojo</p>
                 <p className="text-xs text-pink-800 mt-1">📋 Validación de formularios</p>
+
+                <div className="mt-3 text-left">
+                  <p className="text-xs font-semibold text-gray-700">Usado en:</p>
+                  <ul className="text-xs text-gray-600 ml-4 list-disc">
+                    <li><code>Front/src/Pages/Register/Register.jsx</code></li>
+                    <li><code>Front/src/Pages/Register/ActualizarUsuario.jsx</code></li>
+                    <li><code>Front/src/Pages/Login/Login.jsx</code></li>
+                    <li><code>Front/src/Pages/ModalShowcase.jsx</code> (demo)</li>
+                  </ul>
+
+                  <p className="text-xs font-semibold text-gray-700 mt-2">Props</p>
+                  <ul className="text-xs text-gray-600 ml-4 list-disc">
+                    <li><strong>mensaje</strong> (string) — texto a mostrar</li>
+                    <li><strong>onClose</strong> (function)</li>
+                  </ul>
+                </div>
               </div>
               <button
                 onClick={() => setShowValidationError(true)}
@@ -347,6 +376,25 @@ export default function ModalShowcase() {
               <div className="bg-red-50 rounded-lg p-2.5 mb-4 border border-red-200">
                 <p className="text-xs text-red-800 font-medium">🎨 Color: Rojo (#EF4444)</p>
                 <p className="text-xs text-red-800 mt-1">❌ Error genérico</p>
+                <div className="mt-3 text-left">
+                  <p className="text-xs font-semibold text-gray-700">Usado en:</p>
+                  <ul className="text-xs text-gray-600 ml-4 list-disc">
+                    <li><code>Front/src/Components/Mensajeria/BuzonSalida.jsx</code></li>
+                    <li><code>Front/src/Components/Mensajeria/BuzonEnviados.jsx</code></li>
+                    <li><code>Front/src/Components/Mensajeria/BuzonEntrada.jsx</code></li>
+                    <li><code>Front/src/Components/Mensajeria/BuzonEliminados.jsx</code></li>
+                    <li><code>Front/src/Pages/ModalShowcase.jsx</code> (demo)</li>
+                  </ul>
+
+                  <p className="text-xs font-semibold text-gray-700 mt-2">Props</p>
+                  <ul className="text-xs text-gray-600 ml-4 list-disc">
+                    <li><strong>mensaje</strong> (string) — texto a mostrar</li>
+                    <li><strong>onClose</strong> (function) — callback al cerrar</li>
+                  </ul>
+
+                  <p className="text-xs font-semibold text-gray-700 mt-2">Cómo usar</p>
+                  <pre className="text-xs bg-gray-100 p-2 rounded mt-1 overflow-x-auto"><code>{`<ErrorModal mensaje="Ocurrió un error" onClose={() => setError(null)} />`}</code></pre>
+                </div>
               </div>
               <button
                 onClick={() => setShowError(true)}
@@ -381,6 +429,24 @@ export default function ModalShowcase() {
               <div className="bg-sky-50 rounded-lg p-2.5 mb-4 border border-sky-200">
                 <p className="text-xs text-sky-800 font-medium">🎨 Color: Azul cielo</p>
                 <p className="text-xs text-sky-800 mt-1">✂️ Editor de imágenes</p>
+                <div className="mt-3 text-left">
+                  <p className="text-xs font-semibold text-gray-700">Usado en:</p>
+                  <ul className="text-xs text-gray-600 ml-4 list-disc">
+                    <li><code>Front/src/Components/Modals/ProfilePreferencesModal.jsx</code></li>
+                    <li><code>Front/src/Pages/ModalShowcase.jsx</code> (demo)</li>
+                  </ul>
+
+                  <p className="text-xs font-semibold text-gray-700 mt-2">Props</p>
+                  <ul className="text-xs text-gray-600 ml-4 list-disc">
+                    <li><strong>open</strong> (boolean)</li>
+                    <li><strong>onClose</strong> (function)</li>
+                    <li><strong>imageSrc</strong> (string) — URL o base64 de la imagen</li>
+                    <li><strong>onCropComplete</strong> (function) — recibe blob o dataURL</li>
+                  </ul>
+
+                  <p className="text-xs font-semibold text-gray-700 mt-2">Cómo usar</p>
+                  <pre className="text-xs bg-gray-100 p-2 rounded mt-1 overflow-x-auto"><code>{`<ImageCropModal open={open} imageSrc={url} onCropComplete={(blob) => {}} onClose={() => setOpen(false)} />`}</code></pre>
+                </div>
               </div>
               <button
                 onClick={() => setShowImageCrop(true)}
@@ -415,6 +481,24 @@ export default function ModalShowcase() {
               <div className="bg-emerald-50 rounded-lg p-2.5 mb-4 border border-emerald-200">
                 <p className="text-xs text-emerald-800 font-medium">🎨 Color: Verde/Rojo</p>
                 <p className="text-xs text-emerald-800 mt-1">👤 Registro exitoso</p>
+                <div className="mt-3 text-left">
+                  <p className="text-xs font-semibold text-gray-700">Usado en:</p>
+                  <ul className="text-xs text-gray-600 ml-4 list-disc">
+                    <li><code>Front/src/Pages/Register/Register.jsx</code></li>
+                    <li><code>Front/src/Pages/Register/ActualizarUsuario.jsx</code></li>
+                    <li><code>Front/src/Pages/ModalShowcase.jsx</code> (demo)</li>
+                  </ul>
+
+                  <p className="text-xs font-semibold text-gray-700 mt-2">Props</p>
+                  <ul className="text-xs text-gray-600 ml-4 list-disc">
+                    <li><strong>codigo</strong> (number) — código HTTP o indicador</li>
+                    <li><strong>mensaje</strong> (string) — texto a mostrar</li>
+                    <li><strong>onClose</strong> (function)</li>
+                  </ul>
+
+                  <p className="text-xs font-semibold text-gray-700 mt-2">Cómo usar</p>
+                  <pre className="text-xs bg-gray-100 p-2 rounded mt-1 overflow-x-auto"><code>{`<RegisterModal codigo={201} mensaje="Registro exitoso" onClose={() => setShow(false)} />`}</code></pre>
+                </div>
               </div>
               <button
                 onClick={() => setShowRegisterSuccess(true)}
@@ -449,6 +533,23 @@ export default function ModalShowcase() {
               <div className="bg-rose-50 rounded-lg p-2.5 mb-4 border border-rose-200">
                 <p className="text-xs text-rose-800 font-medium">🎨 Color: Rojo</p>
                 <p className="text-xs text-rose-800 mt-1">👤 Error de registro</p>
+                <div className="mt-3 text-left">
+                  <p className="text-xs font-semibold text-gray-700">Usado en:</p>
+                  <ul className="text-xs text-gray-600 ml-4 list-disc">
+                    <li><code>Front/src/Pages/Register/Register.jsx</code></li>
+                    <li><code>Front/src/Pages/Register/ActualizarUsuario.jsx</code></li>
+                  </ul>
+
+                  <p className="text-xs font-semibold text-gray-700 mt-2">Props</p>
+                  <ul className="text-xs text-gray-600 ml-4 list-disc">
+                    <li><strong>codigo</strong> (number)</li>
+                    <li><strong>mensaje</strong> (string)</li>
+                    <li><strong>onClose</strong> (function)</li>
+                  </ul>
+
+                  <p className="text-xs font-semibold text-gray-700 mt-2">Cómo usar</p>
+                  <pre className="text-xs bg-gray-100 p-2 rounded mt-1 overflow-x-auto"><code>{`<RegisterModal codigo={400} mensaje="Email ya registrado" onClose={() => setShow(false)} />`}</code></pre>
+                </div>
               </div>
               <button
                 onClick={() => setShowRegisterError(true)}
@@ -484,6 +585,26 @@ export default function ModalShowcase() {
               <div className="bg-teal-50 rounded-lg p-2.5 mb-4 border border-teal-200">
                 <p className="text-xs text-teal-800 font-medium">🎨 Color: Verde</p>
                 <p className="text-xs text-teal-800 mt-1">✉️ Mensaje enviado</p>
+                <div className="mt-3 text-left">
+                  <p className="text-xs font-semibold text-gray-700">Usado en:</p>
+                  <ul className="text-xs text-gray-600 ml-4 list-disc">
+                    <li><code>Front/src/Pages/UserPanel/Student/Mensajeria.jsx</code></li>
+                    <li><code>Front/src/Components/Mensajeria/BuzonEnviados.jsx</code></li>
+                    <li><code>Front/src/Components/Mensajeria/BuzonEntrada.jsx</code></li>
+                    <li><code>Front/src/Components/Mensajeria/BuzonSalida.jsx</code></li>
+                    <li><code>Front/src/Pages/ModalShowcase.jsx</code> (demo)</li>
+                  </ul>
+
+                  <p className="text-xs font-semibold text-gray-700 mt-2">Props</p>
+                  <ul className="text-xs text-gray-600 ml-4 list-disc">
+                    <li><strong>titulo</strong> (string) — título a mostrar</li>
+                    <li><strong>mensaje</strong> (string) — texto descriptivo</li>
+                    <li><strong>onClose</strong> (function)</li>
+                  </ul>
+
+                  <p className="text-xs font-semibold text-gray-700 mt-2">Cómo usar</p>
+                  <pre className="text-xs bg-gray-100 p-2 rounded mt-1 overflow-x-auto"><code>{`<SucessModal titulo="Mensaje enviado" mensaje="Tu mensaje se envió correctamente" onClose={() => setShow(false)} />`}</code></pre>
+                </div>
               </div>
               <button
                 onClick={() => setShowSucessModal(true)}
@@ -518,6 +639,22 @@ export default function ModalShowcase() {
               <div className="bg-red-50 rounded-lg p-2.5 mb-4 border border-red-200">
                 <p className="text-xs text-red-800 font-medium">🎨 Color: Rojo/Verde</p>
                 <p className="text-xs text-red-800 mt-1">🔒 Error de autenticación</p>
+                <div className="mt-3 text-left">
+                  <p className="text-xs font-semibold text-gray-700">Usado en:</p>
+                  <ul className="text-xs text-gray-600 ml-4 list-disc">
+                    <li><code>Front/src/Pages/Login/Login.jsx</code></li>
+                    <li><code>Front/src/Pages/ModalShowcase.jsx</code> (demo)</li>
+                  </ul>
+
+                  <p className="text-xs font-semibold text-gray-700 mt-2">Props</p>
+                  <ul className="text-xs text-gray-600 ml-4 list-disc">
+                    <li><strong>mensaje</strong> (string)</li>
+                    <li><strong>onClose</strong> (function)</li>
+                  </ul>
+
+                  <p className="text-xs font-semibold text-gray-700 mt-2">Cómo usar</p>
+                  <pre className="text-xs bg-gray-100 p-2 rounded mt-1 overflow-x-auto"><code>{`<AuthErrorModal mensaje="Credenciales inválidas" onClose={() => setShow(false)} />`}</code></pre>
+                </div>
               </div>
               <button
                 onClick={() => setShowAuthError(true)}
@@ -566,17 +703,22 @@ export default function ModalShowcase() {
       </div>
 
       {/* Render de todos los modales */}
+      {/* Ejemplo de uso: ErrorListModal */}
       <ErrorListModal
         show={showErrorList}
         onClose={() => setShowErrorList(false)}
         errors={sampleErrors}
+        title={"No se puede completar la acción"}
+        messageText={"Revise los siguientes requisitos:"}
       />
 
+      {/* Ejemplo de uso: SuccessModal */}
       <SuccessModal
         show={showSuccessActive}
         onClose={() => setShowSuccessActive(false)}
         isEditing={true}
         isActive={true}
+        message={"La capacitación fue guardada y habilitada correctamente."}
       />
 
       <SuccessModal
@@ -584,6 +726,7 @@ export default function ModalShowcase() {
         onClose={() => setShowSuccessDraft(false)}
         isEditing={true}
         isActive={false}
+        message={"La capacitación se guardó como borrador."}
       />
 
       <SuccessModal
@@ -591,8 +734,10 @@ export default function ModalShowcase() {
         onClose={() => setShowSuccessNew(false)}
         isEditing={false}
         isActive={true}
+        message={"Nueva capacitación creada y habilitada."}
       />
 
+      {/* Ejemplo de uso: WarningModal */}
       <WarningModal
         show={showWarning}
         onClose={() => setShowWarning(false)}
@@ -600,15 +745,15 @@ export default function ModalShowcase() {
         title="Archivo demasiado grande"
       />
 
+      {/* Ejemplo de uso: ConfirmActionModal */}
       <ConfirmActionModal
         open={showConfirm}
         onClose={() => setShowConfirm(false)}
         title="¿Eliminar capacitación?"
-        message="Esta acción eliminará permanentemente la capacitación y todos sus niveles asociados. Los estudiantes inscritos perderán el acceso. Esta operación no se puede deshacer."
+        message="Esta acción eliminará permanentemente la capacitación y todos sus niveles asociados."
         confirmLabel="Eliminar"
         cancelLabel="Cancelar"
         onConfirm={() => {
-          console.log('Acción confirmada');
           setShowConfirm(false);
         }}
       />
@@ -633,7 +778,7 @@ export default function ModalShowcase() {
           onClose={() => setShowImageCrop(false)}
           imageSrc={cropImage}
           onCropComplete={(blob) => {
-            console.log('Imagen recortada:', blob);
+            // handled in demo: image cropped
             setShowImageCrop(false);
           }}
         />

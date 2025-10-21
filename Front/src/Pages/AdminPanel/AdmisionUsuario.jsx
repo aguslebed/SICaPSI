@@ -16,6 +16,9 @@ export default function AdmisionUsuario() {
   const location = useLocation();
   const [data, setData] = useState(location.state?.data || []);
   const [filteredData, setFilteredData] = useState([]);
+  // Paginación
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 10;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -150,6 +153,8 @@ export default function AdmisionUsuario() {
     }
 
     setFilteredData(datosFiltrados);
+    // Resetear página cuando cambian los datos o filtros
+    setPage(1);
   }, [data, busqueda, tipo, fechaDesde, fechaHasta]);
 
   // Función para aplicar filtros (ya se aplican automáticamente con useEffect)
@@ -239,6 +244,12 @@ export default function AdmisionUsuario() {
       }}
     />
   );
+
+  // Computos de paginación derivados
+  const totalFiltered = filteredData.length;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / itemsPerPage));
+  const startIndex = (page - 1) * itemsPerPage;
+  const pageSlice = filteredData.slice(startIndex, startIndex + itemsPerPage);
 
   return (
     <>
@@ -399,7 +410,7 @@ export default function AdmisionUsuario() {
                       </td>
                     </tr>
                   ) : (
-                    filteredData.map((u, idx) => (
+                    pageSlice.map((u, idx) => (
                       <tr key={u.id || idx}>
                         <td data-label="Nombre">{u.nombre}</td>
                         <td data-label="Apellido">{u.apellido}</td>
@@ -453,14 +464,34 @@ export default function AdmisionUsuario() {
             )}
           </div>
 
-            {/* Paginación */}
-            <div className="admin-pagination">
-              <span className="admin-pagination-text">Anterior</span>
-              <button className="admin-page-btn active">1</button>
-              <button className="admin-page-btn">2</button>
-              <button className="admin-page-btn">3</button>
-              <span className="admin-pagination-text">Siguiente</span>
-            </div>
+            {/* Paginación (debajo de la tabla) */}
+            {totalFiltered > itemsPerPage && (
+              <div className="admin-pagination">
+                <button
+                  className="admin-pagination-text"
+                  onClick={() => setPage(prev => Math.max(1, prev - 1))}
+                  disabled={page === 1}
+                >
+                  Anterior
+                </button>
+                {Array.from({ length: totalPages }).map((_, i) => (
+                  <button
+                    key={i}
+                    className={`admin-page-btn ${page === i + 1 ? 'active' : ''}`}
+                    onClick={() => setPage(i + 1)}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+                <button
+                  className="admin-pagination-text"
+                  onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={page === totalPages}
+                >
+                  Siguiente
+                </button>
+              </div>
+            )}
           </section>
         </div>
       </main>

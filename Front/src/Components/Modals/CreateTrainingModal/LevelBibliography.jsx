@@ -7,9 +7,7 @@ export default function LevelBibliography({ bibliography, updateLevelField, leve
 
   // Log para debug de bibliografía recibida
   React.useEffect(() => {
-    console.log(`📚 LevelBibliography - Nivel ${levelIndex} bibliografía recibida:`, bibliography);
-    console.log(`📚 LevelBibliography - Es array?:`, Array.isArray(bibliography));
-    console.log(`📚 LevelBibliography - Cantidad:`, bibliography?.length || 0);
+    // removed debug logs; kept effect placeholder for future instrumentation if needed
   }, [bibliography, levelIndex]);
 
   // Notificar cambios al padre
