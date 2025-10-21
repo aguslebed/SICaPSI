@@ -2,9 +2,9 @@ import React from 'react';
 
 export default function Statistics() {
     return (
-        <div className=" w-full h-full bg-transparent">
-            {/* Full-size overlay container */}
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="relative w-full h-full bg-transparent">
+            {/* Full-size overlay container (non-interactive, placed behind other UI) */}
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 0 }}>
                 <span
                     aria-hidden="true"
                     style={{
