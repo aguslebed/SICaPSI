@@ -374,31 +374,33 @@ export default function GestionProfesores() {
             </tbody>
           </table>
 
-          <div className="admin-pagination">
-            <button
-              className="admin-pagination-text"
-              onClick={() => setPage(prev => Math.max(1, prev - 1))}
-              disabled={page === 1}
-            >
-              Anterior
-            </button>
-            {[...Array(pages)].map((_, i) => (
+          {total > size && (
+            <div className="admin-pagination">
               <button
-                key={i}
-                className={`admin-page-btn ${page === i + 1 ? "active" : ""}`}
-                onClick={() => setPage(i + 1)}
+                className="admin-pagination-text"
+                onClick={() => setPage(prev => Math.max(1, prev - 1))}
+                disabled={page === 1}
               >
-                {i + 1}
+                Anterior
               </button>
-            ))}
-            <button
-              className="admin-pagination-text"
-              onClick={() => setPage(prev => Math.min(pages, prev + 1))}
-              disabled={page === pages}
-            >
-              Siguiente
-            </button>
-          </div>
+              {[...Array(pages)].map((_, i) => (
+                <button
+                  key={i}
+                  className={`admin-page-btn ${page === i + 1 ? "active" : ""}`}
+                  onClick={() => setPage(i + 1)}
+                >
+                  {i + 1}
+                </button>
+              ))}
+              <button
+                className="admin-pagination-text"
+                onClick={() => setPage(prev => Math.min(pages, prev + 1))}
+                disabled={page === pages}
+              >
+                Siguiente
+              </button>
+            </div>
+          )}
         </div>
       </section>
         </div>
