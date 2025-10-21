@@ -3,6 +3,10 @@ import { Link, Outlet } from 'react-router-dom';
 
 import NavBar from '../../Components/Student/NavBar';
 import CreateTrainingModal from '../../Components/Modals/CreateTrainingModal';
+import SuccessModal from '../../Components/Modals/SuccessModal';
+import ErrorListModal from '../../Components/Modals/ErrorListModal';
+import WarningModal from '../../Components/Modals/WarningModal';
+import ConfirmActionModal from '../../Components/Modals/ConfirmActionModal';
 import { useState, useEffect, useRef } from 'react';
 import { getAllActiveTrainings, getAllTrainings, createTraining, updateTraining, addLevelsToTraining, updateLevelsInTraining, deleteTraining, getTrainingById, enrollStudentsToTraining } from '../../API/Request';
 import LoadingOverlay from '../../Components/Shared/LoadingOverlay';
@@ -12,6 +16,17 @@ export default function GestionCapacitacion() {
   const [trainings, setTrainings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Estados para modales
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessages, setErrorMessages] = useState([]);
+  // Estados para personalizar título y texto del modal de errores en este page
+  const [errorModalTitle, setErrorModalTitle] = useState('No se ha podido completar la operación');
+  const [errorModalMessageText, setErrorModalMessageText] = useState('Ocurrió un error. Revise los siguientes detalles:');
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [warningMessage, setWarningMessage] = useState('');
   
   // Estados para los dropdowns
   const [nivelMenu, setNivelMenu] = useState(false);
@@ -30,6 +45,10 @@ export default function GestionCapacitacion() {
   const [appliedNiveles, setAppliedNiveles] = useState([]);
   const [appliedEstados, setAppliedEstados] = useState([]);
   const [appliedMostrarInactivas, setAppliedMostrarInactivas] = useState(true);
+
+  // Estados para paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Referencias para los dropdowns
   const nivelMenuRef = useRef(null);
@@ -137,7 +156,6 @@ export default function GestionCapacitacion() {
     setLoading(true);
     try {
       const { selectedStudents = [], isEditing = false, trainingId } = additionalData;
-      
 
       
       let finalTrainingId = trainingId;
@@ -154,11 +172,39 @@ export default function GestionCapacitacion() {
 
           
           // Preparar niveles con trainingId y descripción por defecto
-          const levelsWithTrainingId = levels.map(level => ({
-            ...level,
-            trainingId: finalTrainingId,
-            description: level.description || `Descripción del ${level.title}` // Agregar descripción por defecto
-          }));
+          const levelsWithTrainingId = levels.map((level, idx) => {
+            // Asegurar título por defecto si no existe, para evitar validación del backend
+            const levelNumber = level.levelNumber || (idx + 1);
+            const safeTitle = level.title && level.title.trim() ? level.title : `Título nivel ${levelNumber}`;
+            const safeLevel = { ...level, title: safeTitle, levelNumber };
+            // Asegurar que training tenga los campos requeridos
+            const training = safeLevel.training || {};
+            const processedTraining = {
+              title: training.title || `Clase Magistral - ${safeLevel.title}`,
+              description: training.description || '',
+              url: training.url || 'https://www.youtube.com/embed/placeholder',
+              duration: training.duration || 0
+            };
+
+            // Asegurar que test tenga los campos requeridos
+            const test = safeLevel.test || {};
+            const processedTest = {
+              title: test.title || `Evaluación - ${safeLevel.title}`,
+              description: test.description || '',
+              imageUrl: test.imageUrl || '',
+              isActive: test.isActive !== undefined ? test.isActive : true,
+              scenes: test.scenes || []
+            };
+
+            return {
+              ...safeLevel,
+              trainingId: finalTrainingId,
+              description: safeLevel.description || `Descripción del ${safeLevel.title}`,
+              training: processedTraining,
+              test: processedTest,
+              bibliography: safeLevel.bibliography || [] // Asegurar que la bibliografía se incluya
+            };
+          });
           
           await updateLevelsInTraining(finalTrainingId, levelsWithTrainingId);
 
@@ -174,11 +220,39 @@ export default function GestionCapacitacion() {
 
           
           // Preparar niveles con trainingId y descripción por defecto
-          const levelsWithTrainingId = levels.map(level => ({
-            ...level,
-            trainingId: finalTrainingId,
-            description: level.description || `Descripción del ${level.title}` // Agregar descripción por defecto
-          }));
+          const levelsWithTrainingId = levels.map((level, idx) => {
+            // Asegurar título por defecto si no existe, para evitar validación del backend
+            const levelNumber = level.levelNumber || (idx + 1);
+            const safeTitle = level.title && level.title.trim() ? level.title : `Título nivel ${levelNumber}`;
+            const safeLevel = { ...level, title: safeTitle, levelNumber };
+            // Asegurar que training tenga los campos requeridos
+            const training = safeLevel.training || {};
+            const processedTraining = {
+              title: training.title || `Clase Magistral - ${safeLevel.title}`,
+              description: training.description || '',
+              url: training.url || 'https://www.youtube.com/embed/placeholder',
+              duration: training.duration || 0
+            };
+
+            // Asegurar que test tenga los campos requeridos
+            const test = safeLevel.test || {};
+            const processedTest = {
+              title: test.title || `Evaluación - ${safeLevel.title}`,
+              description: test.description || '',
+              imageUrl: test.imageUrl || '',
+              isActive: test.isActive !== undefined ? test.isActive : true,
+              scenes: test.scenes || []
+            };
+
+            return {
+              ...safeLevel,
+              trainingId: finalTrainingId,
+              description: safeLevel.description || `Descripción del ${safeLevel.title}`,
+              training: processedTraining,
+              test: processedTest,
+              bibliography: safeLevel.bibliography || [] // Asegurar que la bibliografía se incluya
+            };
+          });
           
           await addLevelsToTraining(finalTrainingId, levelsWithTrainingId);
 
@@ -194,45 +268,56 @@ export default function GestionCapacitacion() {
         } catch (enrollError) {
           console.warn('Error inscribiendo guardias:', enrollError);
           // No fallar toda la operación si falla la inscripción
-          alert(`Capacitación creada, pero hubo un problema inscribiendo guardias: ${enrollError.message}`);
+          setWarningMessage(`Capacitación creada, pero hubo un problema inscribiendo guardias: ${enrollError.message}`);
+          setShowWarningModal(true);
         }
       }
       
       // 4. Refrescar la lista
       await refreshTrainings();
       
-      const successMessage = isEditing 
-        ? 'Capacitación actualizada exitosamente'
-        : `Capacitación creada exitosamente${selectedStudents.length > 0 ? ` con ${selectedStudents.length} guardia(s) inscrito(s)` : ''}`;
-      
-      alert(successMessage);
-      handleCloseModal(); // Cerrar modal después de operación exitosa
+      // El modal de éxito se muestra en CreateTrainingModal
+      // NO cerrar el modal aquí - se cerrará cuando el usuario acepte el modal de éxito
     } catch (error) {
       console.error('Error procesando capacitación:', error);
       const { isEditing = false } = additionalData;
-      alert(`Error al ${isEditing ? 'actualizar' : 'crear'} capacitación: ${error.message}`);
+      setErrorMessages([`Error al ${isEditing ? 'actualizar' : 'crear'} capacitación: ${error.message}`]);
+      setErrorModalTitle(isEditing ? 'No se puede actualizar la capacitación' : 'No se puede crear la capacitación');
+      setErrorModalMessageText('Revise los siguientes detalles e intente nuevamente:');
+      setShowErrorModal(true);
     } finally {
       setLoading(false);
     }
   };
 
-  // Función para manejar la eliminación de capacitaciones
-  const handleDeleteTraining = async (trainingId, trainingTitle) => {
-    const confirmDelete = window.confirm(
-      `¿Estás seguro de que deseas eliminar la capacitación "${trainingTitle}"?\n\n` +
-      `Esta acción eliminará también todos los niveles asociados y no se puede deshacer.`
-    );
-    
-    if (!confirmDelete) return;
+  // Estado para el modal de confirmación de eliminación
+  const [deleteConfirmData, setDeleteConfirmData] = useState(null);
 
+  // Función para manejar la eliminación de capacitaciones
+  const handleDeleteTraining = (trainingId, trainingTitle) => {
+    // Guardar los datos para la eliminación y mostrar modal de confirmación
+    setDeleteConfirmData({ trainingId, trainingTitle });
+  };
+
+  // Función para confirmar la eliminación
+  const confirmDeleteTraining = async () => {
+    if (!deleteConfirmData) return;
+    
+    const { trainingId } = deleteConfirmData;
+    setDeleteConfirmData(null); // Cerrar modal de confirmación
+    
     setLoading(true);
     try {
       await deleteTraining(trainingId);
       await refreshTrainings();
-      alert('Capacitación eliminada exitosamente');
+      setSuccessMessage('Capacitación eliminada exitosamente');
+      setShowSuccessModal(true);
     } catch (error) {
       console.error('Error eliminando capacitación:', error);
-      alert(`Error al eliminar capacitación: ${error.message}`);
+      setErrorMessages([`Error al eliminar capacitación: ${error.message}`]);
+      setErrorModalTitle('No se puede eliminar la capacitación');
+      setErrorModalMessageText('Ocurrió un error al intentar eliminar. Revise los siguientes detalles:');
+      setShowErrorModal(true);
     } finally {
       setLoading(false);
     }
@@ -242,12 +327,21 @@ export default function GestionCapacitacion() {
   const handleEditTraining = async (trainingId) => {
     setLoading(true);
     try {
+      // Limpiar estado anterior primero
+      setEditingTraining(null);
+      
+      // Obtener datos frescos del backend
       const trainingData = await getTrainingById(trainingId);
+      console.log('Datos de capacitación cargados:', trainingData);
+      
       setEditingTraining(trainingData);
       setOpenCreateTraining(true);
     } catch (error) {
       console.error('Error obteniendo capacitación:', error);
-      alert(`Error al cargar capacitación: ${error.message}`);
+      setErrorMessages([`Error al cargar capacitación: ${error.message}`]);
+      setErrorModalTitle('No se puede cargar la capacitación');
+      setErrorModalMessageText('Ocurrió un error al cargar los datos. Revise los siguientes detalles:');
+      setShowErrorModal(true);
     } finally {
       setLoading(false);
     }
@@ -270,6 +364,7 @@ export default function GestionCapacitacion() {
     setAppliedNiveles([...nivelesSeleccionados]);
     setAppliedEstados([...estadosSeleccionados]);
     setAppliedMostrarInactivas(mostrarInactivas);
+    setCurrentPage(1); // Resetear a página 1 al aplicar filtros
   };
 
   // Función para limpiar filtros
@@ -285,6 +380,20 @@ export default function GestionCapacitacion() {
     setAppliedNiveles([]);
     setAppliedEstados([]);
     setAppliedMostrarInactivas(true);
+    setCurrentPage(1); // Resetear a página 1 al limpiar filtros
+  };
+
+  // Función para obtener capacitaciones paginadas
+  const getPaginatedTrainings = () => {
+    const filtered = getFilteredTrainings();
+    const totalPages = Math.ceil(filtered.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return {
+      items: filtered.slice(startIndex, endIndex),
+      totalPages,
+      totalItems: filtered.length
+    };
   };
 
   // Función para filtrar capacitaciones (usa filtros aplicados)
@@ -499,14 +608,14 @@ export default function GestionCapacitacion() {
                       No hay capacitaciones para mostrar.
                     </td>
                   </tr>
-                ) : getFilteredTrainings().length === 0 && !loading ? (
+                ) : getPaginatedTrainings().items.length === 0 && !loading ? (
                   <tr>
                     <td className="admin-empty" colSpan={6}>
                       {mostrarInactivas ? 'No hay capacitaciones para mostrar.' : 'No hay capacitaciones activas. Active "Mostrar capacitaciones inactivas" para ver todas.'}
                     </td>
                   </tr>
                 ) : (
-                  getFilteredTrainings().map((t) => {
+                  getPaginatedTrainings().items.map((t) => {
                     // Niveles info
                     const nivelesCount = t.levels?.length || t.totalLevels || 0;
                     const nivelesLabel = nivelesCount > 0 ? `${nivelesCount} nivel${nivelesCount > 1 ? 'es' : ''}` : 'Sin niveles';
@@ -577,6 +686,96 @@ export default function GestionCapacitacion() {
               </tbody>
             </table>
           </div>
+          
+          {/* Paginación */}
+          {getPaginatedTrainings().totalPages > 1 && (
+            <div className="admin-pagination">
+              <button 
+                className="admin-pagination-text cursor-pointer"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                style={{ opacity: currentPage === 1 ? 0.5 : 1, cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
+              >
+                Anterior
+              </button>
+              
+              {(() => {
+                const totalPages = getPaginatedTrainings().totalPages;
+                const pages = [];
+                
+                if (totalPages <= 5) {
+                  // Mostrar todas las páginas si son 5 o menos
+                  for (let i = 1; i <= totalPages; i++) {
+                    pages.push(
+                      <button
+                        key={i}
+                        className={`admin-page-btn ${currentPage === i ? 'active' : ''} cursor-pointer`}
+                        onClick={() => setCurrentPage(i)}
+                      >
+                        {i}
+                      </button>
+                    );
+                  }
+                } else {
+                  // Lógica para muchas páginas: mostrar 1 ... actual ... último
+                  pages.push(
+                    <button
+                      key={1}
+                      className={`admin-page-btn ${currentPage === 1 ? 'active' : ''} cursor-pointer`}
+                      onClick={() => setCurrentPage(1)}
+                    >
+                      1
+                    </button>
+                  );
+                  
+                  if (currentPage > 3) {
+                    pages.push(<span key="dots1" className="admin-pagination-text">...</span>);
+                  }
+                  
+                  // Páginas cercanas a la actual
+                  const start = Math.max(2, currentPage - 1);
+                  const end = Math.min(totalPages - 1, currentPage + 1);
+                  
+                  for (let i = start; i <= end; i++) {
+                    pages.push(
+                      <button
+                        key={i}
+                        className={`admin-page-btn ${currentPage === i ? 'active' : ''} cursor-pointer`}
+                        onClick={() => setCurrentPage(i)}
+                      >
+                        {i}
+                      </button>
+                    );
+                  }
+                  
+                  if (currentPage < totalPages - 2) {
+                    pages.push(<span key="dots2" className="admin-pagination-text">...</span>);
+                  }
+                  
+                  pages.push(
+                    <button
+                      key={totalPages}
+                      className={`admin-page-btn ${currentPage === totalPages ? 'active' : ''} cursor-pointer`}
+                      onClick={() => setCurrentPage(totalPages)}
+                    >
+                      {totalPages}
+                    </button>
+                  );
+                }
+                
+                return pages;
+              })()}
+              
+              <button 
+                className="admin-pagination-text cursor-pointer"
+                onClick={() => setCurrentPage(prev => Math.min(getPaginatedTrainings().totalPages, prev + 1))}
+                disabled={currentPage === getPaginatedTrainings().totalPages}
+                style={{ opacity: currentPage === getPaginatedTrainings().totalPages ? 0.5 : 1, cursor: currentPage === getPaginatedTrainings().totalPages ? 'not-allowed' : 'pointer' }}
+              >
+                Siguiente
+              </button>
+            </div>
+          )}
         </section>
       </section>
 
@@ -589,6 +788,46 @@ export default function GestionCapacitacion() {
         onSave={handleCreateTraining}
         editingTraining={editingTraining}
       />
+
+      {/* Modales de éxito, error y advertencia */}
+      {showSuccessModal && (
+        <SuccessModal
+          show={showSuccessModal}
+          onClose={() => setShowSuccessModal(false)}
+          message={successMessage}
+        />
+      )}
+
+      {showErrorModal && (
+        <ErrorListModal
+          show={showErrorModal}
+          onClose={() => setShowErrorModal(false)}
+          errors={errorMessages}
+          title={errorModalTitle}
+          messageText={errorModalMessageText}
+        />
+      )}
+
+      {showWarningModal && (
+        <WarningModal
+          show={showWarningModal}
+          onClose={() => setShowWarningModal(false)}
+          message={warningMessage}
+        />
+      )}
+
+      {/* Modal de confirmación de eliminación */}
+      {deleteConfirmData && (
+        <ConfirmActionModal
+          open={true}
+          title="Confirmar eliminación"
+          message={`¿Estás seguro de que deseas eliminar la capacitación "${deleteConfirmData.trainingTitle}"? Esta acción eliminará también todos los niveles asociados y no se puede deshacer.`}
+          confirmLabel="Eliminar"
+          cancelLabel="Cancelar"
+          onConfirm={confirmDeleteTraining}
+          onClose={() => setDeleteConfirmData(null)}
+        />
+      )}
     </>
   );
 }

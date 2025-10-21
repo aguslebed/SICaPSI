@@ -67,9 +67,9 @@ const LevelTest = () => {
       {sceneIndex !== null ? (
         <div className="fixed inset-0 z-[9999] bg-white/0 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 md:p-8 w-full sm:w-[90vw] md:w-[75vw] lg:w-[60vw] max-w-4xl max-h-[90vh] overflow-hidden flex flex-col items-center justify-between">
-            {/* Debug info: escena y ruta de video */}
+            {/* Info de escena */}
             <div style={{marginBottom: '6px', color: '#888', fontSize: '0.9em'}}>
-              <strong>Escena:</strong> {tests[sceneIndex]?.idScene} &nbsp;|&nbsp; <strong>Ruta video:</strong> {tests[sceneIndex]?.videoUrl}
+              <strong>Escena {sceneIndex + 1} de {tests.length}</strong>
             </div>
             {/* Video de la escena */}
               {tests[sceneIndex].videoUrl && (
@@ -124,6 +124,16 @@ const LevelTest = () => {
                   alt={testTitle}
                   className="rounded-2xl w-full object-cover mb-6 sm:mb-8 max-h-[50vh]"
                 />
+                
+                {/* Información del test */}
+                <h2 className="text-2xl font-bold mb-4 text-center text-gray-800">
+                  {level?.test?.title || 'Evaluación Interactiva del Nivel'}
+                </h2>
+                
+                <p className="mb-6 text-center text-gray-600">
+                  {level?.test?.description || 'En este test interactivo pondrás a prueba los conocimientos adquiridos durante la capacitación.'}
+                </p>
+                
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-6 md:gap-8 justify-center w-full">
                   <button
                     className="bg-[#009fe3] text-white font-bold px-6 py-3 sm:px-8 sm:py-4 rounded-lg text-base sm:text-xl hover:bg-[#0077b6] transition cursor-pointer w-full sm:w-64"
@@ -138,6 +148,13 @@ const LevelTest = () => {
                     Iniciar Simulación
                   </button>
                 </div>
+                
+                {/* Información de escenas */}
+                {tests && tests.length > 0 && (
+                  <div className="mt-6 text-sm text-gray-500 text-center">
+                    <p>Esta evaluación contiene {tests.length} escena{tests.length !== 1 ? 's' : ''} interactiva{tests.length !== 1 ? 's' : ''}</p>
+                  </div>
+                )}
               </div>
               </main>
             </div>

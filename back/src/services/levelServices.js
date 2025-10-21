@@ -35,6 +35,16 @@ export class LevelService extends ILevelService {
 
         // Crear los niveles
         const newLevels = await this.levels.insertMany(levels);
+        
+        // IMPORTANTE: Actualizar el array de levels en el Training con los IDs de los nuevos niveles
+        const newLevelIds = newLevels.map(level => level._id);
+        await this.training.findByIdAndUpdate(
+            trainingId,
+            { $push: { levels: { $each: newLevelIds } } },
+            { new: true }
+        );
+        
+        console.log(`✅ ${newLevels.length} niveles agregados al training ${trainingId}`);
         return newLevels;
     }
 
@@ -43,6 +53,7 @@ export class LevelService extends ILevelService {
         if (!training) {
             throw new Error("Capacitación no encontrada");
         }
+        
         // Para cada nivel, actualizar o crear si no existe
         const updatePromises = levels.map(async (level) => {
             // Si viene con _id, actualizamos por _id
@@ -72,6 +83,16 @@ export class LevelService extends ILevelService {
         });
 
         const updatedLevels = await Promise.all(updatePromises);
+        
+        // IMPORTANTE: Actualizar el array de levels en el Training con todos los IDs
+        const allLevelIds = updatedLevels.map(level => level._id);
+        await this.training.findByIdAndUpdate(
+            trainingId,
+            { levels: allLevelIds }, // Reemplazar todo el array con los IDs actuales
+            { new: true }
+        );
+        
+        console.log(`✅ ${updatedLevels.length} niveles actualizados en training ${trainingId}`);
         return updatedLevels;
     }
 }

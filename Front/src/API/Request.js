@@ -577,7 +577,10 @@ export async function deleteTrainingFile(filePath) {
 // Obtener una capacitación por ID
 export async function getTrainingById(trainingId) {
   try {
-    const { data } = await api.get(`/training/${trainingId}`);
+    // Agregar timestamp para evitar caché y obtener datos frescos
+    const timestamp = new Date().getTime();
+    const { data } = await api.get(`/training/${trainingId}?_t=${timestamp}`);
+    console.log('🔄 Datos frescos obtenidos del backend:', data);
     return data;
   } catch (error) {
     console.error("❌ Error obteniendo capacitación:", error);

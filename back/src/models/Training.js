@@ -20,6 +20,9 @@ const TrainingSchema = new mongoose.Schema({
     description: { type: String }
   }],
   progressPercentage: {type: Number, default: 0},
+  startDate: {type: Date, default: null},
+  endDate: {type: Date, default: null},
+  assignedTeacher: {type: String, default: ''},
 }, { 
   timestamps: true
 });
@@ -27,7 +30,8 @@ const TrainingSchema = new mongoose.Schema({
 // Índices para mejor performance
 TrainingSchema.index({ createdBy: 1 });
 TrainingSchema.index({ isActive: 1 });
-// Ensure training titles are unique
-TrainingSchema.index({ title: 1 }, { unique: true, sparse: true });
+// No usar índice único en title para permitir actualizaciones
+// La validación de duplicados se hace en el servicio
+// TrainingSchema.index({ title: 1 }, { unique: true, sparse: true });
 
 export default mongoose.model("Training", TrainingSchema);

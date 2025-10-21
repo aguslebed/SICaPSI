@@ -77,13 +77,23 @@ export class TrainingService extends ITrainingService {
 
  // Actualizar una capacitación
  async updateTraining(trainingId, trainingData) {
+   console.log('🔄 Actualizando training:', { trainingId, title: trainingData.title });
+   
    // Verificar si existe otra capacitación con el mismo título (si se está cambiando)
    if (trainingData.title) {
      const existingTraining = await this.Training.findOne({ 
        title: trainingData.title, 
        _id: { $ne: trainingId } 
      });
+     
+     console.log('🔍 Búsqueda de duplicados:', { 
+       title: trainingData.title, 
+       excludingId: trainingId,
+       found: existingTraining ? existingTraining._id : null 
+     });
+     
      if (existingTraining) {
+       console.log('❌ Título duplicado encontrado:', existingTraining._id.toString(), 'vs', trainingId.toString());
        throw new Error("Ya existe otra capacitación con ese título");
      }
    }

@@ -60,7 +60,7 @@ function PreviewNiveles({ levels, selectedLevel, onLevelClick, onBibliografiaCli
                 onClick={() => onLevelClick && onLevelClick(index)}
               >
                 <span className="font-semibold text-gray-800 break-words whitespace-normal">
-                  Capacitación {level.levelNumber} - Nivel {level.levelNumber}: {level.title || `Nivel ${level.levelNumber}`}
+                  {level.title || `Nivel ${level.levelNumber}`}
                 </span>
                 <svg 
                   className={`w-5 h-5 transform transition-transform ${
@@ -248,7 +248,7 @@ function PreviewTraining({ level }) {
 }
 
 // Subcomponente para Preview de Bibliografía
-function PreviewBibliografia({ level }) {
+function PreviewBibliografia({ level, levelIndex, updateLevelField, handleFileDelete, tempBibData }) {
   // Datos de ejemplo para placeholder
   const placeholderBibliography = [
     {
@@ -262,78 +262,155 @@ function PreviewBibliografia({ level }) {
       description: 'Compendio actualizado de leyes, decretos y resoluciones relacionadas con la seguridad y prevención de riesgos en el ámbito laboral.',
       url: null,
       isPlaceholder: true
-    },
-    {
-      title: 'Guía de Primeros Auxilios',
-      description: 'Material complementario con técnicas básicas de primeros auxilios, RCP y atención de emergencias médicas.',
-      url: null,
-      isPlaceholder: true
     }
   ];
 
-  // Combinar bibliografía real con placeholders
+  // Combinar bibliografía real con live preview
   const realBibliography = level?.bibliography || [];
-  const bibliographyToShow = [...realBibliography];
+  const bibliographyToShow = [];
   
-  // Agregar placeholders solo si hay menos de 3 items
-  if (bibliographyToShow.length < 3) {
-    const remainingSlots = 3 - bibliographyToShow.length;
-    const placeholdersNeeded = placeholderBibliography.slice(0, remainingSlots);
-    bibliographyToShow.push(...placeholdersNeeded);
+  // PRIMER RECUADRO: Live preview de lo que se está escribiendo
+  const hasLiveContent = tempBibData && (tempBibData.title || tempBibData.description || tempBibData.url);
+  if (hasLiveContent) {
+    bibliographyToShow.push({
+      title: tempBibData.title || 'Nuevo Material',
+      description: tempBibData.description || '',
+      url: tempBibData.url || null,
+      isLivePreview: true
+    });
   }
+  
+  // SIGUIENTES RECUADROS: Bibliografía ya guardada
+  bibliographyToShow.push(...realBibliography);
+  
+  // PLACEHOLDERS: Solo si no hay live preview ni bibliografía guardada
+  if (bibliographyToShow.length === 0) {
+    bibliographyToShow.push(...placeholderBibliography);
+  }
+
+  const handleDelete = async (displayIndex) => {
+    // Si hay live preview, el primer item es el preview, entonces el índice real es displayIndex - 1
+    const hasLiveContent = tempBibData && (tempBibData.title || tempBibData.description || tempBibData.url);
+    const realIndex = hasLiveContent ? displayIndex - 1 : displayIndex;
+    
+    // Validar que el índice sea válido
+    if (realIndex < 0 || realIndex >= realBibliography.length) return;
+    
+    const item = realBibliography[realIndex];
+    
+    // Si el item tiene un archivo local, eliminarlo del servidor
+    if (item.url && item.url.startsWith('/uploads/')) {
+      try {
+        await handleFileDelete(item.url, levelIndex);
+      } catch (error) {
+        console.error('Error eliminando archivo:', error);
+      }
+    }
+    
+    // Eliminar el item del array
+    const newBibliography = [...realBibliography];
+    newBibliography.splice(realIndex, 1);
+    updateLevelField(levelIndex, 'bibliography', newBibliography);
+  };
 
   return (
     <div className="p-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-6">Bibliografía</h1>
+      <h1 className="text-3xl font-bold text-gray-800 mb-6">Bibliografía</h1>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {bibliographyToShow.map((item, index) => (
-          <div 
-            key={item.isPlaceholder ? `placeholder-${index}` : index} 
-            className={`p-6 rounded-2xl shadow-xl border flex flex-col gap-4 hover:shadow-2xl transition-all ${
-              item.isPlaceholder 
-                ? 'bg-gradient-to-br from-gray-50 via-white to-gray-100 border-gray-300 border-dashed border-2 opacity-75'
-                : 'bg-gradient-to-br from-blue-50 via-white to-blue-100 border-blue-200'
-            }`}
-          >
-            <div className="flex items-center gap-4 mb-2">
-              <FileText className={`w-10 h-10 ${item.isPlaceholder ? 'text-gray-400' : 'text-blue-400'}`} />
-              <h2 className={`font-bold text-xl ${item.isPlaceholder ? 'text-gray-600' : 'text-blue-700'} break-words whitespace-normal`}>
-                {item.title || `Material ${index + 1}`}
-              </h2>
+        {bibliographyToShow.map((item, index) => {
+          const isLivePreview = item.isLivePreview;
+          const isPlaceholder = item.isPlaceholder;
+          const isSaved = !isLivePreview && !isPlaceholder;
+          
+          return (
+            <div 
+              key={isPlaceholder ? `placeholder-${index}` : isLivePreview ? 'live-preview' : index} 
+              className={`rounded-2xl shadow-xl border overflow-hidden hover:shadow-2xl transition-all relative flex flex-col ${
+                isPlaceholder 
+                  ? 'bg-white border-gray-300 border-dashed border-2 opacity-75'
+                  : isLivePreview
+                  ? 'bg-gradient-to-br from-green-50 via-white to-green-100 border-green-300 border-2'
+                  : 'bg-gradient-to-br from-blue-50 via-white to-blue-100 border-blue-200'
+              }`}
+            >
+              {/* Badge "En edición" arriba de la carta */}
+              {isLivePreview && (
+                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 z-10">
+                  <span className="px-3 py-1 bg-green-500 text-white text-xs font-semibold rounded-full shadow-lg animate-pulse whitespace-nowrap">
+                    En edición
+                  </span>
+                </div>
+              )}
+              
+              {/* Botón de eliminar - esquina superior derecha */}
+              {isSaved && updateLevelField && handleFileDelete && (
+                <button
+                  onClick={() => handleDelete(index)}
+                  className="absolute top-3 right-3 p-2 bg-white/80 hover:bg-red-50 text-red-400 hover:text-red-600 border border-red-200 hover:border-red-400 rounded-full transition-all cursor-pointer shadow-sm hover:shadow-md z-10"
+                  title="Eliminar elemento"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+
+              {/* HEADER - Título */}
+              <div className="px-6 pt-8 pb-2">
+                <div className="flex items-center gap-4 flex-1 min-w-0 max-w-full">
+                  <FileText className={`w-10 h-10 flex-shrink-0 ${
+                    isPlaceholder ? 'text-gray-400' : isLivePreview ? 'text-green-500' : 'text-blue-400'
+                  }`} />
+                  <h2 className={`font-bold text-xl break-words overflow-wrap-anywhere ${
+                    isPlaceholder ? 'text-gray-600' : isLivePreview ? 'text-green-700' : 'text-blue-700'
+                  }`} style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }} title={item.title || `Material ${index + 1}`}>
+                    {item.title || `Material ${index + 1}`}
+                  </h2>
+                </div>
             </div>
-            {item.description && (
-              <p className={`text-base italic ${item.isPlaceholder ? 'text-gray-600' : 'text-gray-700'}`}>
-                {item.description}
-              </p>
-            )}
-            <div>
-              <h3 className={`font-semibold mb-2 ${item.isPlaceholder ? 'text-gray-500' : 'text-blue-600'}`}>
-                Material
-              </h3>
+
+            {/* CUERPO - Descripción */}
+            <div className="px-6 py-3 flex-1" style={{ minHeight: '160px' }}>
+              {item.description ? (
+                <p className={`text-base leading-relaxed break-words ${
+                  item.isPlaceholder ? 'text-gray-600 italic' : 'text-gray-700 italic'
+                }`} style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                  {item.description}
+                </p>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-sm text-gray-400 italic">Sin descripción</p>
+                </div>
+              )}
+            </div>
+
+            {/* FOOTER - Botón de acceso */}
+            <div className="px-6 pb-6">
               {item.url ? (
                 <a
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all"
+                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                   </svg>
-                  Acceder
+                  <span>Acceder al Material</span>
                 </a>
               ) : (
-                <div className="inline-flex items-center gap-2 px-6 py-3 bg-gray-200 text-gray-500 rounded-lg font-semibold border-2 border-dashed border-gray-400">
+                <div className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-gray-200 text-gray-500 rounded-lg font-semibold border-2 border-dashed border-gray-400">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                   </svg>
-                  Agregar enlace
+                  <span>Agregar enlace</span>
                 </div>
               )}
             </div>
           </div>
-        ))}
+        );
+        })}
       </div>
     </div>
   );
@@ -427,7 +504,7 @@ function PreviewTest({ level, selectedScene }) {
         <div className="w-full max-w-5xl">
           {/* Info de la escena */}
           <div className="mb-4 text-sm text-gray-500 text-left">
-            <strong>Escena:</strong> {scene.idScene} {scene.videoUrl && `| Ruta video: ${scene.videoUrl}`}
+            <strong>Escena {sceneToShow + 1} de {scenes.length}</strong>
             {isEditingMode && (
               <span className="ml-3 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-semibold">
                 📝 Modo Edición - Preview en Tiempo Real
@@ -595,20 +672,7 @@ function PreviewTest({ level, selectedScene }) {
           {/* Información de escenas */}
           {scenes && scenes.length > 0 && (
             <div className="mt-6 text-sm text-gray-500 text-center">
-              <p className="mb-2">Este test contiene {scenes.length} escena{scenes.length !== 1 ? 's' : ''} interactiva{scenes.length !== 1 ? 's' : ''}</p>
-              
-              {/* Lista de escenas para navegación rápida */}
-              <div className="mt-4 flex flex-wrap gap-2 justify-center">
-                {scenes.map((scene, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setPreviewSceneIndex(idx)}
-                    className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs hover:bg-blue-200 transition cursor-pointer"
-                  >
-                    Escena {scene.idScene} {scene.lastOne && '(Final)'}
-                  </button>
-                ))}
-              </div>
+              <p>Esta evaluación contiene {scenes.length} escena{scenes.length !== 1 ? 's' : ''} interactiva{scenes.length !== 1 ? 's' : ''}</p>
             </div>
           )}
         </div>
@@ -629,6 +693,9 @@ export default function TrainingPreview({
   selectedScene,
   selectedStudents,
   students,
+  updateLevelField,
+  handleFileDelete,
+  bibliographyTempData,
   onLevelClick,
   onBibliografiaClick,
   onTrainingClick,
@@ -669,6 +736,10 @@ export default function TrainingPreview({
         return (
           <PreviewBibliografia 
             level={levels[selectedLevel]}
+            levelIndex={selectedLevel}
+            updateLevelField={updateLevelField}
+            handleFileDelete={handleFileDelete}
+            tempBibData={bibliographyTempData}
           />
         );
       

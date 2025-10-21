@@ -37,12 +37,26 @@ const upload = multer({
     storage,
     limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
     fileFilter: (req, file, cb) => {
-        const allowedTypes = ['.mp4', '.pdf', '.ppt', '.pptx', '.jpg', '.jpeg', '.png'];
+        // Lista ampliada de tipos de archivo permitidos
+        const allowedTypes = [
+            // Videos
+            '.mp4', '.avi', '.mov', '.wmv', '.flv', '.mkv', '.webm', '.m4v', '.mpeg', '.mpg', '.3gp',
+            // Documentos
+            '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt', '.rtf', '.odt', '.ods', '.odp',
+            // Imágenes
+            '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.webp', '.ico', '.tiff', '.tif',
+            // Audio
+            '.mp3', '.wav', '.ogg', '.m4a', '.flac', '.aac', '.wma', '.aiff', '.ape',
+            // Comprimidos
+            '.zip', '.rar', '.7z', '.tar', '.gz', '.bz2',
+            // Otros
+            '.json', '.xml', '.csv', '.html', '.css', '.js', '.epub', '.mobi'
+        ];
         const ext = path.extname(file.originalname).toLowerCase();
         if (allowedTypes.includes(ext)) {
             cb(null, true);
         } else {
-            cb(new Error('Tipo de archivo no permitido'), false);
+            cb(new Error(`Tipo de archivo no permitido: ${ext}. Contacte al administrador si necesita subir este tipo de archivo.`), false);
         }
     }
 });

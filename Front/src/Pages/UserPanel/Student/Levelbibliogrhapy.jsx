@@ -32,49 +32,49 @@ const Levelbibliogrhapy = () => {
                 {bibliografias.map((biblio, idx) => (
                   <div
                     key={idx}
-                    className="bg-gradient-to-br from-blue-50 via-white to-blue-100 p-8 rounded-2xl shadow-xl border border-blue-200 flex flex-col gap-4 hover:shadow-2xl transition-all"
+                    className="bg-gradient-to-br from-blue-50 via-white to-blue-100 rounded-2xl shadow-xl border border-blue-200 overflow-hidden hover:shadow-2xl transition-all flex flex-col"
                   >
-                    <div className="flex items-center gap-4 mb-2">
-                      <FileText className="w-10 h-10 text-blue-400" />
-                      <h2 className="font-bold text-xl text-blue-700">{biblio.title}</h2>
+                    {/* HEADER - Título */}
+                    <div className="px-6 pt-6 pb-2">
+                      <div className="flex items-center gap-4">
+                        <FileText className="w-10 h-10 text-blue-400 flex-shrink-0" />
+                        <h2 className="font-bold text-xl text-blue-700" title={biblio.title}>
+                          {biblio.title}
+                        </h2>
+                      </div>
                     </div>
-                    {biblio.description && (
-                      <p className="mb-2 text-gray-700 text-base italic">{biblio.description}</p>
-                    )}
-                    {/* Archivos / Descargas */}
-                    {(biblio.url || biblio.videoUrl) && (
-                      <div className="mb-2">
-                        <h3 className="font-semibold text-blue-600 mb-2">Material</h3>
+
+                    {/* BODY - Descripción con altura fija */}
+                    <div className="px-6 py-3 flex-1" style={{ minHeight: '160px' }}>
+                      {biblio.description ? (
+                        <p className="text-gray-700 text-base italic">
+                          {biblio.description}
+                        </p>
+                      ) : (
+                        <div className="flex items-center justify-center h-full">
+                          <p className="text-sm text-gray-400 italic">Sin descripción</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* FOOTER - Botón de acceso */}
+                    <div className="px-6 pb-6">
+                      {(biblio.url || biblio.videoUrl) ? (
                         <a
                           href={biblio.url || biblio.videoUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all"
+                          className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all"
                         >
                           <ExternalLink className="w-5 h-5" />
                           <span>Acceder</span>
                         </a>
-                      </div>
-                    )}
-                    {/* Enlaces */}
-                    {Array.isArray(biblio.links) && biblio.links.length > 0 && (
-                      <div>
-                        <h3 className="font-semibold text-blue-600 mb-2">Enlaces útiles</h3>
-                        <div className="flex flex-wrap gap-3">
-                          {biblio.links.map((enlace, i) => (
-                            <a
-                              key={i}
-                              href={enlace.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold shadow hover:bg-blue-700 transition"
-                            >
-                              Ir al enlaces
-                            </a>
-                          ))}
+                      ) : (
+                        <div className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-200 text-gray-500 rounded-lg font-semibold border-2 border-dashed border-gray-400">
+                          <span>Sin material disponible</span>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

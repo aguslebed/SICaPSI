@@ -12,6 +12,7 @@ const Home = lazy(() => import('./Pages/Home/Home'));
 const InicioDeSesion = lazy(() => import('./Pages/Login/Login'));
 const Registrarse = lazy(() => import('./Pages/Register/Register'));
 const NotFound = lazy(() => import('./Pages/NotFound'));
+const ModalShowcase = lazy(() => import('./Pages/ModalShowcase'));
 const PanelDeUsuario = lazy(() => import('./Pages/UserPanel/Student/UserPanel'));
 const DetalleCapacitacion = lazy(() => import('./Pages/UserPanel/Student/TrainingIndex'));
 const TrainingLevels = lazy(() => import('./Pages/UserPanel/Student/TrainingLevels'));
@@ -57,6 +58,7 @@ export const router = createBrowserRouter([
   { path: '/', element: <Home /> },
   { path: '/login', element: <InicioDeSesion /> },
   { path: '/registrarse', element: <Registrarse /> },
+  { path: '/modals', element: <ModalShowcase /> },
   {
     path: '/adminPanel',
     element: <ProtectedLayout />,
