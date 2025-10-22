@@ -145,7 +145,7 @@ export default function GestionUsuario() {
           .map(e => estadoMapLookup[e] || [])
           .flat()
           .map(m => String(m).toLowerCase());
-  const availableStatuses = Array.from(new Set((users || []).map(u => String(u.status || '').toLowerCase())));
+        const availableStatuses = Array.from(new Set((users || []).map(u => String(u.status || '').toLowerCase())));
         if (mapped.length > 0) {
           result = result.filter(u => mapped.includes(String(u.status || '').toLowerCase()));
         }
