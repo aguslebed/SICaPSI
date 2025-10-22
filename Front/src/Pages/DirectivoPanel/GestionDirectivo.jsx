@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useRef } from 'react';
 import NavBar from '../../Components/Student/NavBar';
 import { getStudents } from '../../API/Request';
 import LoadingOverlay from '../../Components/Shared/LoadingOverlay';
-import './AdminPanel.css';
+import './DirectivoPanel.css';
 
 // Chip para estado simple (reusa clases existentes)
 function ChipEstado({ status }) {

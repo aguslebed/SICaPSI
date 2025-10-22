@@ -57,7 +57,7 @@ const NavBar = () => {
     '/adminPanel/gestionCursos',
     '/adminPanel/gestionProfesores',
     '/adminPanel/gestionCapacitacion',
-    '/adminPanel/gestionDirectivo'
+  // La gestión directivo ahora vive en /directivoPanel
   ];
   
   const shouldShowBackButton = allowedRoutes.some(route => location.pathname.includes(route));

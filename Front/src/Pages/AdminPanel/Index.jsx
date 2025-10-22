@@ -15,36 +15,15 @@ export default function AdminPanel() {
   const options = [
     {
       title: "Admisión de Usuarios",
-      link: "adminPanel/admisionUsuario",
+      link: "/adminPanel/admisionUsuario",
       isImage: true,
       image: admisionImg,
-      onClick: async () => {
-        setLoading(true);
-        try {
-          const data = await fetchAdmisionUsuarios();
-          navigate("/adminPanel/admisionUsuario", { state: { data } });
-        } catch (error) {
-          console.error("Error fetching data for AdmisionUsuario:", error);
-        } finally {
-          setLoading(false);
-        }
-      },
     },
     {
       title: "Gestión de Usuarios",
       link: "/adminPanel/gestionUsuario",
       isImage: true,
       image: usuarioImg,
-       onClick: async () => {
-        setLoading(true);
-        try {
-          navigate("/adminPanel/gestionUsuario");
-        } catch (error) {
-          console.error("Error fetching data for GestionUsuario:", error);
-        } finally {
-          setLoading(false);
-        }
-      },
     },
     {
       title: "Gestión de Capacitación",
@@ -57,32 +36,6 @@ export default function AdminPanel() {
       link: "/adminPanel/gestionProfesores",
       isImage: true,
       image: profesorImg,
-        onClick: async () => {
-        setLoading(true);
-        try {
-          navigate("/adminPanel/gestionProfesores");
-        } catch (error) {
-          console.error("Error fetching data for GestionUsuario:", error);
-        } finally {
-          setLoading(false);
-        }
-      },
-    },
-     {
-      title: "Gestión Directivo",
-      link: "/adminPanel/gestionDirectivo",
-      isImage: true,
-      image: profesorImg,
-        onClick: async () => {
-        setLoading(true);
-        try {
-          navigate("/adminPanel/gestionDirectivo");
-        } catch (error) {
-          console.error("Error fetching data for Gestion Directivo:", error);
-        } finally {
-          setLoading(false);
-        }
-      },
     },
   ];
 
