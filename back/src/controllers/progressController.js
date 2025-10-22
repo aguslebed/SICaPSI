@@ -24,7 +24,20 @@ export function makeProgressController() {
           }
         });
       } catch (err) { next(err); }
-    }
+    },
+
+    async checkLevelApproved(req, res, next) {
+      try {
+        const userId = req.user?.userId;
+        const training = req.params.trainingId;
+        const level = req.level;
+        if (!userId) throw new AppError('No autorizado', 401);
+      }
+        catch (err) { next(err); 
+
+        }
+      }
+
   };
 }
 

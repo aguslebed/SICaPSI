@@ -13,6 +13,6 @@ const router = Router();
 const controller = makeProgressController();
 
 // Marcar nivel como completado (idempotente)
-router.post('/trainings/:trainingId/levels/:levelId/complete', authMiddleware, controller.completeLevel);
+router.post('/trainings/:trainingId/levels/:levelId/checkApproved', authMiddleware, controller.checkLevelApproved);
 
 export default router;

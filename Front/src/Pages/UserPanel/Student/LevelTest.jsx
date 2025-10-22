@@ -44,14 +44,22 @@ const LevelTest = () => {
   const [sceneIndex, setSceneIndex] = useState(null);
 
   // Reiniciar video (volver al inicio)
-  const handleRestart = () => setSceneIndex(null);
+  const handleRestart = () => {
+    setSceneIndex(null);
+    setPoints(0);
+  }
 
   // Iniciar simulación (ir a la primera escena)
   const handleStart = () => setSceneIndex(0);
 
+  const [points,setPoints] = useState(0);
+
   // Ir a la siguiente escena según opción
-  const handleOption = (nextId) => {
+  const handleOption = (nextId, optPoints) => {
     const nextIndex = tests.findIndex(test => test.idScene === nextId);
+    console.log(tests)
+    //Antes de seguir a la siguiente escena, acumula puntos
+    setPoints(prevPoints => prevPoints + optPoints);
     if (nextIndex !== -1) {
       setSceneIndex(nextIndex);
     } else {
@@ -97,7 +105,7 @@ const LevelTest = () => {
                     key={idx}
                     className="bg-[#009fe3] text-white font-bold rounded-lg hover:bg-[#0077b6] transition cursor-pointer w-full sm:w-64 min-h-12 px-4"
                     style={buttonStyle}
-                    onClick={() => handleOption(opt.next)}
+                    onClick={() => handleOption(opt.next, opt.points)}
                   >
                     {opt.description}
                   </button>

@@ -41,7 +41,6 @@ const UserPanel = () => {
                   key={Training._id}
                   titulo={Training.title}
                   subtitulo={Training.subtitle}
-                  porcentaje={Training.progressPercent} // Si tienes el progreso, puedes calcularlo aquí
                   estado={Training.isActive ? "activo" : "desactivado"}
                   link={`/trainer/${Training._id}`}
                   imagen={Training.image}
