@@ -35,6 +35,7 @@ const GestionUsuario = lazy(() => import('./Pages/AdminPanel/GestionUsuario'));
 const GestionCapacitacion = lazy(() => import('./Pages/AdminPanel/GestionCapacitacion'));
 const GestionProfesores = lazy(() => import('./Pages/AdminPanel/GestionProfesores'));
 const ProfesorEditar = lazy(() => import('./Pages/AdminPanel/ProfesorEditar'));
+const GestionDirectivo = lazy(() => import('./Pages/AdminPanel/GestionDirectivo'));
 
 async function authLoader({ request }) {
   try {
@@ -95,8 +96,9 @@ export const router = createBrowserRouter([
       { path: 'admisionUsuario', element: <AdmisionUsuario /> },
       { path: 'gestionUsuario', element: <GestionUsuario /> },
       { path: 'gestionCapacitacion', element: <GestionCapacitacion /> },
-  { path: 'gestionProfesores', element: <GestionProfesores /> },
-  { path: 'profesorEditar/:id', element: <ProfesorEditar /> },
+      { path: 'gestionProfesores', element: <GestionProfesores /> },
+      { path: 'profesorEditar/:id', element: <ProfesorEditar /> },
+      { path: 'gestionDirectivo', element: <GestionDirectivo /> },
       // Crear Usuario: debe renderizar el Register.jsx
       { path: 'gestionUsuario/crearUsuario', element: <Registrarse /> },
       { path: 'gestionUsuario/modificarUsuario', element: <AdminActualizarUsuario /> }

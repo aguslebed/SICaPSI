@@ -2,6 +2,7 @@ import React from "react";
 import admisionImg from "../../assets/admision2.png";
 import profesorImg from "../../assets/profesor.png";
 import cursoImg from "../../assets/curso.png";
+
 import usuarioImg from "../../assets/usuario.png";
 import { Link, useNavigate } from "react-router-dom";
 import NavBar from "../../Components/Student/NavBar";
@@ -37,7 +38,6 @@ export default function AdminPanel() {
        onClick: async () => {
         setLoading(true);
         try {
-          // const data = await getAllUsers();
           navigate("/adminPanel/gestionUsuario");
         } catch (error) {
           console.error("Error fetching data for GestionUsuario:", error);
@@ -63,6 +63,22 @@ export default function AdminPanel() {
           navigate("/adminPanel/gestionProfesores");
         } catch (error) {
           console.error("Error fetching data for GestionUsuario:", error);
+        } finally {
+          setLoading(false);
+        }
+      },
+    },
+     {
+      title: "Gestión Directivo",
+      link: "/adminPanel/gestionDirectivo",
+      isImage: true,
+      image: profesorImg,
+        onClick: async () => {
+        setLoading(true);
+        try {
+          navigate("/adminPanel/gestionDirectivo");
+        } catch (error) {
+          console.error("Error fetching data for Gestion Directivo:", error);
         } finally {
           setLoading(false);
         }

@@ -56,7 +56,8 @@ const NavBar = () => {
     '/adminPanel/gestionUsuario',
     '/adminPanel/gestionCursos',
     '/adminPanel/gestionProfesores',
-    '/adminPanel/gestionCapacitacion'
+    '/adminPanel/gestionCapacitacion',
+    '/adminPanel/gestionDirectivo'
   ];
   
   const shouldShowBackButton = allowedRoutes.some(route => location.pathname.includes(route));
