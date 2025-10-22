@@ -49,6 +49,16 @@ class ProgressService {
     }
     return result;
   }
+
+  async isLevelApproved(userId, trainingId, level) {
+    const uId = toObjectId(userId);
+    const tId = toObjectId(trainingId);
+    const lId = toObjectId(level.);
+
+  }
+
+
 }
+  
 
 export default ProgressService;
