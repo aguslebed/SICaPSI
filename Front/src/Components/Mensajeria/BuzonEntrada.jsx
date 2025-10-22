@@ -275,7 +275,7 @@ export default function BuzonEntrada({ hideCompose = false, trainingId, sortBy =
                         onClick={(e) => e.stopPropagation()}
                       />
                     </td>
-                    <td className="p-2 text-left">{msg.sender.firstName} {msg.sender.lastName}</td>
+                    <td className="p-2 text-left">{((msg.sender?.firstName || '') + ' ' + (msg.sender?.lastName || '')).trim() || msg.sender?.email || 'Desconocido'}</td>
                     <td className="p-2 text-left">
                       <span className="truncate block max-w-[40ch]" title={msg.subject}>{msg.subject}</span>
                     </td>

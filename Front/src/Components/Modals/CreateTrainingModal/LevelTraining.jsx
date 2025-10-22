@@ -23,11 +23,11 @@ export default function LevelTraining({ level, levelIndex, updateLevelField, upl
               <input
                 value={level.training.title}
                 onChange={(e) => updateLevelField(levelIndex, 'training.title', e.target.value)}
-                maxLength={50}
+                maxLength={200}
                 className="w-full border-0 px-0 py-0.5 md:py-0.5 lg:py-0.5 xl:py-1 text-xs md:text-xs lg:text-xs xl:text-sm placeholder:text-xs md:placeholder:text-xs lg:placeholder:text-xs xl:placeholder:text-sm font-normal focus:ring-0 focus:outline-none bg-transparent"
-                placeholder="Ingrese el titulo de la Clase Magistral (Max caracteres: 50)"
+                placeholder="Ingrese el titulo de la Clase Magistral (Max caracteres: 200)"
               />
-              <p className="text-[10px] md:text-[10px] lg:text-[11px] xl:text-xs text-gray-500 mt-0.5 md:mt-0.5 lg:mt-0.5 xl:mt-1 text-right">{level.training.title.length}/50 caracteres</p>
+              <p className="text-[10px] md:text-[10px] lg:text-[11px] xl:text-xs text-gray-500 mt-0.5 md:mt-0.5 lg:mt-0.5 xl:mt-1 text-right">{level.training.title.length}/200 caracteres</p>
             </td>
           </tr>
           <tr>
@@ -38,12 +38,12 @@ export default function LevelTraining({ level, levelIndex, updateLevelField, upl
               <textarea
                 value={level.training.description}
                 onChange={(e) => updateLevelField(levelIndex, 'training.description', e.target.value)}
-                maxLength={100}
+                maxLength={1000}
                 className="w-full border-0 px-0 py-0.5 md:py-0.5 lg:py-0.5 xl:py-1 text-xs md:text-xs lg:text-xs xl:text-sm placeholder:text-xs md:placeholder:text-xs lg:placeholder:text-xs xl:placeholder:text-sm font-normal focus:ring-0 focus:outline-none bg-transparent resize-none"
                 rows={2}
                 placeholder="Ingrese la descripción de la Clase Magistral (Max 100 caracteres)"
               />
-              <p className="text-[10px] md:text-[10px] lg:text-[11px] xl:text-xs text-gray-500 mt-0.5 md:mt-0.5 lg:mt-0.5 xl:mt-1 text-right">{level.training.description.length}/100 caracteres</p>
+              <p className="text-[10px] md:text-[10px] lg:text-[11px] xl:text-xs text-gray-500 mt-0.5 md:mt-0.5 lg:mt-0.5 xl:mt-1 text-right">{level.training.description.length}/1000 caracteres</p>
             </td>
           </tr>
           <tr>

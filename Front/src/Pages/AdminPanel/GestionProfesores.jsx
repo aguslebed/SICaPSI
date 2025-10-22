@@ -3,6 +3,9 @@ import NavBar from "../../Components/Student/NavBar";
 import { useNavigate } from "react-router-dom";
 import { listTeachers, setTeacherStatus } from "../../API/Request";
 import LoadingOverlay from "../../Components/Shared/LoadingOverlay";
+import ConfirmActionModal from "../../Components/Modals/ConfirmActionModal";
+import ErrorModal from "../../Components/Modals/ErrorModal";
+import SucessModal from "../../Components/Modals/SucessModal";
 import './AdminPanel.css';
 
 // Badge de estado
@@ -66,6 +69,11 @@ export default function GestionProfesores() {
   // paginado
   const [page, setPage] = useState(1);
   const size = 10;
+  // confirm / success / error modals for status changes
+  const [confirmAction, setConfirmAction] = useState({ open: false, teacherId: null, toStatus: null, label: '', name: '' });
+  const [successMessage, setSuccessMessage] = useState(null);
+  const [errorMessage, setErrorMessage] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // cargar desde backend
   useEffect(() => {
@@ -344,25 +352,10 @@ export default function GestionProfesores() {
                       <button
                         className="admin-action-btn"
                         title={r.estado === "disponible" ? "Bloquear" : "Habilitar"}
-                        onClick={async () => {
+                        onClick={() => {
                           const toStatus = r.estado === "disponible" ? "disabled" : "available";
                           const label = r.estado === "disponible" ? "bloquear" : "habilitar";
-                          if (!window.confirm(`¿Seguro querés ${label} a ${r.nombre} ${r.apellido}?`)) return;
-
-                          const prev = [...rowsRaw];
-                          const next = prev.map((it) =>
-                            it.id === r.id
-                              ? { ...it, estado: toStatus === "available" ? "disponible" : "deshabilitado" }
-                              : it
-                          );
-                          setRowsRaw(next);
-
-                          try {
-                            await setTeacherStatus(r.id, toStatus);
-                          } catch {
-                            alert("No se pudo cambiar el estado. Se revierte.");
-                            setRowsRaw(prev);
-                          }
+                          setConfirmAction({ open: true, teacherId: r.id, toStatus, label, name: `${r.nombre} ${r.apellido}` });
                         }}
                       >
                         {r.estado === "disponible" ? "🚫" : "✅"}
@@ -400,7 +393,40 @@ export default function GestionProfesores() {
                 Siguiente
               </button>
             </div>
-          )}
+            )}
+
+            {/* Confirm / Success / Error modals for status change */}
+            <ConfirmActionModal
+              open={confirmAction.open}
+              title={`Confirmar ${confirmAction.label}`}
+              message={`¿Seguro querés ${confirmAction.label} a ${confirmAction.name}?`}
+              confirmLabel={confirmAction.label?.charAt(0).toUpperCase() + confirmAction.label?.slice(1)}
+              onClose={() => setConfirmAction({ open: false, teacherId: null, toStatus: null, label: '', name: '' })}
+              onConfirm={async () => {
+                if (!confirmAction.teacherId) return;
+                setConfirmAction((c) => ({ ...c, open: false }));
+                const prev = [...rowsRaw];
+                const next = prev.map((it) =>
+                  it.id === confirmAction.teacherId
+                    ? { ...it, estado: confirmAction.toStatus === "available" ? "disponible" : "deshabilitado" }
+                    : it
+                );
+                setRowsRaw(next);
+                setIsProcessing(true);
+                try {
+                  await setTeacherStatus(confirmAction.teacherId, confirmAction.toStatus);
+                  setSuccessMessage('Estado actualizado correctamente');
+                } catch (e) {
+                  setErrorMessage('No se pudo cambiar el estado. Se revierte.');
+                  setRowsRaw(prev);
+                } finally {
+                  setIsProcessing(false);
+                }
+              }}
+            />
+            {isProcessing && <LoadingOverlay label="Procesando cambio de estado..." />}
+            {successMessage && <SucessModal titulo={'Operación exitosa'} mensaje={successMessage} onClose={() => setSuccessMessage(null)} />}
+            {errorMessage && <ErrorModal mensaje={errorMessage} onClose={() => setErrorMessage(null)} />}
         </div>
       </section>
         </div>

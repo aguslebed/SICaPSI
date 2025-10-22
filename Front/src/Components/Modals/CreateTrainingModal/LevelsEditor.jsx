@@ -51,11 +51,11 @@ export default function LevelsEditor(props) {
                   <input
                     value={levels[selectedLevel].title}
                     onChange={(e) => updateLevelField(selectedLevel, 'title', e.target.value)}
-                    maxLength={50}
+                    maxLength={100}
                     className="w-full border-0 px-0 py-0.5 md:py-1 text-xs md:text-sm placeholder:text-xs md:placeholder:text-sm font-normal focus:ring-0 focus:outline-none bg-transparent"
                     placeholder="Ingrese el titulo del nivel (Max caracter: 50)"
                   />
-                  <p className="text-[9px] md:text-[10px] text-gray-500 mt-0.5 text-right">{levels[selectedLevel].title.length}/50 caracteres</p>
+                  <p className="text-[9px] md:text-[10px] text-gray-500 mt-0.5 text-right">{levels[selectedLevel].title.length}/100 caracteres</p>
                 </td>
               </tr>
             </tbody>

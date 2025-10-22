@@ -58,13 +58,13 @@ export default function LevelBibliography({ bibliography, updateLevelField, leve
               <input
                 type="text"
                 value={tempBibTitle}
-                onChange={(e) => {
-                  if (e.target.value.length <= 50) {
-                    setTempBibTitle(e.target.value);
-                  }
-                }}
-                placeholder="Ingrese el título de la bibliografía (Max caracteres: 50)"
-                maxLength={50}
+                  onChange={(e) => {
+                    if (e.target.value.length <= 100) {
+                      setTempBibTitle(e.target.value);
+                    }
+                  }}
+                  placeholder="Ingrese el título de la bibliografía (Max caracteres: 100)"
+                  maxLength={100}
                 className="w-full border-0 px-0 py-0.5 text-xs placeholder:text-xs font-normal focus:ring-0 focus:outline-none bg-transparent"
               />
               <p className="text-[10px] text-gray-500 mt-0.5 text-right">{tempBibTitle.length}/50 caracteres</p>
@@ -77,13 +77,13 @@ export default function LevelBibliography({ bibliography, updateLevelField, leve
             <td className="px-1.5 py-1 border border-gray-300">
               <textarea
                 value={tempBibDescription}
-                onChange={(e) => {
-                  if (e.target.value.length <= 100) {
-                    setTempBibDescription(e.target.value);
-                  }
-                }}
-                placeholder="Ingrese la descripción de la bibliografía (Max caracteres: 100)"
-                maxLength={100}
+                  onChange={(e) => {
+                    if (e.target.value.length <= 500) {
+                      setTempBibDescription(e.target.value);
+                    }
+                  }}
+                  placeholder="Ingrese la descripción de la bibliografía (Max caracteres: 500)"
+                  maxLength={500}
                 rows="2"
                 className="w-full border-0 px-0 py-0.5 text-xs placeholder:text-xs font-normal focus:ring-0 focus:outline-none bg-transparent resize-none"
               />

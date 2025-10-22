@@ -3,6 +3,7 @@ import { Link, Outlet } from 'react-router-dom';
 import NavBar from '../../Components/Student/NavBar';
 import { updateUser as updateUserApi, getAllUsers } from '../../API/Request';
 import LoadingOverlay from '../../Components/Shared/LoadingOverlay';
+import ErrorModal from '../../Components/Modals/ErrorModal';
 import './AdminPanel.css';
 
 
@@ -68,6 +69,7 @@ export default function GestionUsuario() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState(null);
 
   // Referencias para los dropdowns
   const tipoMenuRef = useRef(null);
@@ -217,15 +219,7 @@ export default function GestionUsuario() {
       // create a simple error modal state if needed
       // Reuse showSuccessModal for success; we'll show a quick error modal
       setShowDeleteModal(false);
-      // Dynamically create an error modal using window.alert fallback
-      try {
-        // Prefer a modal in parent pages: set an error in global state; fallback to alert
-        // We'll open a simple alert-style modal here by using window.alert as last resort
-        // TODO: if you want a permanent error modal state here, I can add it.
-        window.alert(msg);
-      } catch (e) {
-        console.error('Fallback alert failed', e);
-      }
+      setErrorModalMessage(msg);
     } finally {
       setLoading(false);
     }
@@ -651,6 +645,7 @@ export default function GestionUsuario() {
           </div>
         )}
       </main>
+      {errorModalMessage && <ErrorModal mensaje={errorModalMessage} onClose={() => setErrorModalMessage(null)} />}
     </>
   );
 }

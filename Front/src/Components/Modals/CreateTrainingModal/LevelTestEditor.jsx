@@ -25,11 +25,11 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                 value={level.test.title} 
                 onChange={(e) => updateLevelField(levelIndex, 'test.title', e.target.value)} 
                 onFocus={() => { setSelectedScene(null); }}
-                maxLength={50}
+                maxLength={100}
                 className="w-full border-0 px-0 py-0.5 md:py-0.5 lg:py-0.5 xl:py-1 text-xs md:text-xs lg:text-xs xl:text-sm placeholder:text-xs md:placeholder:text-xs lg:placeholder:text-xs xl:placeholder:text-sm font-normal focus:ring-0 focus:outline-none bg-transparent" 
                 placeholder="Ingrese el título del test (Max caracteres: 50)" 
               />
-              <p className="text-[10px] md:text-[10px] lg:text-[11px] xl:text-xs text-gray-500 mt-0.5 md:mt-0.5 lg:mt-0.5 xl:mt-1 text-right">{level.test.title.length}/50 caracteres</p>
+              <p className="text-[10px] md:text-[10px] lg:text-[11px] xl:text-xs text-gray-500 mt-0.5 md:mt-0.5 lg:mt-0.5 xl:mt-1 text-right">{level.test.title.length}/100 caracteres</p>
             </td>
           </tr>
           <tr>
@@ -41,12 +41,12 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                 value={level.test.description} 
                 onChange={(e) => updateLevelField(levelIndex, 'test.description', e.target.value)} 
                 onFocus={() => { setSelectedScene(null); }}
-                maxLength={100}
+                maxLength={1000}
                 className="w-full border-0 px-0 py-0.5 md:py-0.5 lg:py-0.5 xl:py-1 text-xs md:text-xs lg:text-xs xl:text-sm placeholder:text-xs md:placeholder:text-xs lg:placeholder:text-xs xl:placeholder:text-sm font-normal focus:ring-0 focus:outline-none bg-transparent resize-none" 
-                rows={2} 
-                placeholder="Ingrese la descripcion de la evaluación (Max 100 caracteres)" 
+                rows={3} 
+                placeholder="Ingrese la descripcion de la evaluación (Max 200 caracteres)" 
               />
-              <p className="text-[10px] md:text-[10px] lg:text-[11px] xl:text-xs text-gray-500 mt-0.5 md:mt-0.5 lg:mt-0.5 xl:mt-1 text-right">{level.test.description.length}/100 caracteres</p>
+              <p className="text-[10px] md:text-[10px] lg:text-[11px] xl:text-xs text-gray-500 mt-0.5 md:mt-0.5 lg:mt-0.5 xl:mt-1 text-right">{level.test.description.length}/1000 caracteres</p>
             </td>
           </tr>
           <tr>
@@ -256,19 +256,19 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                     Descripción
                   </td>
                   <td className="px-1.5 py-1 border border-gray-300">
-                    <textarea
+                      <textarea
                       value={level.test.scenes[selectedScene].description || ''}
                       onChange={(e) => {
                         const newScenes = [...(level.test.scenes || [])];
                         newScenes[selectedScene] = { ...newScenes[selectedScene], description: e.target.value };
                         updateLevelField(levelIndex, 'test.scenes', newScenes);
                       }}
-                      maxLength={50}
+                      maxLength={500}
                       className="w-full border-0 px-0 py-0.5 text-xs placeholder:text-xs font-normal focus:ring-0 focus:outline-none bg-transparent resize-none"
                       rows="2"
-                      placeholder="Ingrese la descripción de la escena (Max caracteres: 50)"
+                      placeholder="Ingrese la descripción de la escena (Max caracteres: 500)"
                     />
-                    <p className="text-[10px] text-gray-500 mt-0.5 text-right">{(level.test.scenes[selectedScene].description || '').length}/50 caracteres</p>
+                    <p className="text-[10px] text-gray-500 mt-0.5 text-right">{(level.test.scenes[selectedScene].description || '').length}/500 caracteres</p>
                   </td>
                 </tr>
                 <tr>
@@ -489,9 +489,11 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                               newScenes[selectedScene] = { ...newScenes[selectedScene], options: newOptions };
                               updateLevelField(levelIndex, 'test.scenes', newScenes);
                             }}
+                            maxLength={100}
                             className="w-full border-0 px-0 py-0.5 text-xs placeholder:text-xs font-normal focus:ring-0 focus:outline-none bg-transparent"
                             placeholder="Texto del botón (ej: Acercarse y abrir la puerta)"
                           />
+                          <p className="text-[10px] text-gray-500 mt-0.5 text-right">{(level.test.scenes[selectedScene].options[selectedOption].description || '').length}/100 caracteres</p>
                         </td>
                       </tr>
                       <tr>
