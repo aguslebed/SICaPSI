@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ChevronDown, CheckCircle, Lock, BookOpen, PlayCircle } from "lucide-react";
 import { useUser } from "../../../context/UserContext";
 import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
+import { normalizeRichTextValue, getPlainTextFromRichText } from "../../../Components/Modals/CreateTrainingModal/RichTextInput";
 
 const TrainingLevels = () => {
   const [openLevel, setOpenLevel] = useState(null);
@@ -56,7 +57,7 @@ const TrainingLevels = () => {
                   className={`flex justify-between items-center px-6 py-3 cursor-pointer transition ${levelActive ? "bg-blue-100" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}
                   onClick={() => levelActive && toggleNivel(nivel._id)}
                 >
-                  <span className="font-semibold">{nivel.title}</span>
+                  <span className="font-semibold break-words" dangerouslySetInnerHTML={{ __html: normalizeRichTextValue(nivel.title) || `Nivel ${nivel.levelNumber}` }} />
                   <div className="flex items-center gap-2">
                     {/* Aquí podrías mostrar si el nivel está completado usando progreso */}
                     <ChevronDown

@@ -1,14 +1,46 @@
 import React, { useState } from 'react';
+import RichTextInput, { getPlainTextFromRichText } from './RichTextInput';
 
-export default function LevelBibliography({ bibliography, updateLevelField, levelIndex, uploadingFiles, handleFileUpload, handleFileDelete, showWarningModal, onTempValuesChange }) {
+export default function LevelBibliography({
+  bibliography,
+  updateLevelField,
+  levelIndex,
+  uploadingFiles,
+  handleFileUpload,
+  handleFileDelete,
+  showWarningModal,
+  onTempValuesChange,
+  editingIndex,
+  setEditingIndex
+}) {
   const [tempBibTitle, setTempBibTitle] = useState('');
   const [tempBibDescription, setTempBibDescription] = useState('');
+  const [tempBibDescriptionLength, setTempBibDescriptionLength] = useState(0);
   const [tempBibUrl, setTempBibUrl] = useState('');
+  const isEditing = typeof editingIndex === 'number' && editingIndex >= 0;
 
   // Log para debug de bibliografía recibida
   React.useEffect(() => {
     // removed debug logs; kept effect placeholder for future instrumentation if needed
   }, [bibliography, levelIndex]);
+
+  React.useEffect(() => {
+    if (!isEditing) return;
+    const item = bibliography?.[editingIndex];
+    if (!item) {
+      if (setEditingIndex) {
+        setEditingIndex(null);
+      }
+      setTempBibTitle('');
+      setTempBibDescription('');
+      setTempBibDescriptionLength(0);
+      setTempBibUrl('');
+      return;
+    }
+    setTempBibTitle(item.title || '');
+    setTempBibDescription(item.description || '');
+    setTempBibUrl(item.url || '');
+  }, [isEditing, editingIndex, bibliography, setEditingIndex]);
 
   // Notificar cambios al padre
   React.useEffect(() => {
@@ -21,19 +53,48 @@ export default function LevelBibliography({ bibliography, updateLevelField, leve
     }
   }, [tempBibTitle, tempBibDescription, tempBibUrl, onTempValuesChange]);
 
-  const addBib = () => {
-    if (!tempBibTitle && !tempBibUrl) return;
-    const newBibliography = [...(bibliography || [])];
-    newBibliography.push({
+  const resetForm = () => {
+    if (setEditingIndex) {
+      setEditingIndex(null);
+    }
+    setTempBibTitle('');
+    setTempBibDescription('');
+    setTempBibDescriptionLength(0);
+    setTempBibUrl('');
+  };
+
+  const saveBibliographyItem = () => {
+    const hasTitle = Boolean(tempBibTitle?.trim());
+    const hasUrl = Boolean(tempBibUrl?.trim());
+    if (!hasTitle && !hasUrl) {
+      return;
+    }
+
+    const nextItem = {
       title: tempBibTitle,
       description: tempBibDescription,
       url: tempBibUrl
-    });
-    updateLevelField(newBibliography);
-    setTempBibTitle('');
-    setTempBibDescription('');
-    setTempBibUrl('');
+    };
+
+    if (isEditing) {
+      if (!bibliography || !bibliography[editingIndex]) {
+        return;
+      }
+      const updatedList = [...bibliography];
+      updatedList[editingIndex] = nextItem;
+      updateLevelField(updatedList);
+    } else {
+      const newBibliography = [...(bibliography || [])];
+      newBibliography.push(nextItem);
+      updateLevelField(newBibliography);
+      resetForm();
+    }
   };
+
+  React.useEffect(() => {
+    const currentLength = Math.min(getPlainTextFromRichText(tempBibDescription).length, 250);
+    setTempBibDescriptionLength((prev) => (prev !== currentLength ? currentLength : prev));
+  }, [tempBibDescription]);
 
   return (
     <div className="border border-gray-300 rounded-sm p-1.5 bg-white">
@@ -50,24 +111,25 @@ export default function LevelBibliography({ bibliography, updateLevelField, leve
           </tr>
         </thead>
         <tbody>
+          {isEditing && (
+            <tr>
+              <td colSpan="2" className="px-1.5 py-1 border border-gray-300 bg-yellow-50 text-xs text-yellow-700">
+                Editando bibliografía #{(editingIndex ?? 0) + 1}. Guardá los cambios o cancela la edición para volver a agregar nuevos materiales.
+              </td>
+            </tr>
+          )}
           <tr>
             <td className="bg-gray-100 px-1.5 py-1 text-xs font-medium text-gray-700 border border-gray-300" style={{ width: '25%' }}>
               Título
             </td>
             <td className="px-1.5 py-1 border border-gray-300">
-              <input
-                type="text"
+              <RichTextInput
                 value={tempBibTitle}
-                  onChange={(e) => {
-                    if (e.target.value.length <= 100) {
-                      setTempBibTitle(e.target.value);
-                    }
-                  }}
-                  placeholder="Ingrese el título de la bibliografía (Max caracteres: 100)"
-                  maxLength={100}
-                className="w-full border-0 px-0 py-0.5 text-xs placeholder:text-xs font-normal focus:ring-0 focus:outline-none bg-transparent"
+                onChange={(html) => setTempBibTitle(html)}
+                maxLength={100}
+                placeholder="Ingrese el título de la bibliografía (Max caracteres: 100)"
               />
-              <p className="text-[10px] text-gray-500 mt-0.5 text-right">{tempBibTitle.length}/50 caracteres</p>
+              <p className="text-[10px] text-gray-500 mt-0.5 text-right">{getPlainTextFromRichText(tempBibTitle).length}/100 caracteres</p>
             </td>
           </tr>
           <tr>
@@ -75,19 +137,16 @@ export default function LevelBibliography({ bibliography, updateLevelField, leve
               Descripción
             </td>
             <td className="px-1.5 py-1 border border-gray-300">
-              <textarea
+              <RichTextInput
                 value={tempBibDescription}
-                  onChange={(e) => {
-                    if (e.target.value.length <= 500) {
-                      setTempBibDescription(e.target.value);
-                    }
-                  }}
-                  placeholder="Ingrese la descripción de la bibliografía (Max caracteres: 500)"
-                  maxLength={500}
-                rows="2"
-                className="w-full border-0 px-0 py-0.5 text-xs placeholder:text-xs font-normal focus:ring-0 focus:outline-none bg-transparent resize-none"
+                onChange={(html, plainLength) => {
+                  setTempBibDescription(html);
+                  setTempBibDescriptionLength(Math.min(plainLength, 250));
+                }}
+                maxLength={250}
+                placeholder="Ingrese la descripción de la bibliografía (Max caracteres: 250)"
               />
-              <p className="text-[10px] text-gray-500 mt-0.5 text-right">{tempBibDescription.length}/100 caracteres</p>
+              <p className="text-[10px] text-gray-500 mt-0.5 text-right">{tempBibDescriptionLength}/250 caracteres</p>
             </td>
           </tr>
           <tr>
@@ -106,14 +165,7 @@ export default function LevelBibliography({ bibliography, updateLevelField, leve
                 {tempBibUrl && tempBibUrl.startsWith('/uploads/') && (
                   <button
                     type="button"
-                    onClick={async () => {
-                      if (tempBibUrl && typeof tempBibUrl === 'string' && tempBibUrl.startsWith('/uploads/')) {
-                        try {
-                          await handleFileDelete(tempBibUrl, levelIndex);
-                        } catch (error) {
-                          console.error('Error eliminando archivo:', error);
-                        }
-                      }
+                    onClick={() => {
                       setTempBibUrl('');
                     }}
                     className="text-red-600 hover:text-red-800 text-xs px-1.5 py-0.5 border border-red-200 rounded-md cursor-pointer"
@@ -139,25 +191,19 @@ export default function LevelBibliography({ bibliography, updateLevelField, leve
                       }
 
                       try {
-                        // Si ya hay un archivo subido, eliminarlo primero
-                        if (tempBibUrl && tempBibUrl.startsWith('/uploads/')) {
-                          try {
-                            await handleFileDelete(tempBibUrl, levelIndex);
-                          } catch (error) {
-                            console.error('Error eliminando archivo anterior:', error);
-                          }
-                        }
-
-                        const response = await handleFileUpload(file, levelIndex);
+                        // Si ya hay un archivo subido, simplemente lo reemplazamos (no eliminar hasta guardar)
+                        // Usar el índice correcto: si está editando, usar editingIndex, sino usar bibliography.length (nuevo item)
+                        const bibIndex = isEditing ? editingIndex : (bibliography?.length || 0);
+                        const response = await handleFileUpload(file, levelIndex, 'bib', bibIndex);
                         const filePath = typeof response === 'string' ? response : response?.filePath;
                         if (!filePath) {
                           throw new Error('No se recibió la ruta del archivo');
                         }
                         setTempBibUrl(filePath);
                       } catch (error) {
-                        console.error('Error subiendo archivo:', error);
+                        console.error('Error preparando archivo:', error);
                         if (showWarningModal) {
-                          showWarningModal(`Error subiendo archivo: ${error.message || 'Error desconocido'}`);
+                          showWarningModal(`Error: ${error.message || 'Error desconocido'}`);
                         }
                       } finally {
                         e.target.value = '';
@@ -173,14 +219,25 @@ export default function LevelBibliography({ bibliography, updateLevelField, leve
             </td>
           </tr>
           <tr>
-            <td colSpan="2" className="px-1.5 py-1 border border-gray-300 text-right">
-              <button
-                type="button"
-                onClick={addBib}
-                className="bg-white hover:bg-gray-50 text-gray-700 border border-green-600 px-3 py-1.5 rounded-sm text-xs font-medium cursor-pointer"
-              >
-                + Agregar
-              </button>
+            <td colSpan="2" className="px-1.5 py-1 border border-gray-300">
+              <div className={`flex items-center ${isEditing ? 'justify-between' : 'justify-end'} gap-2`}>
+                {isEditing && (
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="bg-white hover:bg-gray-50 text-gray-600 border border-gray-300 px-3 py-1.5 rounded-sm text-xs font-medium cursor-pointer"
+                  >
+                    Cancelar edición
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={saveBibliographyItem}
+                  className="bg-white hover:bg-gray-50 text-gray-700 border border-green-600 px-3 py-1.5 rounded-sm text-xs font-medium cursor-pointer"
+                >
+                  {isEditing ? 'Guardar cambios' : '+ Agregar'}
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>

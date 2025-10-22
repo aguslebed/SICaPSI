@@ -98,18 +98,24 @@ export class TrainingService extends ITrainingService {
      }
    }
 
-   const updatedTraining = await this.Training.findByIdAndUpdate(
-     trainingId, 
-     trainingData, 
-     { new: true, runValidators: true }
-   )
-   .populate({ path: 'createdBy', select: 'firstName lastName email', model: this.User })
-   .populate({ path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level })
-   .exec();
-
-   if (!updatedTraining) {
+   // Obtener la capacitación actual
+   const training = await this.Training.findById(trainingId);
+   
+   if (!training) {
      throw new Error("Capacitación no encontrada");
    }
+
+   // Actualizar campos
+   Object.assign(training, trainingData);
+   
+   // Guardar (esto ejecutará el middleware pre-save que actualiza isActive según fechas)
+   await training.save();
+
+   // Populate y retornar
+   const updatedTraining = await this.Training.findById(trainingId)
+     .populate({ path: 'createdBy', select: 'firstName lastName email', model: this.User })
+     .populate({ path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level })
+     .exec();
 
    return updatedTraining;
  }

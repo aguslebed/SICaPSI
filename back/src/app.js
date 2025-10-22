@@ -14,6 +14,7 @@ import { fileURLToPath } from 'url';
 import trainingRoutes from "./routes/trainingRoutes.js";
 import enrollmentRoutes from "./routes/enrollmentRoutes.js";
 import levelRoutes from "./routes/levelRoutes.js";
+import { startTrainingScheduler } from "./utils/trainingScheduler.js";
 
 
 // __dirname equivalent for ES Modules
@@ -95,6 +96,9 @@ class AppConfig {
       this.configureMiddlewares();
       this.configureRoutes();
       this.configureErrorHandling();
+
+      // Iniciar scheduler de capacitaciones
+      startTrainingScheduler();
 
       // Iniciar servidor
       this.app.listen(this.PORT, "0.0.0.0", () => {

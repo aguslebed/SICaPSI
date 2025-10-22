@@ -8,7 +8,7 @@ import ErrorListModal from '../../Components/Modals/ErrorListModal';
 import WarningModal from '../../Components/Modals/WarningModal';
 import ConfirmActionModal from '../../Components/Modals/ConfirmActionModal';
 import { useState, useEffect, useRef } from 'react';
-import { getAllActiveTrainings, getAllTrainings, createTraining, updateTraining, addLevelsToTraining, updateLevelsInTraining, deleteTraining, getTrainingById, enrollStudentsToTraining } from '../../API/Request';
+import { getAllActiveTrainings, getAllTrainings, createTraining, updateTraining, addLevelsToTraining, updateLevelsInTraining, deleteTraining, getTrainingById, enrollStudentsToTraining, deleteTrainingFile } from '../../API/Request';
 import LoadingOverlay from '../../Components/Shared/LoadingOverlay';
 import './AdminPanel.css';
 
@@ -180,16 +180,16 @@ export default function GestionCapacitacion() {
             // Asegurar que training tenga los campos requeridos
             const training = safeLevel.training || {};
             const processedTraining = {
-              title: training.title || `Clase Magistral - ${safeLevel.title}`,
+              title: training.title || '',
               description: training.description || '',
-              url: training.url || 'https://www.youtube.com/embed/placeholder',
+              url: training.url || '',
               duration: training.duration || 0
             };
 
             // Asegurar que test tenga los campos requeridos
             const test = safeLevel.test || {};
             const processedTest = {
-              title: test.title || `Evaluación - ${safeLevel.title}`,
+              title: test.title || '',
               description: test.description || '',
               imageUrl: test.imageUrl || '',
               isActive: test.isActive !== undefined ? test.isActive : true,
@@ -199,7 +199,7 @@ export default function GestionCapacitacion() {
             return {
               ...safeLevel,
               trainingId: finalTrainingId,
-              description: safeLevel.description || `Descripción del ${safeLevel.title}`,
+              description: safeLevel.description || '',
               training: processedTraining,
               test: processedTest,
               bibliography: safeLevel.bibliography || [] // Asegurar que la bibliografía se incluya
@@ -228,16 +228,16 @@ export default function GestionCapacitacion() {
             // Asegurar que training tenga los campos requeridos
             const training = safeLevel.training || {};
             const processedTraining = {
-              title: training.title || `Clase Magistral - ${safeLevel.title}`,
+              title: training.title || '',
               description: training.description || '',
-              url: training.url || 'https://www.youtube.com/embed/placeholder',
+              url: training.url || '',
               duration: training.duration || 0
             };
 
             // Asegurar que test tenga los campos requeridos
             const test = safeLevel.test || {};
             const processedTest = {
-              title: test.title || `Evaluación - ${safeLevel.title}`,
+              title: test.title || '',
               description: test.description || '',
               imageUrl: test.imageUrl || '',
               isActive: test.isActive !== undefined ? test.isActive : true,
@@ -247,7 +247,7 @@ export default function GestionCapacitacion() {
             return {
               ...safeLevel,
               trainingId: finalTrainingId,
-              description: safeLevel.description || `Descripción del ${safeLevel.title}`,
+              description: safeLevel.description || '',
               training: processedTraining,
               test: processedTest,
               bibliography: safeLevel.bibliography || [] // Asegurar que la bibliografía se incluya
@@ -275,6 +275,12 @@ export default function GestionCapacitacion() {
       
       // 4. Refrescar la lista
       await refreshTrainings();
+      
+      // 5. Si se creó una nueva capacitación, actualizar editingTraining para cambiar a modo edición
+      if (!isEditing && finalTrainingId) {
+        const createdTraining = await getTrainingById(finalTrainingId);
+        setEditingTraining(createdTraining);
+      }
       
       // El modal de éxito se muestra en CreateTrainingModal
       // NO cerrar el modal aquí - se cerrará cuando el usuario acepte el modal de éxito
@@ -311,6 +317,64 @@ export default function GestionCapacitacion() {
     
     setLoading(true);
     try {
+      // 1. Primero obtener la capacitación completa para conocer todos sus archivos
+      const trainingData = await getTrainingById(trainingId);
+      
+      // 2. Recopilar todos los archivos que deben eliminarse
+      const filesToDelete = [];
+      
+      // 2.1 Imagen de presentación
+      if (trainingData.image && trainingData.image.startsWith('/uploads/')) {
+        filesToDelete.push(trainingData.image);
+      }
+      
+      // 2.2 Archivos en niveles
+      if (trainingData.levels && trainingData.levels.length > 0) {
+        trainingData.levels.forEach(level => {
+          // Video de capacitación
+          if (level.training?.url && level.training.url.startsWith('/uploads/')) {
+            filesToDelete.push(level.training.url);
+          }
+          
+          // Imagen del test
+          if (level.test?.imageUrl && level.test.imageUrl.startsWith('/uploads/')) {
+            filesToDelete.push(level.test.imageUrl);
+          }
+          
+          // Videos de escenas del test
+          if (level.test?.scenes && level.test.scenes.length > 0) {
+            level.test.scenes.forEach(scene => {
+              if (scene.videoUrl && scene.videoUrl.startsWith('/uploads/')) {
+                filesToDelete.push(scene.videoUrl);
+              }
+            });
+          }
+          
+          // Archivos de bibliografía
+          if (level.bibliography && level.bibliography.length > 0) {
+            level.bibliography.forEach(bib => {
+              if (bib.url && bib.url.startsWith('/uploads/')) {
+                filesToDelete.push(bib.url);
+              }
+            });
+          }
+        });
+      }
+      
+      // 3. Eliminar archivos del servidor
+      if (filesToDelete.length > 0) {
+        console.log('Eliminando archivos asociados:', filesToDelete);
+        for (const filePath of filesToDelete) {
+          try {
+            await deleteTrainingFile(filePath);
+          } catch (error) {
+            console.warn(`No se pudo eliminar el archivo ${filePath}:`, error);
+            // Continuar con los demás archivos aunque falle alguno
+          }
+        }
+      }
+      
+      // 4. Eliminar la capacitación de la base de datos
       await deleteTraining(trainingId);
       await refreshTrainings();
       setSuccessMessage('Capacitación eliminada exitosamente');
@@ -633,8 +697,8 @@ export default function GestionCapacitacion() {
                     return (
                       <tr key={t._id}>
                         <td data-label="Capacitación">
-                          <div style={{ fontWeight: 600 }}>{t.title}</div>
-                          <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>{t.subtitle}</div>
+                          <div style={{ fontWeight: 600 }} dangerouslySetInnerHTML={{ __html: t.title || '' }} />
+                          <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }} dangerouslySetInnerHTML={{ __html: t.subtitle || '' }} />
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
                             Progreso: {t.progressPercentage || 0}%
                           </div>

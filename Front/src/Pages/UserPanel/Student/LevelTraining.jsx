@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { useUser } from "../../../context/UserContext";
 import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
 import { resolveImageUrl } from "../../../API/Request";
+import { normalizeRichTextValue, getPlainTextFromRichText } from "../../../Components/Modals/CreateTrainingModal/RichTextInput";
 
 const LevelTraining = () => {
   const { idTraining, nivelId } = useParams();
@@ -20,6 +21,8 @@ const LevelTraining = () => {
   if (!nivel) return <div>No se encontró el nivel.</div>;
 
   const training = nivel.training || {};
+  const sanitizedDescription = normalizeRichTextValue(training.description || "");
+  const hasDescription = getPlainTextFromRichText(sanitizedDescription).trim().length > 0;
 
   // Función para convertir URLs de YouTube al formato embed
   const convertToEmbedUrl = (url) => {
@@ -123,10 +126,8 @@ const LevelTraining = () => {
       <div className="w-full max-w-4xl bg-white rounded-2xl shadow-lg border border-gray-200 p-8 space-y-6">
         {/* Título */}
         <header className="text-center space-y-2">
-          <h1 className="text-3xl font-extrabold text-blue-700">
-            {training.title || nivel.title}
-          </h1>
-          <p className="text-lg text-gray-600">{nivel.description}</p>
+          <h1 className="text-3xl font-extrabold text-blue-700 break-words" dangerouslySetInnerHTML={{ __html: normalizeRichTextValue(training.title || nivel.title) || 'Clase Magistral' }} />
+          <p className="text-lg text-gray-600 break-words" dangerouslySetInnerHTML={{ __html: normalizeRichTextValue(nivel.description) || '' }} />
         </header>
 
         {/* Contenido multimedia */}
@@ -139,14 +140,16 @@ const LevelTraining = () => {
         )}
 
         {/* Descripción */}
-        {training.description && (
+        {hasDescription && (
           <section className="bg-blue-50 p-5 rounded-xl border border-blue-200">
             <h3 className="font-semibold text-blue-600 mb-2">
               Descripción de la capacitación
             </h3>
-            <p className="text-gray-700 leading-relaxed">
-              {training.description}
-            </p>
+            <div
+              className="text-gray-700 leading-relaxed break-words"
+              dir="ltr"
+              dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
+            />
           </section>
         )}
 

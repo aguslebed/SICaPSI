@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
 import { useUser } from "../../../context/UserContext";
 import { resolveImageUrl } from '../../../API/Request';
+import { normalizeRichTextValue, getPlainTextFromRichText } from "../../../Components/Modals/CreateTrainingModal/RichTextInput";
 
 const LevelTest = () => {
   // Botón base: mantenemos cursor-pointer y legibilidad, pero adaptativo
@@ -88,19 +89,18 @@ const LevelTest = () => {
               </div>
             )}
             {/* Descripción */}
-            <h2 className="text-base sm:text-lg font-bold mb-2 text-center min-h-10 flex items-center justify-center">{tests[sceneIndex].description}</h2>
+            <h2 className="text-base sm:text-lg font-bold mb-2 text-center min-h-10 flex items-center justify-center break-words" dangerouslySetInnerHTML={{ __html: normalizeRichTextValue(tests[sceneIndex].description) || 'Escena de evaluación' }} />
             {/* Opciones */}
             <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-4 md:gap-6 justify-center w-full">
               {Array.isArray(tests[sceneIndex].options) &&
                 tests[sceneIndex].options.map((opt, idx) => (
                   <button
                     key={idx}
-                    className="bg-[#009fe3] text-white font-bold rounded-lg hover:bg-[#0077b6] transition cursor-pointer w-full sm:w-64 min-h-12 px-4"
+                    className="bg-[#009fe3] text-white font-bold rounded-lg hover:bg-[#0077b6] transition cursor-pointer w-full sm:w-64 min-h-12 px-4 break-words"
                     style={buttonStyle}
                     onClick={() => handleOption(opt.next)}
-                  >
-                    {opt.description}
-                  </button>
+                    dangerouslySetInnerHTML={{ __html: normalizeRichTextValue(opt.description) || 'Opción' }}
+                  />
                 ))}
             </div>
             {/* Botón para reiniciar */}
@@ -126,13 +126,9 @@ const LevelTest = () => {
                 />
                 
                 {/* Información del test */}
-                <h2 className="text-2xl font-bold mb-4 text-center text-gray-800">
-                  {level?.test?.title || 'Evaluación Interactiva del Nivel'}
-                </h2>
+                <h2 className="text-2xl font-bold mb-4 text-center text-gray-800 break-words" dangerouslySetInnerHTML={{ __html: normalizeRichTextValue(level?.test?.title) || 'Evaluación Interactiva del Nivel' }} />
                 
-                <p className="mb-6 text-center text-gray-600">
-                  {level?.test?.description || 'En este test interactivo pondrás a prueba los conocimientos adquiridos durante la capacitación.'}
-                </p>
+                <div className="mb-6 text-center text-gray-600 break-words" dangerouslySetInnerHTML={{ __html: normalizeRichTextValue(level?.test?.description) || 'En este test interactivo pondrás a prueba los conocimientos adquiridos durante la capacitación.' }} />
                 
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-6 md:gap-8 justify-center w-full">
                   <button

@@ -161,7 +161,7 @@ const NavBar = () => {
                               }}
                               title="Ir a bandeja de entrada"
                             >
-                              <span className="inline-block text-xs text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">{trainingTitle}</span>
+                              <span className="inline-block text-xs text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded" dangerouslySetInnerHTML={{ __html: trainingTitle || 'General' }} />
                               <div className="font-semibold">{m.subject || '(Sin asunto)'}</div>
                               <div className="text-xs text-gray-600">De: {senderName || 'Desconocido'} · {date}</div>
                               <div className="mt-1 flex items-center gap-2">

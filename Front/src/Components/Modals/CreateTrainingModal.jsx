@@ -1,8 +1,9 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { UserContext } from '../../context/UserContext';
 import { getStudents, getEnrolledStudents, uploadTrainingFile, deleteTrainingFile, getAllUsers } from '../../API/Request';
-import TrainingPreview from './TrainingPreview';
+import TrainingPreview from './CreateTrainingModal/TrainingPreview';
 import PresentationForm from './CreateTrainingModal/PresentationForm';
+import { getPlainTextFromRichText, normalizeRichTextValue } from './CreateTrainingModal/RichTextInput';
 import LevelsEditor from './CreateTrainingModal/LevelsEditor';
 import AssignTeacher from './CreateTrainingModal/AssignTeacher';
 import EnrollStudents from './CreateTrainingModal/EnrollStudents';
@@ -68,6 +69,9 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
   // Estado para la opción seleccionada en la escena (similar a selectedLevel y selectedScene)
   const [selectedOption, setSelectedOption] = useState(null);
 
+  // Estado para la bibliografía seleccionada (edición desde la vista previa)
+  const [editingBibliographyIndex, setEditingBibliographyIndex] = useState(null);
+
   // Cuando se abre el modal (crear o editar), asegurar que el punto de inicio sea "Capacitación"
   // y limpiar subsecciones/selecciones para evitar abrir en la última modificación.
   useEffect(() => {
@@ -77,6 +81,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
       setSelectedLevel(0);
       setSelectedScene(null);
       setSelectedOption(null);
+      setEditingBibliographyIndex(null);
     }
     // sólo cuando cambia 'open'
   }, [open]);
@@ -98,6 +103,17 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
 
   // Estado para archivos subidos
   const [uploadingFiles, setUploadingFiles] = useState({});
+
+  // Estado para archivos pendientes de subir (solo se suben al guardar)
+  const [pendingImageFile, setPendingImageFile] = useState(null);
+  const [pendingLevelFiles, setPendingLevelFiles] = useState({});
+  // Estructura: { 'training-0': File, 'test-0': File, 'scene-0-1': File, 'bib-0-2': File }
+
+  // Estado para trackear archivos originales (para eliminarlos solo al guardar si fueron reemplazados)
+  const [originalFiles, setOriginalFiles] = useState({
+    image: '',
+    levels: []
+  });
 
   // Estados para modales de error y éxito
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -123,7 +139,8 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
     if (!subtitle || !subtitle.trim()) {
       errors.push('Falta el subtítulo de la capacitación');
     }
-    if (!description || !description.trim()) {
+    const descriptionText = getPlainTextFromRichText(description);
+    if (!descriptionText || !descriptionText.trim()) {
       errors.push('Falta la descripción de la capacitación');
     }
     if (!imageValue) {
@@ -139,6 +156,26 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
     // Validar que fecha fin sea posterior a fecha inicio
     if (startDate && endDate && new Date(endDate) <= new Date(startDate)) {
       errors.push('La fecha de fin debe ser posterior a la fecha de inicio');
+    }
+
+    // Validar fechas para habilitación
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Ignorar horario
+    
+    if (startDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      if (start > today) {
+        errors.push('No se puede habilitar la capacitación antes de la fecha de inicio. Se habilitará automáticamente en esa fecha.');
+      }
+    }
+    
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(0, 0, 0, 0);
+      if (end < today) {
+        errors.push('No se puede habilitar la capacitación después de la fecha de fin. La fecha de finalización ya pasó.');
+      }
     }
 
     // Validar que exista al menos 1 nivel
@@ -172,7 +209,8 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
           if (!bibItem.title || !bibItem.title.trim()) {
             errors.push(`Nivel ${levelNum}, Bibliografía ${bibIdx + 1}: Falta el título`);
           }
-          if (!bibItem.description || !bibItem.description.trim()) {
+          const bibliographyDescriptionText = getPlainTextFromRichText(bibItem.description);
+          if (!bibliographyDescriptionText || !bibliographyDescriptionText.trim()) {
             errors.push(`Nivel ${levelNum}, Bibliografía ${bibIdx + 1}: Falta la descripción`);
           }
           if (!bibItem.url || !bibItem.url.trim()) {
@@ -242,6 +280,30 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
   const handleIsActiveChange = (checked) => {
     // Si está intentando activar (checked === true)
     if (checked) {
+      // Validar fechas primero
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        if (start > today) {
+          setWarningMessage('No se puede habilitar la capacitación antes de la fecha de inicio. Se habilitará automáticamente en esa fecha.');
+          setShowWarningModal(true);
+          return;
+        }
+      }
+      
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(0, 0, 0, 0);
+        if (end < today) {
+          setWarningMessage('No se puede habilitar la capacitación después de la fecha de fin. La fecha de finalización ya pasó.');
+          setShowWarningModal(true);
+          return;
+        }
+      }
+      
       // Validar antes de activar (logs removed)
       const validation = validateTrainingForActivation();
 
@@ -277,11 +339,10 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
     const hasBibliography = 
       level.bibliography &&
       level.bibliography.length > 0 &&
-      level.bibliography.every(item => 
-        item.title?.trim() && 
-        item.description?.trim() && 
-        item.url?.trim()
-      );
+      level.bibliography.every(item => {
+        const plainDescription = getPlainTextFromRichText(item.description);
+        return item.title?.trim() && plainDescription.trim() && item.url?.trim();
+      });
 
     // Validar test
     const hasTest = 
@@ -302,23 +363,37 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
     return hasTraining && hasBibliography && hasTest;
   };
 
-  // Función para subir archivo de training
-  const handleFileUpload = async (file, levelIndex) => {
-    const fileKey = `level-${levelIndex}-training`;
+  // Función para almacenar archivo pendiente (NO subirlo todavía)
+  const handleFileUpload = async (file, levelIndex, fileType, subIndex = null) => {
+    // fileType: 'training', 'test', 'scene', 'bib'
+    // subIndex: para escenas y bibliografía
     
-    try {
-      setUploadingFiles(prev => ({ ...prev, [fileKey]: true }));
-      
-      const response = await uploadTrainingFile(file);
-      
-      // Retornar la respuesta para que los componentes hijos la manejen
-      return response;
-    } catch (error) {
-      console.error('Error subiendo archivo:', error);
-      throw error; // Re-lanzar el error para que lo maneje el componente hijo
-    } finally {
-      setUploadingFiles(prev => ({ ...prev, [fileKey]: false }));
+    const fileKey = subIndex !== null 
+      ? `${fileType}-${levelIndex}-${subIndex}`
+      : `${fileType}-${levelIndex}`;
+    
+    // Validar tamaño (100MB max para videos, 5MB para imágenes)
+    const maxSize = (fileType === 'training' || fileType === 'scene') 
+      ? 100 * 1024 * 1024  // 100MB para videos
+      : 5 * 1024 * 1024;    // 5MB para imágenes y otros
+    
+    const maxSizeText = (fileType === 'training' || fileType === 'scene') ? '100 MB' : '5 MB';
+    if (file.size > maxSize) {
+      throw new Error(`El archivo excede el tamaño máximo de ${maxSizeText}`);
     }
+    
+    // Guardar el archivo en estado pendiente
+    setPendingLevelFiles(prev => ({ ...prev, [fileKey]: file }));
+    
+    // Crear data URL para preview
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        resolve({ filePath: event.target.result, isPending: true });
+      };
+      reader.onerror = () => reject(new Error('Error leyendo archivo'));
+      reader.readAsDataURL(file);
+    });
   };
 
   // Función para eliminar archivos locales
@@ -345,14 +420,29 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
     if (editingTraining && open) {
       // Cargando datos de capacitación para edición
       // Cargar datos del training
-      setTitle(editingTraining.title || '');
-      setSubtitle(editingTraining.subtitle || '');
-      setDescription(editingTraining.description || '');
+    setTitle(editingTraining.title || '');
+    setSubtitle(editingTraining.subtitle || '');
+    setDescription(normalizeRichTextValue(editingTraining.description || ''));
       setImage(editingTraining.image || '');
       setIsActive(editingTraining.isActive ?? true);
       setAssignedTeacher(editingTraining.assignedTeacher || '');
       setStartDate(editingTraining.startDate ? editingTraining.startDate.split('T')[0] : '');
       setEndDate(editingTraining.endDate ? editingTraining.endDate.split('T')[0] : '');
+      setPendingImageFile(null); // Limpiar archivo pendiente al cargar para edición
+      setPendingLevelFiles({}); // Limpiar archivos pendientes de niveles
+      
+      // Guardar archivos originales para comparar al guardar
+      const originalLevels = editingTraining.levels?.map(level => ({
+        trainingUrl: level.training?.url || level.training?.videoUrl || '',
+        testImageUrl: level.test?.imageUrl || '',
+        testScenes: level.test?.scenes?.map(scene => scene.videoUrl || '') || [],
+        bibliography: level.bibliography?.map(bib => bib.url || bib.videoUrl || '') || []
+      })) || [];
+      
+      setOriginalFiles({
+        image: editingTraining.image || '',
+        levels: originalLevels
+      });
       
       // Cargar niveles si existen
       if (editingTraining.levels && editingTraining.levels.length > 0) {
@@ -360,7 +450,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
         setLevels(editingTraining.levels.map((level, idx) => {
           const bibliographyData = level.bibliography ? level.bibliography.map(bibItem => ({
             title: bibItem.title || '',
-            description: bibItem.description || '',
+            description: normalizeRichTextValue(bibItem.description || ''),
             // Compatibilidad con datos legacy que podrían tener videoUrl en lugar de url
             url: bibItem.url || bibItem.videoUrl || ''
           })) : [];
@@ -399,6 +489,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
       if (editingTraining._id) {
         loadEnrolledStudents(editingTraining._id);
       }
+      setEditingBibliographyIndex(null);
     } else if (!editingTraining && open) {
       // Limpiar formulario para nuevo training
       setTitle('');
@@ -409,6 +500,8 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
       setAssignedTeacher('');
       setStartDate('');
       setEndDate('');
+      setPendingImageFile(null); // Limpiar archivo pendiente
+      setPendingLevelFiles({}); // Limpiar archivos pendientes de niveles
       setLevels([{ 
         levelNumber: 1, 
         title: '', 
@@ -430,6 +523,8 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
       setReport([]);
       setSelectedLevel(0);
       setSelectedStudents([]); // Limpiar Alumnos seleccionados para nuevo training
+      setEditingBibliographyIndex(null);
+      setOriginalFiles({ image: '', levels: [] }); // Limpiar archivos originales
     }
   }, [editingTraining, open]);
 
@@ -493,6 +588,15 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
     }
   };
 
+  const handleSelectLevel = (levelIndex, options = {}) => {
+    setSelectedLevel(levelIndex);
+    setSelectedScene(null);
+    setSelectedOption(null);
+    if (!options.preserveEditing) {
+      setEditingBibliographyIndex(null);
+    }
+  };
+
   if (!open) return null;
 
   const addLevel = () => {
@@ -516,7 +620,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
       }
     };
     setLevels([...levels, newLevel]);
-    setSelectedLevel(levels.length);
+    handleSelectLevel(levels.length);
   };
 
   const removeLevel = () => {
@@ -530,7 +634,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
       }));
       setLevels(renumberedLevels);
       // Ajustar el nivel seleccionado
-      setSelectedLevel(Math.max(0, selectedLevel - 1));
+      handleSelectLevel(Math.max(0, selectedLevel - 1));
     }
   };
 
@@ -594,8 +698,93 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
   };
 
   const handleSave = async () => {
+    // 0. Subir archivo de imagen pendiente si existe (ANTES de validaciones)
+    let finalImagePath = typeof image === 'string' ? image.trim() : image;
+    let oldImageToDelete = null;
+    
+    if (pendingImageFile) {
+      try {
+        setUploadingFiles(prev => ({ ...prev, 'presentation-image': true }));
+        const response = await uploadTrainingFile(pendingImageFile);
+        const uploadedPath = typeof response === 'string' ? response : response?.filePath;
+        
+        if (!uploadedPath) {
+          throw new Error('No se recibió la ruta del archivo subido');
+        }
+        
+        // Si estamos editando y había una imagen anterior, marcarla para eliminación
+        if (isEditing && originalFiles.image && originalFiles.image.startsWith('/uploads/')) {
+          oldImageToDelete = originalFiles.image;
+        }
+        
+        finalImagePath = uploadedPath;
+        setImage(uploadedPath); // Actualizar el estado con la ruta del servidor
+        setPendingImageFile(null); // Limpiar archivo pendiente
+      } catch (err) {
+        console.error('Error subiendo imagen:', err);
+        setErrorMessages([`Error al subir la imagen: ${err.message || 'Error desconocido'}`]);
+        setErrorModalTitle('Error al subir archivo');
+        setErrorModalMessageText('No se pudo subir la imagen:');
+        setShowErrorModal(true);
+        return; // Detener el guardado si falla la subida
+      } finally {
+        setUploadingFiles(prev => ({ ...prev, 'presentation-image': false }));
+      }
+    }
+
+    // 0.1 Subir archivos pendientes de niveles
+    const updatedLevels = [...levels];
+    const filesToDeleteFromLevels = [];
+    
+    for (const [fileKey, file] of Object.entries(pendingLevelFiles)) {
+      try {
+        setUploadingFiles(prev => ({ ...prev, [fileKey]: true }));
+        const response = await uploadTrainingFile(file);
+        const uploadedPath = typeof response === 'string' ? response : response?.filePath;
+        
+        if (!uploadedPath) {
+          throw new Error(`No se recibió la ruta del archivo ${fileKey}`);
+        }
+        
+        // Parsear fileKey: 'training-0', 'test-1', 'scene-2-3', 'bib-1-4'
+        const [fileType, levelIdx, subIdx] = fileKey.split('-');
+        const levelIndex = parseInt(levelIdx);
+        
+        if (fileType === 'training') {
+          // La eliminación del archivo anterior se maneja más abajo en la comparación con originalFiles
+          updatedLevels[levelIndex].training.url = uploadedPath;
+        } else if (fileType === 'test') {
+          // La eliminación del archivo anterior se maneja más abajo en la comparación con originalFiles
+          updatedLevels[levelIndex].test.imageUrl = uploadedPath;
+        } else if (fileType === 'scene') {
+          const sceneIndex = parseInt(subIdx);
+          // La eliminación del archivo anterior se maneja más abajo en la comparación con originalFiles
+          updatedLevels[levelIndex].test.scenes[sceneIndex].videoUrl = uploadedPath;
+        } else if (fileType === 'bib') {
+          const bibIndex = parseInt(subIdx);
+          // La eliminación del archivo anterior se maneja más abajo en la comparación con originalFiles
+          updatedLevels[levelIndex].bibliography[bibIndex].url = uploadedPath;
+        }
+        
+      } catch (err) {
+        console.error(`Error subiendo archivo ${fileKey}:`, err);
+        setErrorMessages([`Error al subir archivo: ${err.message || 'Error desconocido'}`]);
+        setErrorModalTitle('Error al subir archivo');
+        setErrorModalMessageText('No se pudo subir uno de los archivos:');
+        setShowErrorModal(true);
+        return;
+      } finally {
+        setUploadingFiles(prev => ({ ...prev, [fileKey]: false }));
+      }
+    }
+    
+    // Actualizar levels con las nuevas rutas
+    setLevels(updatedLevels);
+    setPendingLevelFiles({}); // Limpiar archivos pendientes
+    
     // 1. Validar datos básicos SIEMPRE (requeridos para guardar)
-    const imageValue = typeof image === 'string' ? image.trim() : image;
+    // IMPORTANTE: Usar updatedLevels en lugar de levels porque setLevels es asíncrono
+    const imageValue = finalImagePath;
     const basicErrors = [];
 
     if (!title || !title.trim()) basicErrors.push('Falta el título de la capacitación');
@@ -692,15 +881,112 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
     };
     
     // Limpiar niveles: filtrar elementos de bibliografía vacíos
-    const cleanedLevels = levels.map(level => ({
+    // IMPORTANTE: Usar updatedLevels porque incluye las rutas de archivos recién subidos
+    const cleanedLevels = updatedLevels.map(level => ({
       ...level,
-      bibliography: level.bibliography?.filter(item => 
-        item.title?.trim() && (item.url?.trim() || item.description?.trim())
-      ) || []
+      bibliography: level.bibliography?.filter(item => {
+        const plainDescription = getPlainTextFromRichText(item.description);
+        return item.title?.trim() && (item.url?.trim() || plainDescription.trim());
+      }) || []
     }));
     
     if (onSave) {
       try {
+        // ANTES de guardar, detectar y eliminar archivos que ya no se usan
+        if (isEditing) {
+          const filesToDelete = [...filesToDeleteFromLevels]; // Incluir archivos reemplazados
+          
+          // 1. Verificar imagen de presentación
+          // Si se subió una nueva imagen, oldImageToDelete ya contiene la imagen a eliminar
+          if (oldImageToDelete) {
+            filesToDelete.push(oldImageToDelete);
+          } else if (originalFiles.image && originalFiles.image.startsWith('/uploads/') && originalFiles.image !== imageValue) {
+            // Si no se subió nueva imagen pero cambió la URL (usuario ingresó URL manual)
+            filesToDelete.push(originalFiles.image);
+          }
+          
+          // 2. Verificar archivos en niveles
+          cleanedLevels.forEach((level, levelIdx) => {
+            const originalLevel = originalFiles.levels[levelIdx];
+            if (!originalLevel) return;
+            
+            console.log(`🔍 Nivel ${levelIdx} - Comparación:`, {
+              original: {
+                trainingUrl: originalLevel.trainingUrl,
+                testImageUrl: originalLevel.testImageUrl,
+                testScenes: originalLevel.testScenes,
+                bibliography: originalLevel.bibliography
+              },
+              current: {
+                trainingUrl: level.training?.url,
+                testImageUrl: level.test?.imageUrl,
+                testScenes: level.test?.scenes?.map(s => s.videoUrl),
+                bibliography: level.bibliography?.map(b => b.url)
+              }
+            });
+            
+            // 2.1 Training video
+            if (originalLevel.trainingUrl && originalLevel.trainingUrl.startsWith('/uploads/') && 
+                originalLevel.trainingUrl !== level.training?.url) {
+              console.log(`🗑️ Training URL cambió: "${originalLevel.trainingUrl}" -> "${level.training?.url}"`);
+              filesToDelete.push(originalLevel.trainingUrl);
+            }
+            
+            // 2.2 Test image
+            if (originalLevel.testImageUrl && originalLevel.testImageUrl.startsWith('/uploads/') && 
+                originalLevel.testImageUrl !== level.test?.imageUrl) {
+              console.log(`🗑️ Test image cambió: "${originalLevel.testImageUrl}" -> "${level.test?.imageUrl}"`);
+              filesToDelete.push(originalLevel.testImageUrl);
+            }
+            
+            // 2.3 Test scenes videos
+            originalLevel.testScenes.forEach((originalSceneUrl, sceneIdx) => {
+              const currentSceneUrl = level.test?.scenes?.[sceneIdx]?.videoUrl || '';
+              if (originalSceneUrl && originalSceneUrl.startsWith('/uploads/') && 
+                  originalSceneUrl !== currentSceneUrl) {
+                console.log(`🗑️ Scene ${sceneIdx} cambió: "${originalSceneUrl}" -> "${currentSceneUrl}"`);
+                filesToDelete.push(originalSceneUrl);
+              }
+            });
+            
+            // 2.4 Bibliography files
+            originalLevel.bibliography.forEach((originalBibUrl, bibIdx) => {
+              const currentBibUrl = level.bibliography?.[bibIdx]?.url || '';
+              if (originalBibUrl && originalBibUrl.startsWith('/uploads/') && 
+                  originalBibUrl !== currentBibUrl) {
+                console.log(`🗑️ Bibliography ${bibIdx} cambió: "${originalBibUrl}" -> "${currentBibUrl}"`);
+                filesToDelete.push(originalBibUrl);
+              }
+            });
+          });
+          
+          // Eliminar duplicados y archivos que ya no se usan
+          const uniqueFilesToDelete = [...new Set(filesToDelete)];
+          console.log('🗑️ DEBUG - Archivos a eliminar:', {
+            filesToDeleteFromLevels,
+            filesToDeleteTotal: filesToDelete.length,
+            uniqueFilesToDelete: uniqueFilesToDelete.length
+          });
+          if (uniqueFilesToDelete.length > 0) {
+            console.log('🗑️ Eliminando archivos no utilizados:', uniqueFilesToDelete);
+            for (const filePath of uniqueFilesToDelete) {
+              try {
+                console.log('🗑️ Eliminando:', filePath);
+                await deleteTrainingFile(filePath);
+                console.log('✅ Eliminado correctamente:', filePath);
+              } catch (error) {
+                // Ignorar error 404 (archivo ya eliminado anteriormente)
+                if (error.message?.includes('404') || error.message?.includes('no encontrado')) {
+                  console.log(`ℹ️ Archivo ya no existe (ignorado): ${filePath}`);
+                } else {
+                  console.warn(`❌ No se pudo eliminar ${filePath}:`, error);
+                }
+                // Continuar aunque falle alguna eliminación
+              }
+            }
+          }
+        }
+        
         // Esperar a que la operación del padre (crear/actualizar) termine
         await onSave(payload, cleanedLevels, additionalData);
 
@@ -729,9 +1015,19 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
                 <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
-                <div>
-                  <h2 className="text-sm md:text-base font-bold">{title || (isEditing ? 'Editar capacitación' : 'Capacitación nueva')}</h2>
-                  <p className="text-[10px] md:text-xs text-green-100">{subtitle || (isEditing ? 'Modificar datos' : 'Descripción breve')}</p>
+                <div style={{ minWidth: 0 }}>
+                  <h2
+                    className="text-sm md:text-base font-bold truncate"
+                    title={title || (isEditing ? 'Editar capacitación' : 'Capacitación nueva')}
+                    style={{ maxWidth: '15rem' }}
+                    dangerouslySetInnerHTML={{ __html: title || (isEditing ? 'Editar capacitación' : 'Capacitación nueva') }}
+                  />
+                  <p
+                    className="text-[10px] md:text-xs text-green-100 truncate"
+                    title={subtitle || (isEditing ? 'Modificar datos' : 'Descripción breve')}
+                    style={{ maxWidth: '20rem' }}
+                    dangerouslySetInnerHTML={{ __html: subtitle || (isEditing ? 'Modificar datos' : 'Descripción breve') }}
+                  />
                 </div>
               </div>
               <div className="flex items-center gap-2 md:gap-3">
@@ -742,15 +1038,6 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
                   <span className="text-[11px] md:text-xs font-bold">{levels.length}</span>
                   <span className="text-[11px] md:text-xs font-medium text-white/90">Nivel{levels.length !== 1 ? 'es' : ''}</span>
                 </div>
-              </div>
-            </div>
-            {/* Progress bar moved inside header to keep headers same height (absolutely positioned) */}
-            <div className="absolute inset-x-4 md:inset-x-6 bottom-0.5 md:bottom-1 text-white text-center text-[10px] md:text-xs py-1 md:py-1.5 font-semibold rounded-sm">
-              <div className="flex items-center justify-center gap-1 md:gap-1.5">
-                <svg className="w-2.5 h-2.5 md:w-3 md:h-3" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span>Progreso: 0%</span>
               </div>
             </div>
           </div>
@@ -881,6 +1168,8 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
               uploadingFiles={uploadingFiles}
               uploadTrainingFile={uploadTrainingFile}
               deleteTrainingFile={deleteTrainingFile}
+              pendingImageFile={pendingImageFile}
+              setPendingImageFile={setPendingImageFile}
               showWarningModal={(message) => {
                 setWarningMessage(message);
                 setShowWarningModal(true);
@@ -893,7 +1182,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
             <LevelsEditor
               levels={levels}
               selectedLevel={selectedLevel}
-              setSelectedLevel={setSelectedLevel}
+              setSelectedLevel={handleSelectLevel}
               addLevel={addLevel}
               removeLevel={removeLevel}
               expandedSubsection={expandedSubsection}
@@ -914,6 +1203,8 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
                 setShowWarningModal(true);
               }}
               onBibliographyTempChange={handleBibliographyTempChange}
+              editingBibliographyIndex={editingBibliographyIndex}
+              setEditingBibliographyIndex={setEditingBibliographyIndex}
             />
           )}
           {/* Asignar Profesor */}
@@ -1012,24 +1303,41 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
             updateLevelField={updateLevelField}
             handleFileDelete={handleFileDelete}
             bibliographyTempData={bibliographyTempData}
+            editingBibliographyIndex={editingBibliographyIndex}
             onLevelClick={(levelIndex) => {
-              setSelectedLevel(levelIndex);
+              handleSelectLevel(levelIndex);
               setActiveSection('niveles');
             }}
             onBibliografiaClick={(levelIndex) => {
-              setSelectedLevel(levelIndex);
+              handleSelectLevel(levelIndex);
               setExpandedSubsection('bibliografia');
               setActiveSection('bibliografia');
             }}
             onTrainingClick={(levelIndex) => {
-              setSelectedLevel(levelIndex);
+              handleSelectLevel(levelIndex);
               setExpandedSubsection('training');
               setActiveSection('training');
             }}
             onTestClick={(levelIndex) => {
-              setSelectedLevel(levelIndex);
+              handleSelectLevel(levelIndex);
               setExpandedSubsection('test');
               setActiveSection('test');
+            }}
+            onBibliographyItemSelect={(levelIndex, itemIndex) => {
+              handleSelectLevel(levelIndex, { preserveEditing: true });
+              setExpandedSubsection('bibliografia');
+              setActiveSection('bibliografia');
+              setEditingBibliographyIndex(itemIndex);
+              const selectedItem = levels[levelIndex]?.bibliography?.[itemIndex];
+              if (selectedItem) {
+                setBibliographyTempData({
+                  title: selectedItem.title || '',
+                  description: selectedItem.description || '',
+                  url: selectedItem.url || ''
+                });
+              } else {
+                setBibliographyTempData({ title: '', description: '', url: '' });
+              }
             }}
           />
         </div>
