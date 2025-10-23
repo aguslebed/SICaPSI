@@ -83,6 +83,7 @@ export default function LevelBibliography({
       const updatedList = [...bibliography];
       updatedList[editingIndex] = nextItem;
       updateLevelField(updatedList);
+      resetForm(); // Resetear formulario después de guardar cambios
     } else {
       const newBibliography = [...(bibliography || [])];
       newBibliography.push(nextItem);
