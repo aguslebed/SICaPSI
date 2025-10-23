@@ -26,13 +26,19 @@ export class TrainingValidator extends IValidator {
     const createdBy = data.createdBy;
 
     // 1) Campos obligatorios
-    if (!title) errors.push({ field: "title", message: "Título requerido" });
-    if (!subtitle) errors.push({ field: "subtitle", message: "Subtítulo requerido" });
-    if (!description) errors.push({ field: "description", message: "Descripción requerida" });
-    if (!image) errors.push({ field: "image", message: "Imagen requerida" });
-    
-    // createdBy solo es requerido en creación, no en actualización
-    if (!isUpdate && !createdBy) errors.push({ field: "createdBy", message: "Usuario creador requerido" });
+    if (!isUpdate) {
+      if (!title) errors.push({ field: "title", message: "Título requerido" });
+      if (!subtitle) errors.push({ field: "subtitle", message: "Subtítulo requerido" });
+      if (!description) errors.push({ field: "description", message: "Descripción requerida" });
+      if (!image) errors.push({ field: "image", message: "Imagen requerida" });
+      if (!createdBy) errors.push({ field: "createdBy", message: "Usuario creador requerido" });
+    } else {
+      // En actualización, solo validar los campos presentes
+      if ("title" in data && !title) errors.push({ field: "title", message: "Título requerido" });
+      if ("subtitle" in data && !subtitle) errors.push({ field: "subtitle", message: "Subtítulo requerido" });
+      if ("description" in data && !description) errors.push({ field: "description", message: "Descripción requerida" });
+      if ("image" in data && !image) errors.push({ field: "image", message: "Imagen requerida" });
+    }
 
     // 2) Report (array de objetos)
     if (Array.isArray(data.report)) {

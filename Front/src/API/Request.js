@@ -669,3 +669,31 @@ export async function enrollStudentsToTraining(trainingId, studentIds) {
     }
   }
 }
+
+// --- API Contenido ---
+
+// Obtener contenido pendiente de validación
+// --- Reemplazo: API de 'content' ya no se usa. Para validar contenido usaremos 'training'.
+// Obtener 'trainings' pendientes / todos (aquí usamos getAllTrainings que ya existe en el backend)
+export async function getPendingContent() {
+  try {
+    // En este proyecto el modelo 'Training' no tiene campo 'status'. Usaremos getAllTrainings()
+    const { data } = await api.get('/training/getAllTrainings');
+    return data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al obtener capacitaciones');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+// Para compatibilidad, dejamos un alias para obtener todos los trainings
+export async function getAllContent() {
+  return await getPendingContent();
+}
+
+// No hay endpoints de 'content' para crear/actualizar/delete aquí — eliminar esas funciones del cliente.
