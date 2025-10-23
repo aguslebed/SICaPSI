@@ -237,6 +237,8 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
       if (!level.test?.scenes || level.test.scenes.length === 0) {
         errors.push(`Nivel ${levelNum}: Debe crear al menos 1 escena en la evaluación`);
       } else {
+        // Indica si el nivel tiene al menos una escena final (permite que opciones queden sin `next`)
+        const levelHasAnyFinal = Array.isArray(level.test?.scenes) && level.test.scenes.some((s, i) => s?.isFinal === true || i === (level.test.scenes.length - 1));
         level.test.scenes.forEach((scene, sceneIdx) => {
           const sceneNum = sceneIdx + 1;
           if (!scene.description || !scene.description.trim()) {
@@ -253,6 +255,14 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
             scene.options.forEach((option, optIdx) => {
               if (!option.description || !option.description.trim()) {
                 errors.push(`Nivel ${levelNum}, Escena ${sceneNum}, Botón ${optIdx + 1}: Falta el texto del botón`);
+              }
+              // Requerir next sólo si la escena NO es final, la opción no es lastOne, y el nivel no tiene finales
+              const isFinalScene = Array.isArray(level.test?.scenes) && (scene.isFinal === true || sceneIdx === (level.test.scenes.length - 1));
+              const requireNext = !isFinalScene && (!option.lastOne || option.lastOne !== true) && !levelHasAnyFinal;
+              if (requireNext) {
+                if (option.next === undefined || option.next === null || option.next === '') {
+                  errors.push(`Nivel ${levelNum}, Escena ${sceneNum}, Botón ${optIdx + 1}: Falta la próxima escena`);
+                }
               }
             });
           }
@@ -906,6 +916,8 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
         
         sanitizedLevels.forEach((level, idx) => {
           const levelNumber = level.levelNumber || idx + 1;
+          // Indica si el nivel tiene al menos una escena final (permite que opciones queden sin `next`)
+          const levelHasAnyFinal = Array.isArray(level.test?.scenes) && level.test.scenes.some((s, i) => s?.isFinal === true || i === (level.test.scenes.length - 1));
           
           // Validar título del nivel
           if (!sanitizePlain(level.title)) {
@@ -975,6 +987,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
                 }
                 
                 // Validar opciones
+                console.log('Validando opciones de la escena:', scene);
                 if (!scene.options || scene.options.length < 2) {
                   activationErrors.push(`El Nivel ${levelNumber} - Escena ${sceneIdx + 1}: necesita al menos 2 opciones.`);
                 } else {
@@ -985,9 +998,17 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
                     if (option.points === undefined || option.points === null) {
                       activationErrors.push(`El Nivel ${levelNumber} - Escena ${sceneIdx + 1} - Opción ${optIdx + 1}: falta puntos.`);
                     }
-                    if (option.next === undefined || option.next === null || option.next === '') {
-                      activationErrors.push(`El Nivel ${levelNumber} - Escena ${sceneIdx + 1} - Opción ${optIdx + 1}: falta próxima escena.`);
-                    }
+                        const isFinalScene = Array.isArray(level.test?.scenes) && (scene.isFinal === true || sceneIdx === (level.test.scenes.length - 1));
+                        // Requerir `next` sólo si:
+                        // - la escena NO es final,
+                        // - la opción NO está marcada como lastOne,
+                        // - Y el nivel NO tiene al menos una escena final (nivel sin final requiere rutas completas).
+                        const requireNext = !isFinalScene && (!option.lastOne || option.lastOne !== true) && !levelHasAnyFinal;
+                        if (requireNext) {
+                          if (option.next === undefined || option.next === null || option.next === '') {
+                            activationErrors.push(`El Nivel ${levelNumber} - Escena ${sceneIdx + 1} - Opción ${optIdx + 1}: falta próxima escena.`);
+                          }
+                        }
                   });
                 }
               });
