@@ -1,6 +1,9 @@
 import React from "react";
 import admisionImg from "../../assets/admision2.png";
 import usuarioImg from "../../assets/usuario.png";
+import listadoImg from "../../assets/listado.png";
+
+
 import { Link, useNavigate } from "react-router-dom";
 import NavBar from "../../Components/Student/NavBar";
 import { getAllActiveTrainings, fetchAdmisionUsuarios, getAllUsers } from '../../API/Request';
@@ -52,10 +55,10 @@ export default function DirectivoPanel() {
       },
     },
     {
-      title: "Gestión Directivo",
+      title: "Listados",
       link: "/directivoPanel/gestionDirectivo",
       isImage: true,
-      image: usuarioImg,
+      image: listadoImg,
       onClick: async () => {
         try {
           navigate('/directivoPanel/gestionDirectivo');
