@@ -38,12 +38,12 @@ SICaPSI/
 
 ```javascript
 {
-  title: String (max 500) - Título principal
-  subtitle: String (max 750) - Subtítulo descriptivo
-  description: String (max 5000) - Descripción detallada
-  image: String - URL o ruta de imagen de portada
-  isActive: Boolean (default: true) - Estado de habilitación
-  createdBy: ObjectId (ref: User) - Administrador creador
+  title: String (max 500, required) - Título principal
+  subtitle: String (max 750, required) - Subtítulo descriptivo
+  description: String (max 5000, required) - Descripción detallada
+  image: String (default: '__PENDING_UPLOAD__') - URL o ruta de imagen de portada
+  isActive: Boolean (default: false) - Estado de habilitación
+  createdBy: ObjectId (ref: User, required) - Administrador creador
   levels: [ObjectId] (ref: Level) - IDs de niveles asociados
   totalLevels: Number (default: 0) - Contador de niveles
   
@@ -57,19 +57,21 @@ SICaPSI/
   }],
   
   progressPercentage: Number (default: 0) - % de avance
-  startDate: Date (nullable) - Fecha de inicio
-  endDate: Date (nullable) - Fecha de finalización
-  assignedTeacher: String - ID del profesor asignado
+  startDate: Date (default: null) - Fecha de inicio
+  endDate: Date (default: null) - Fecha de finalización
+  assignedTeacher: String (default: '') - ID del profesor asignado
 }
 ```
 
-**Métodos especiales:**
-- `updateActiveStatusByDates()`: Actualiza automáticamente `isActive` según las fechas
-- **Pre-save middleware**: Ejecuta la validación de fechas antes de guardar
+**Características especiales:**
+- El campo `image` usa `'__PENDING_UPLOAD__'` como valor por defecto para permitir guardar capacitaciones sin imagen inicialmente
+- El campo `isActive` por defecto es `false` para que las capacitaciones se creen deshabilitadas
+- Timestamps automáticos (`createdAt`, `updatedAt`)
 
 **Índices:**
 - `createdBy`: Para filtrar por administrador
 - `isActive`: Para queries de capacitaciones activas
+- `title`: Índice único para evitar capacitaciones con nombres duplicados
 
 ---
 
@@ -78,10 +80,10 @@ SICaPSI/
 
 ```javascript
 {
-  trainingId: ObjectId (ref: Training) - Capacitación padre
-  levelNumber: Number (min: 1) - Número secuencial del nivel
-  title: String (max 500) - Título del nivel
-  description: String (max 5000, auto-generada) - Descripción del nivel
+  trainingId: ObjectId (ref: Training, required) - Capacitación padre
+  levelNumber: Number (min: 1, required) - Número secuencial del nivel
+  title: String (max 500, default: '') - Título del nivel
+  description: String (max 5000, default: '') - Descripción del nivel
   
   // Bibliografía (recursos adicionales)
   bibliography: [{
@@ -93,18 +95,18 @@ SICaPSI/
   
   // Clase magistral (video educativo)
   training: {
-    title: String (max 500) - Título de la clase
-    description: String (max 5000) - Descripción del contenido
-    url: String (required) - URL del video
-    duration: Number - Duración en minutos
+    title: String (max 500, default: '') - Título de la clase
+    description: String (max 5000, default: '') - Descripción del contenido
+    url: String (default: '') - URL del video
+    duration: Number (default: 0) - Duración en minutos
     createdAt: Date (default: now)
   },
   
   // Examen interactivo
   test: {
-    title: String (max 500) - Título del examen
-    description: String (max 5000) - Descripción del examen
-    imageUrl: String - Imagen de portada del examen
+    title: String (max 500, default: '') - Título del examen
+    description: String (max 5000, default: '') - Descripción del examen
+    imageUrl: String (default: '') - Imagen de portada del examen
     isActive: Boolean (default: true) - Estado del examen
     createdAt: Date (default: now),
     
@@ -112,24 +114,29 @@ SICaPSI/
     scenes: [{
       idScene: Number (required) - ID único de la escena
       videoUrl: String (required) - Video de la escena
-      description: String (max 2500) - Descripción de la situación
+      description: String (max 2500, required) - Descripción de la situación
       lastOne: Boolean (default: false) - Marca escena final
       bonus: Number (default: 0) - Puntos extra
       
       // Opciones de navegación
       options: [{
-        description: String (max 500) - Texto de la opción
+        description: String (max 500, required) - Texto de la opción
         points: Number (required) - Puntos asignados
-        next: Number (nullable) - ID de la próxima escena
+        next: Number (nullable, default: null) - ID de la próxima escena
       }]
     }]
   }
 }
 ```
 
+**Características especiales:**
+- Campos opcionales con valores por defecto para permitir guardado en modo borrador
+- Timestamps automáticos (`createdAt`, `updatedAt`)
+- Las escenas forman un grafo de navegación interactivo
+
 **Índices únicos:**
 - `{ trainingId, levelNumber }`: Un training no puede tener niveles duplicados
-- `{ trainingId, title }`: Un training no puede tener títulos de nivel repetidos
+- `{ trainingId, title }`: Un training no puede tener títulos de nivel repetidos (sparse: true)
 - `isActive`: Para queries de niveles activos
 
 ---
@@ -160,19 +167,26 @@ SICaPSI/
 
 | Método | Endpoint | Descripción | Parámetros |
 |--------|----------|-------------|------------|
-| `POST` | `/api/trainings/createTraining` | Crea una nueva capacitación | Body: `{ title, subtitle, description, image, isActive, createdBy, startDate, endDate }` |
-| `GET` | `/api/trainings/getAllTrainings` | Obtiene todas las capacitaciones | - |
-| `GET` | `/api/trainings/getAllActiveTrainings` | Obtiene capacitaciones activas | - |
-| `GET` | `/api/trainings/:id` | Obtiene una capacitación por ID | Params: `id` |
-| `PATCH` | `/api/trainings/:id` | Actualiza una capacitación | Params: `id`, Body: campos a actualizar |
-| `DELETE` | `/api/trainings/:id` | Elimina una capacitación | Params: `id` |
-| `POST` | `/api/trainings/upload-image` | Sube imagen de capacitación | FormData: `image` |
-| `POST` | `/api/trainings/upload-file` | Sube archivo multimedia | FormData: `file` |
-| `DELETE` | `/api/trainings/delete-file` | Elimina un archivo del servidor | Body: `{ filePath }` |
+| `POST` | `/api/training/createTraining` | Crea una nueva capacitación | Body: `{ title, subtitle, description, image, isActive, createdBy, startDate, endDate }` |
+| `GET` | `/api/training/getAllTrainings` | Obtiene todas las capacitaciones | - |
+| `GET` | `/api/training/getAllActiveTrainings` | Obtiene capacitaciones activas | - |
+| `GET` | `/api/training/:id` | Obtiene una capacitación por ID | Params: `id` |
+| `PATCH` | `/api/training/:id` | Actualiza una capacitación | Params: `id`, Body: campos a actualizar |
+| `DELETE` | `/api/training/:id` | Elimina una capacitación y su carpeta de archivos | Params: `id` |
+| `POST` | `/api/training/upload-image` | Sube imagen a carpeta temporal | FormData: `image` |
+| `POST` | `/api/training/upload-file` | Sube archivo multimedia a carpeta temporal | FormData: `file` |
+| `DELETE` | `/api/training/delete-file` | Elimina un archivo del servidor | Body: `{ filePath }` |
+| `POST` | `/api/training/replace-file` | Reemplaza archivo existente con uno nuevo | FormData: `file`, Body: `{ trainingId, oldFilePath }` |
+| `POST` | `/api/training/move-temp-files` | Mueve archivos de carpeta temporal a definitiva | Body: `{ trainingId, tempFiles: [array de rutas] }` |
 
 **Controlador:** `back/src/controllers/trainingController.js`  
 **Servicio:** `back/src/services/TrainingService.js`  
 **Validador:** `back/src/validators/trainingValidator.js`
+
+**Configuración de Multer:**
+- Límites: 100MB para archivos, 25MB para campos de texto (HTML con formato)
+- Almacenamiento: `/uploads/temp/` para archivos nuevos, `/uploads/trainings/{trainingId}/` para archivos permanentes
+- Tipos de archivo permitidos: videos (mp4, avi, mov, mkv, webm, etc.), documentos (pdf, doc, docx, etc.), imágenes (jpg, png, gif, svg, webp, etc.), audio, comprimidos y otros
 
 ---
 
@@ -180,12 +194,14 @@ SICaPSI/
 
 | Método | Endpoint | Descripción | Parámetros |
 |--------|----------|-------------|------------|
-| `POST` | `/api/levels/addLevelsToTraining` | Agrega niveles a una capacitación | Body: `{ trainingId, levels: [array de niveles] }` |
-| `GET` | `/api/levels/getAlllevelsInTraining` | Obtiene todos los niveles de una capacitación | Body: `{ trainingId }` |
-| `PUT` | `/api/levels/updateLevelsInTraining` | Actualiza niveles de una capacitación | Body: `{ trainingId, levels: [array de niveles] }` |
+| `POST` | `/api/level/addLevelsToTraining` | Agrega niveles a una capacitación | Body: `{ trainingId, levels: [array de niveles] }` |
+| `POST` | `/api/level/getAlllevelsInTraining` | Obtiene todos los niveles de una capacitación | Body: `{ trainingId }` |
+| `PUT` | `/api/level/updateLevelsInTraining` | Actualiza niveles de una capacitación | Body: `{ trainingId, levels: [array de niveles] }` |
 
 **Controlador:** `back/src/controllers/levelController.js`  
 **Servicio:** `back/src/services/levelServices.js`
+
+**Nota:** El endpoint `getAlllevelsInTraining` usa POST porque espera `trainingId` en el body
 
 ---
 
@@ -616,10 +632,25 @@ const updateLevelField = (levelIndex, fieldPath, value) => {
 ### 📄 **LevelBibliography.jsx** (Editor de Bibliografía)
 **Ubicación:** `Front/src/Components/Modals/CreateTrainingModal/LevelBibliography.jsx`
 
+**Props recibidas:**
+```javascript
+{
+  bibliography: Array - Array de recursos bibliográficos del nivel
+  levelIndex: Number - Índice del nivel actual
+  updateLevelField: Function - Función para actualizar campos del nivel
+  uploadingFiles: Object - Estado de archivos en proceso de subida
+  handleFileUpload: Function - Función para manejar subida de archivos
+  handleFileDelete: Function - Función para eliminar archivos
+  showWarningModal: Function - Función para mostrar modal de advertencia
+  onTempDataChange: Function - Callback para notificar cambios temporales al preview
+}
+```
+
 **Responsabilidades:**
 1. **Listar recursos bibliográficos** del nivel
 2. **Agregar/editar/eliminar** recursos
 3. **Subir archivos PDF/enlaces** externos
+4. **Notificar cambios temporales** al preview para visualización en tiempo real
 
 **Estados locales:**
 ```javascript
@@ -630,121 +661,161 @@ const [editingIndex, setEditingIndex] = useState(null);
 ```
 
 **Funcionalidades:**
-- Formulario para agregar/editar recursos bibliográficos
-- Soporte para URLs externas o archivos locales
+- Formulario para agregar/editar recursos bibliográficos con RichTextInput
+- Soporte para URLs externas o archivos locales (PDF, documentos)
 - Lista de recursos existentes con opciones de editar/eliminar
 - Validación de campos antes de guardar
-- Notificación de cambios temporales al componente padre para preview
+- Notificación de cambios temporales al componente padre para preview en tiempo real
+- Reset automático del formulario después de guardar ediciones
+- Uso de `useCallback` para optimizar rendimiento y evitar loops infinitos
 
 ---
 
 ### 📄 **LevelTraining.jsx** (Editor de Clase Magistral)
 **Ubicación:** `Front/src/Components/Modals/CreateTrainingModal/LevelTraining.jsx`
 
+**Props recibidas:**
+```javascript
+{
+  level: Object - Objeto del nivel actual
+  levelIndex: Number - Índice del nivel
+  updateLevelField: Function - Función para actualizar campos del nivel
+  uploadingFiles: Object - Estado de archivos en proceso de subida
+  handleFileUpload: Function - Función para manejar subida de archivos
+  handleFileDelete: Function - Función para eliminar archivos
+  showWarningModal: Function - Función para mostrar modal de advertencia
+}
+```
+
 **Responsabilidades:**
 1. **Configurar el video** de la clase magistral
-2. **Agregar título y descripción** de la clase
-3. **Especificar duración** del video
+2. **Agregar título y descripción** de la clase con RichTextInput
+3. **Especificar duración** del video en minutos
+4. **Gestionar archivos de video** (subida, reemplazo, eliminación)
 
 **Campos:**
-- **Título de la clase**: Editor de texto rico (max 100 caracteres)
-- **Descripción de la clase**: Editor de texto rico (max 1000 caracteres)
+- **Título de la clase**: RichTextInput (max 500 caracteres)
+- **Descripción de la clase**: RichTextInput (max 5000 caracteres)
 - **URL del video**: Input de texto o selector de archivo
 - **Duración**: Input numérico (minutos)
 
 **Soporte:**
 - URLs de YouTube, Vimeo, u otros servicios
-- Subida de archivos de video locales
+- Subida de archivos de video locales (MP4, MOV, AVI, MKV, WebM, OGG)
+- Límite de 100MB por archivo
 - Vista previa del video en TrainingPreview
+- Botón para limpiar/eliminar video seleccionado
 
 ---
 
 ### 📄 **LevelTestEditor.jsx** (Editor de Examen)
 **Ubicación:** `Front/src/Components/Modals/CreateTrainingModal/LevelTestEditor.jsx`
 
+**Props recibidas:**
+```javascript
+{
+  level: Object - Objeto del nivel actual
+  levelIndex: Number - Índice del nivel
+  updateLevelField: Function - Función para actualizar campos del nivel
+  selectedScene: Number|null - Índice de la escena seleccionada
+  setSelectedScene: Function - Función para cambiar escena seleccionada
+  selectedOption: Number|null - Índice de la opción seleccionada
+  setSelectedOption: Function - Función para cambiar opción seleccionada
+  handleFileUpload: Function - Función para manejar subida de archivos
+  handleFileDelete: Function - Función para eliminar archivos
+  showWarningModal: Function - Función para mostrar modal de advertencia
+  setActiveSection: Function - Función para cambiar sección activa del preview
+}
+```
+
 **Responsabilidades:**
-1. **Configurar datos generales** del examen
-2. **Crear/editar escenas** interactivas
+1. **Configurar datos generales** del examen con RichTextInput
+2. **Crear/editar escenas** interactivas con videos
 3. **Definir opciones de navegación** entre escenas
+4. **Gestionar preview automático** según campo enfocado
 
 **Estructura del examen:**
 
 **Datos generales:**
-- Título del examen (max 100 caracteres)
-- Descripción del examen (max 1000 caracteres)
-- Imagen de portada del examen
+- Título del examen (RichTextInput, max 500 caracteres)
+- Descripción del examen (RichTextInput, max 5000 caracteres)
+- Imagen de portada del examen (URL o archivo local)
+- Checkbox de estado activo (isActive)
 
 **Escenas:**
 Cada escena contiene:
 - **ID de escena**: Número único identificador
-- **Video de la escena**: URL o archivo local
-- **Descripción**: Texto que describe la situación (max 500 caracteres)
+- **Video de la escena**: URL o archivo local (MP4, MOV, AVI, MKV, WebM, OGG - max 100MB)
+- **Descripción**: RichTextInput que describe la situación (max 2500 caracteres)
 - **Es escena final**: Checkbox que marca si es la última escena
 - **Puntos bonus**: Puntos adicionales por llegar a esta escena
 
 **Opciones de decisión:**
-Cada escena puede tener múltiples opciones, cada una con:
-- **Descripción de la opción**: Texto que ve el usuario (max 200 caracteres)
+Cada escena puede tener múltiples opciones (máximo 2), cada una con:
+- **Descripción de la opción**: Texto que ve el usuario (max 500 caracteres)
 - **Puntos**: Puntaje asignado por elegir esta opción
 - **Próxima escena**: ID de la escena a la que lleva esta opción (null si es final)
 
 **Funcionalidades:**
-- Agregar/eliminar escenas
+- Agregar/eliminar escenas con IDs autoincrementales
 - Agregar/eliminar opciones dentro de cada escena
-- Navegación entre escenas seleccionadas
-- Validación de grafo de navegación (no hay escenas huérfanas)
+- Navegación entre escenas mediante dropdown
+- Sistema de preview automático:
+  - Focus en campos del test → muestra preview del test
+  - Focus en campos de escena → muestra preview de esa escena
+- Validación de grafo de navegación
+- Contador de caracteres en tiempo real
+- Gestión de archivos de video para cada escena
 
 ---
 
 ### 📄 **EnrollStudents.jsx** (Inscripción de Estudiantes)
 **Ubicación:** `Front/src/Components/Modals/CreateTrainingModal/EnrollStudents.jsx`
 
+**Props recibidas:**
+```javascript
+{
+  loadingStudents: Boolean - Indicador de carga de estudiantes
+  students: Array - Lista de estudiantes disponibles
+  searchStudent: String - Valor actual del campo de búsqueda
+  setSearchStudent: Function - Función para actualizar búsqueda
+  handleSearch: Function - Función para aplicar filtro de búsqueda
+  handleClearSearch: Function - Función para limpiar búsqueda
+  selectedStudents: Array - IDs de estudiantes seleccionados
+  handleStudentSelection: Function - Función para seleccionar/deseleccionar estudiante
+  selectAllStudents: Function - Función para seleccionar todos
+  deselectAllStudents: Function - Función para deseleccionar todos
+  getFilteredStudents: Function - Función que retorna estudiantes filtrados
+}
+```
+
 **Responsabilidades:**
-1. **Listar todos los estudiantes** disponibles
-2. **Permitir seleccionar múltiples** estudiantes
-3. **Filtrar por búsqueda** (nombre, email, etc.)
+1. **Listar todos los estudiantes** disponibles con rol 'Alumno'
+2. **Permitir seleccionar múltiples** estudiantes mediante checkboxes
+3. **Filtrar por búsqueda** (nombre completo o email)
+4. **Acciones masivas** de selección
 
 **Funcionalidades:**
-- Buscador con filtro aplicado por botón
-- Acciones masivas: seleccionar todos / deseleccionar todos
-- Lista de estudiantes con checkboxes
-- Contador de estudiantes seleccionados
-- Indicador de carga mientras se obtienen los datos
+- Buscador con filtro aplicado por botón "Buscar"
+- Botón "Limpiar" para resetear búsqueda
+- Acciones masivas: 
+  - "Seleccionar todos" (solo los filtrados)
+  - "Deseleccionar todos"
+- Lista de estudiantes con checkboxes individuales
+- Contador de estudiantes seleccionados: "X estudiante(s) seleccionado(s)"
+- Indicador de carga mientras se obtienen los datos del backend
+- Muestra nombre completo y email de cada estudiante
 
-**Funciones:**
+**Estructura de datos:**
 ```javascript
-// Filtrar estudiantes por búsqueda
-const getFilteredStudents = () => {
-  if (!appliedFilter) return students;
-  
-  return students.filter(student => {
-    const fullName = `${student.firstName} ${student.lastName}`.toLowerCase();
-    const email = student.email.toLowerCase();
-    const search = appliedFilter.toLowerCase();
-    
-    return fullName.includes(search) || email.includes(search);
-  });
-};
-
-// Seleccionar/deseleccionar un estudiante
-const handleStudentSelection = (studentId, checked) => {
-  if (checked) {
-    setSelectedStudents(prev => [...prev, studentId]);
-  } else {
-    setSelectedStudents(prev => prev.filter(id => id !== studentId));
-  }
-};
-
-// Seleccionar todos
-const selectAllStudents = () => {
-  const filteredIds = getFilteredStudents().map(s => s._id);
-  setSelectedStudents(filteredIds);
-};
-
-// Deseleccionar todos
-const deselectAllStudents = () => {
-  setSelectedStudents([]);
-};
+// Cada estudiante tiene:
+{
+  _id: String - ID del estudiante
+  firstName: String - Nombre
+  lastName: String - Apellido
+  email: String - Correo electrónico
+  role: String - "Alumno"
+}
 ```
 
 ---
@@ -752,18 +823,41 @@ const deselectAllStudents = () => {
 ### 📄 **AssignTeacher.jsx** (Asignación de Profesor)
 **Ubicación:** `Front/src/Components/Modals/CreateTrainingModal/AssignTeacher.jsx`
 
+**Props recibidas:**
+```javascript
+{
+  teachers: Array - Lista de profesores disponibles
+  loadingTeachers: Boolean - Indicador de carga de profesores
+  assignedTeacher: String - ID del profesor asignado
+  setAssignedTeacher: Function - Función para cambiar profesor asignado
+}
+```
+
 **Responsabilidades:**
-1. **Listar todos los profesores** disponibles
-2. **Permitir seleccionar UN profesor**
-3. **Mostrar el profesor asignado** actual
+1. **Listar todos los profesores** disponibles con rol 'Capacitador'
+2. **Permitir seleccionar UN profesor** mediante dropdown
+3. **Mostrar estado de asignación** con badges visuales
 
 **Estructura:**
 - Dropdown (select) con lista de profesores
 - Opción por defecto: "-- Seleccione un profesor --"
-- Contador de profesores disponibles
+- Contador de profesores disponibles: "X profesor(es) disponible(s)"
 - Badge verde si hay profesor asignado: "✓ ASIGNADO"
 - Badge amarillo si no hay profesor: "⚠ Sin profesor asignado"
 - Muestra nombre completo y email del profesor en cada opción
+- Indicador de carga mientras se obtienen datos del backend
+
+**Estructura de datos:**
+```javascript
+// Cada profesor tiene:
+{
+  _id: String - ID del profesor
+  firstName: String - Nombre
+  lastName: String - Apellido
+  email: String - Correo electrónico
+  role: String - "Capacitador"
+}
+```
 
 ---
 
@@ -821,11 +915,23 @@ const deselectAllStudents = () => {
 ### 📄 **RichTextInput.jsx** (Editor de Texto Rico)
 **Ubicación:** `Front/src/Components/Modals/CreateTrainingModal/RichTextInput.jsx`
 
+**Props recibidas:**
+```javascript
+{
+  value: String - Valor HTML del contenido
+  onChange: Function - Callback al cambiar el contenido
+  maxLength: Number (default: 500) - Límite de caracteres
+  placeholder: String (default: '') - Texto placeholder
+  onFocus: Function (opcional) - Callback al hacer focus
+}
+```
+
 **Responsabilidades:**
 1. **Permitir formateo de texto** (negritas, cursivas, subrayado)
 2. **Cambiar colores** de texto
 3. **Ajustar tamaño** de fuente
 4. **Sanitizar HTML** antes de guardar
+5. **Contador de caracteres** en tiempo real
 
 **Características:**
 ```javascript
@@ -893,6 +999,49 @@ const getPlainTextFromRichText = (value) => {
 - `sanitizeRichTextValue(value)`: Limpia y normaliza HTML
 - `getPlainTextFromRichText(value)`: Extrae texto plano
 - `normalizeRichTextValue(value)`: Normaliza formato HTML
+
+---
+
+### 📄 **Sistema de Preview Automático**
+
+**Funcionalidad:** Cambio automático de vista previa según el campo enfocado
+
+**Implementado en:** `LevelTestEditor.jsx`
+
+**Comportamiento:**
+- Al hacer focus en **campos del test** (título, descripción, URL imagen, checkbox estado): muestra preview del test completo
+- Al hacer focus en **campos de escena** (ID, descripción, video, lastOne, bonus, opciones): muestra preview de esa escena específica
+
+**Funciones helper:**
+```javascript
+// Cambiar a vista previa del test
+const handleFocusTest = () => {
+  setSelectedScene(null);
+  setActiveSection('test');
+};
+
+// Cambiar a vista previa de una escena específica
+const handleFocusScene = (sceneIndex) => {
+  setSelectedScene(sceneIndex);
+  setActiveSection('test');
+};
+```
+
+**Campos con auto-preview del test:**
+- Título del test (RichTextInput)
+- Descripción del test (RichTextInput)
+- URL de imagen del test (input)
+- Checkbox estado activo del test
+
+**Campos con auto-preview de escena:**
+- ID de escena (input number)
+- Descripción de escena (RichTextInput)
+- Video de escena (input URL)
+- Checkbox "Última escena"
+- Campo Bonus (input number)
+- Descripción del botón/opción (input text)
+- Puntos del botón (input number)
+- ID de siguiente escena (input number)
 
 ---
 
@@ -1063,49 +1212,240 @@ Usuario                    Frontend                   Backend                   
 
 ---
 
-## ⚠️ PROBLEMAS ACTUALES Y PROPUESTA DE SOLUCIÓN
+## 🔄 FLUJO DETALLADO DE GESTIÓN DE ARCHIVOS
 
-### **PROBLEMA 1: No hay modo "borrador"**
+### **Creación de capacitación (nuevo training)**
 
-**Estado actual:**
-- Se puede crear una capacitación sin niveles
-- Se puede crear una capacitación sin estudiantes
-- Se puede crear una capacitación sin profesor
-- `isActive` se puede marcar como `true` sin validaciones
-
-**Solución propuesta:**
+**1. Usuario sube archivos durante creación:**
 ```javascript
-// En Training.js
-{
-  isDraft: { type: Boolean, default: true },
-  isActive: { type: Boolean, default: false },
-  completionChecklist: {
-    hasLevels: { type: Boolean, default: false },
-    hasStudents: { type: Boolean, default: false },
-    hasTeacher: { type: Boolean, default: false },
-    hasDates: { type: Boolean, default: false }
-  }
-}
+// Frontend: CreateTrainingModal.jsx
+const handleFileUpload = async (file, levelIndex, fileType, subIndex = null) => {
+  // 1. Subir a carpeta temporal
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await Request.post('/training/upload-file', formData);
+  
+  // 2. Guardar ruta temporal en estado pendiente
+  const tempPath = response.data.filePath; // "/uploads/temp/filename-123456.ext"
+  
+  // 3. Añadir a pendingLevelFiles con key única
+  const fileKey = fileType === 'scene' 
+    ? `scene-${levelIndex}-${subIndex}`
+    : `${fileType}-${levelIndex}`;
+  
+  setPendingLevelFiles(prev => ({
+    ...prev,
+    [fileKey]: { path: tempPath, originalName: file.name }
+  }));
+};
+```
 
-// Método de validación
-TrainingSchema.methods.isReadyToActivate = function() {
-  return (
-    this.completionChecklist.hasLevels &&
-    this.completionChecklist.hasStudents &&
-    this.completionChecklist.hasTeacher &&
-    this.completionChecklist.hasDates
-  );
+**2. Usuario guarda la capacitación:**
+```javascript
+// Frontend: CreateTrainingModal.jsx - handleSave()
+const handleSave = async () => {
+  // 1. Crear el training (con imagen temporal si hay)
+  const trainingData = {
+    title, subtitle, description,
+    image: pendingImageFile ? '/uploads/temp/image.jpg' : '',
+    // ... otros campos
+  };
+  const trainingResponse = await Request.post('/training/createTraining', trainingData);
+  const trainingId = trainingResponse.data._id;
+  
+  // 2. Recopilar todas las rutas temporales
+  const tempFiles = [];
+  if (pendingImageFile) tempFiles.push(image);
+  
+  Object.values(pendingLevelFiles).forEach(file => {
+    if (file.path.startsWith('/uploads/temp/')) {
+      tempFiles.push(file.path);
+    }
+  });
+  
+  // 3. Mover todos los archivos de temp a carpeta definitiva
+  const moveResponse = await Request.post('/training/move-temp-files', {
+    trainingId,
+    tempFiles
+  });
+  
+  // 4. Actualizar rutas en los niveles
+  const movedFiles = moveResponse.data.movedFiles; // [{ oldPath, newPath }, ...]
+  const updatedLevels = levels.map(level => {
+    // Reemplazar rutas temporales por definitivas
+    // ...
+  });
+  
+  // 5. Guardar niveles con rutas definitivas
+  await Request.post('/level/addLevelsToTraining', {
+    trainingId,
+    levels: updatedLevels
+  });
+};
+```
+
+**3. Backend mueve archivos:**
+```javascript
+// Backend: trainingRoutes.js - POST /move-temp-files
+router.post("/move-temp-files", (req, res) => {
+  const { trainingId, tempFiles } = req.body;
+  
+  const tempFolder = path.resolve(__dirname, "..", "..", "uploads", "temp");
+  const finalFolder = path.resolve(__dirname, "..", "..", "uploads", "trainings", trainingId);
+  
+  // Crear carpeta final
+  if (!fs.existsSync(finalFolder)) {
+    fs.mkdirSync(finalFolder, { recursive: true });
+  }
+  
+  const movedFiles = [];
+  
+  // Mover cada archivo
+  for (const tempPath of tempFiles) {
+    const filename = path.basename(tempPath);
+    const sourcePath = path.join(tempFolder, filename);
+    const destPath = path.join(finalFolder, filename);
+    
+    fs.renameSync(sourcePath, destPath);
+    
+    movedFiles.push({
+      oldPath: tempPath,
+      newPath: `/uploads/trainings/${trainingId}/${filename}`
+    });
+  }
+  
+  res.json({ movedFiles });
+});
+```
+
+---
+
+### **Edición de capacitación (training existente)**
+
+**1. Usuario reemplaza un archivo:**
+```javascript
+// Frontend: CreateTrainingModal.jsx
+const handleFileUpload = async (file, levelIndex, fileType, subIndex = null) => {
+  // Si editingTraining existe, usar endpoint de reemplazo
+  if (editingTraining && editingTraining._id) {
+    const trainingId = editingTraining._id;
+    
+    // Obtener ruta del archivo antiguo
+    const oldFilePath = getOldFilePath(levelIndex, fileType, subIndex);
+    
+    // Llamar a replace-file
+    const response = await Request.post('/training/replace-file', {
+      file,
+      trainingId,
+      oldFilePath
+    });
+    
+    // Actualizar con la nueva ruta definitiva
+    const newFilePath = response.data.filePath; // "/uploads/trainings/{id}/new-file.ext"
+    
+    // Actualizar el campo correspondiente
+    updateLevelField(levelIndex, fieldPath, newFilePath);
+    
+    // Actualizar originalFiles para tracking
+    setOriginalFiles(prev => {
+      const updated = { ...prev };
+      // Actualizar la referencia del archivo en la estructura
+      return updated;
+    });
+  }
+};
+```
+
+**2. Backend reemplaza archivo:**
+```javascript
+// Backend: trainingRoutes.js - POST /replace-file
+router.post("/replace-file", upload.single('file'), (req, res) => {
+  const { oldFilePath, trainingId } = req.body;
+  
+  // 1. Eliminar archivo antiguo si existe
+  if (oldFilePath && oldFilePath.startsWith('/uploads/')) {
+    const oldAbsolutePath = path.resolve(__dirname, "..", "..", 
+      oldFilePath.replace('/uploads/', 'uploads/'));
+    
+    if (fs.existsSync(oldAbsolutePath)) {
+      fs.unlinkSync(oldAbsolutePath);
+    }
+  }
+  
+  // 2. Mover archivo nuevo de temp a carpeta definitiva
+  const tempPath = req.file.path;
+  const finalFolder = path.resolve(__dirname, "..", "..", "uploads", "trainings", trainingId);
+  
+  if (!fs.existsSync(finalFolder)) {
+    fs.mkdirSync(finalFolder, { recursive: true });
+  }
+  
+  const finalPath = path.join(finalFolder, req.file.filename);
+  fs.renameSync(tempPath, finalPath);
+  
+  const newFilePath = `/uploads/trainings/${trainingId}/${req.file.filename}`;
+  
+  res.json({ filePath: newFilePath });
+});
+```
+
+**3. Usuario guarda cambios:**
+```javascript
+// Frontend: CreateTrainingModal.jsx - handleSave() en modo edición
+const handleSave = async () => {
+  // Los archivos ya están en su ubicación definitiva (reemplazados uno a uno)
+  // Solo actualizar los datos del training y niveles
+  
+  await Request.patch(`/training/${editingTraining._id}`, trainingData);
+  await Request.put('/level/updateLevelsInTraining', {
+    trainingId: editingTraining._id,
+    levels: processedLevels
+  });
 };
 ```
 
 ---
 
-### **PROBLEMA 2: Botón "Guardar" no cambia a "Actualizar"**
+### **Eliminación de capacitación**
 
-**Estado actual:**
-- El botón siempre dice "Guardar Capacitación"
+```javascript
+// Frontend: GestionCapacitacion.jsx
+const confirmDeleteTraining = async () => {
+  await Request.delete(`/training/${trainingId}`);
+  // El backend automáticamente elimina toda la carpeta
+};
 
-**Solución propuesta:**
+// Backend: TrainingService.js
+async deleteTraining(trainingId) {
+  // 1. Eliminar carpeta de archivos
+  const uploadsFolder = path.resolve(__dirname, "..", "..", "uploads", "trainings", trainingId);
+  
+  if (fs.existsSync(uploadsFolder)) {
+    fs.rmSync(uploadsFolder, { recursive: true, force: true });
+  }
+  
+  // 2. Eliminar niveles de la BD
+  await this.level.deleteMany({ trainingId });
+  
+  // 3. Eliminar training de la BD
+  await this.training.findByIdAndDelete(trainingId);
+}
+```
+
+---
+
+## ✅ FUNCIONALIDADES IMPLEMENTADAS
+
+### **1. Modo borrador con validación flexible**
+✅ **Implementado:**
+- Las capacitaciones se crean con `isActive: false` por defecto
+- Los campos son opcionales durante creación (valores por defecto en modelos)
+- Validación exhaustiva solo al intentar activar `isActive`
+- Modal de errores muestra lista detallada de requisitos faltantes
+- Sistema de validación parcial con `isPartialUpdate` en el validador
+
+### **2. Botón contextual "Guardar" vs "Actualizar"**
+✅ **Implementado:**
 ```jsx
 // En CreateTrainingModal.jsx
 <button onClick={handleSave}>
@@ -1113,19 +1453,166 @@ TrainingSchema.methods.isReadyToActivate = function() {
 </button>
 ```
 
+### **3. Sistema completo de gestión de archivos**
+✅ **Implementado:**
+- Carpeta temporal `/uploads/temp/` para archivos durante creación
+- Carpeta definitiva `/uploads/trainings/{trainingId}/` para cada capacitación
+- Endpoint `/replace-file` para reemplazo atómico con eliminación automática del archivo antiguo
+- Endpoint `/move-temp-files` para mover archivos de temp a definitiva
+- Eliminación en cascada de carpeta completa al borrar capacitación
+- Límites configurables (100MB archivos, 25MB campos de texto)
+- Tracking de archivos con `originalFiles` para detectar cambios
+- Sistema de archivos pendientes con `pendingLevelFiles`
+
+### **4. Editor de texto rico (RichTextInput)**
+✅ **Implementado:**
+- Formato de texto (negrita, cursiva, subrayado)
+- Selector de tamaño de fuente (10-36px)
+- Paleta de colores (70+ colores)
+- Contador de caracteres en tiempo real
+- Sanitización de HTML para seguridad
+- Funciones de utilidad exportadas
+
+### **5. Sistema de preview en tiempo real**
+✅ **Implementado:**
+- Vista previa actualizada en tiempo real mientras se edita
+- Preview automático según campo enfocado (test vs escena específica)
+- Navegación interactiva entre niveles y escenas
+- Detección de YouTube para embedder videos correctamente
+- Preview de bibliografía editable desde la vista previa
+
+### **6. Validación completa antes de activar**
+✅ **Implementado:**
+```javascript
+// Validaciones exhaustivas:
+- Título, subtítulo, descripción obligatorios
+- Fechas de inicio y fin obligatorias
+- Fecha de fin > fecha de inicio
+- Al menos un nivel creado
+- Cada nivel con título, clase magistral y examen
+- Cada examen con al menos una escena
+- Al menos un estudiante inscrito
+- Un profesor asignado
+```
+
+### **7. Gestión de inscripciones**
+✅ **Implementado:**
+- Búsqueda y filtrado de estudiantes
+- Selección múltiple con acciones masivas
+- Asignación de un profesor
+- Contador de inscritos
+- Estados visuales con badges
+
 ---
 
-### **PROBLEMA 3: No hay validación de completitud**
+## ⚠️ ÁREAS DE MEJORA Y PROPUESTAS
+
+### **MEJORA 1: Sincronización bidireccional de assignedTeacher**
 
 **Estado actual:**
-- Se puede habilitar una capacitación sin completar todos los datos
+- `Training.assignedTeacher` se actualiza desde el frontend
+- `User.assignedTraining` se actualiza desde EnrollmentService
+- No hay sincronización automática entre ambos
 
-**Solución propuesta:**
+**Propuesta de mejora:**
+```javascript
+// En EnrollmentService.js
+async enrollTrainerToTraining(userId, trainingId) {
+  const user = await this.user.findById(userId);
+  if (!user || user.role !== "Capacitador") {
+    throw new Error("Usuario no válido como capacitador");
+  }
+
+  const training = await this.training.findById(trainingId);
+  if (!training) throw new Error("Capacitación no encontrada");
+
+  // Sincronización bidireccional
+  if (!user.assignedTraining.includes(trainingId)) {
+    user.assignedTraining.push(trainingId);
+    await user.save();
+  }
+  
+  training.assignedTeacher = userId;
+  await training.save();
+
+  return { message: "Inscripción exitosa", training };
+}
+```
+
+---
+
+### **MEJORA 2: Indicadores visuales de completitud**
+
+**Propuesta:**
+- Agregar iconos de checkmark/warning en cada nivel según completitud
+- Barra de progreso mostrando % de campos completados
+- Tooltip indicando qué falta por completar al pasar mouse sobre indicadores
+
+---
+
+### **MEJORA 3: Validación de grafo de navegación del test**
+
+**Propuesta:**
+- Validar que no haya escenas huérfanas (sin opciones que apunten a ellas)
+- Validar que los IDs de escenas sean únicos
+- Validar que las opciones apunten a IDs de escenas existentes
+- Advertir si hay escenas sin salida (sin opción que lleve a otra escena o marque final)
+
+---
+
+### **PROBLEMA 5: Sistema de validación flexible**
+
+**Estado actual:**
+- ✅ El validador `trainingValidator.js` soporta validación parcial con `isPartialUpdate`
+- ✅ Los campos pueden ser opcionales durante creación (modo borrador)
+- ✅ Validación completa solo se ejecuta al intentar activar la capacitación
+- ✅ El frontend valida exhaustivamente antes de permitir activar `isActive`
+
+**Implementación actual:**
+```javascript
+// En trainingValidator.js
+validate(data = {}, options = {}) {
+  const errors = [];
+  const { isUpdate = false, isPartialUpdate = false } = options;
+
+  // Si es actualización parcial, solo validar campos presentes
+  if (isPartialUpdate) {
+    if (data.hasOwnProperty('title') && !title) {
+      errors.push({ field: "title", message: "Título requerido" });
+    }
+    // ... validaciones condicionales por campo
+  } else {
+    // Validación completa
+    if (!title) errors.push({ field: "title", message: "Título requerido" });
+    if (!subtitle) errors.push({ field: "subtitle", message: "Subtítulo requerido" });
+    // ... todas las validaciones
+  }
+
+  // Validación del array de reportes
+  if (Array.isArray(data.report)) {
+    data.report.forEach((r, i) => {
+      if (typeof r.level !== "number") {
+        errors.push({ field: `report[${i}].level`, message: "Nivel debe ser numérico" });
+      }
+      // ... más validaciones de report
+    });
+  }
+
+  if (errors.length) {
+    throw new AppError("Datos inválidos", 400, "TRAINING_400", errors);
+  }
+
+  return { isValid: errors.length === 0, errors };
+}
+```
+
+**Validación en el frontend:**
 ```javascript
 // En CreateTrainingModal.jsx
 const validateTrainingForActivation = () => {
   const errors = [];
   
+  // Validar datos básicos
   if (!title || getPlainTextFromRichText(title).trim() === '') {
     errors.push('El título es obligatorio');
   }
@@ -1134,22 +1621,19 @@ const validateTrainingForActivation = () => {
     errors.push('Las fechas de inicio y fin son obligatorias');
   }
   
+  if (startDate && endDate && new Date(endDate) <= new Date(startDate)) {
+    errors.push('La fecha de fin debe ser posterior a la de inicio');
+  }
+  
+  // Validar que haya al menos un nivel
   if (levels.length === 0) {
     errors.push('Debe agregar al menos un nivel');
   }
   
-  // Validar que cada nivel esté completo
+  // Validar completitud de cada nivel
   levels.forEach((level, index) => {
-    if (!level.title || getPlainTextFromRichText(level.title).trim() === '') {
-      errors.push(`El nivel ${index + 1} no tiene título`);
-    }
-    
     if (!level.training.url) {
       errors.push(`El nivel ${index + 1} no tiene video de clase magistral`);
-    }
-    
-    if (!level.test.title) {
-      errors.push(`El nivel ${index + 1} no tiene título de examen`);
     }
     
     if (level.test.scenes.length === 0) {
@@ -1157,6 +1641,7 @@ const validateTrainingForActivation = () => {
     }
   });
   
+  // Validar inscripciones
   if (selectedStudents.length === 0) {
     errors.push('Debe inscribir al menos un estudiante');
   }
@@ -1168,13 +1653,14 @@ const validateTrainingForActivation = () => {
   return errors;
 };
 
+// Solo validar al intentar activar
 const handleIsActiveChange = (checked) => {
   if (checked) {
     const errors = validateTrainingForActivation();
     if (errors.length > 0) {
       setErrorMessages(errors);
       setShowErrorModal(true);
-      return;
+      return; // No permite activar
     }
   }
   setIsActive(checked);
@@ -1183,108 +1669,71 @@ const handleIsActiveChange = (checked) => {
 
 ---
 
-### **PROBLEMA 4: Campo `assignedTeacher` no se sincroniza**
-
-**Estado actual:**
-- Existe `assignedTeacher` en Training.js
-- Existe `assignedTraining` en User.js
-- No están sincronizados
-
-**Solución propuesta:**
-```javascript
-// En EnrollmentService.js
-async enrollTrainerToTraining(userId, trainingId) {
-  const user = await this.user.findById(userId);
-  if (!user) throw new Error("Usuario no encontrado");
-  
-  if (user.role !== "Capacitador") {
-    throw new Error("El usuario no es un capacitador");
-  }
-
-  const training = await this.training.findById(trainingId);
-  if (!training) throw new Error("Capacitacion no encontrado");
-
-  if (user.assignedTraining.includes(trainingId)) {
-    throw new Error("El capacitador ya está inscrito en la capacitacion");
-  }
-
-  // Actualizar user.assignedTraining
-  user.assignedTraining.push(trainingId);
-  await user.save();
-  
-  // NUEVO: Sincronizar training.assignedTeacher
-  training.assignedTeacher = userId;
-  await training.save();
-
-  return { message: "Inscripción exitosa", training };
-}
-```
-
----
-
-### **PROBLEMA 5: Validación de fechas en el backend**
-
-**Estado actual:**
-- El validador `trainingValidator.js` NO valida `startDate` ni `endDate`
-- El frontend los trata como obligatorios
-
-**Solución propuesta:**
-```javascript
-// En trainingValidator.js
-validate(data = {}, options = {}) {
-  const errors = [];
-  const { isUpdate = false } = options;
-
-  // ... validaciones existentes ...
-  
-  // Validar fechas cuando isActive = true
-  if (data.isActive === true) {
-    if (!data.startDate) {
-      errors.push({ field: "startDate", message: "Fecha de inicio requerida para capacitaciones activas" });
-    }
-    
-    if (!data.endDate) {
-      errors.push({ field: "endDate", message: "Fecha de fin requerida para capacitaciones activas" });
-    }
-    
-    if (data.startDate && data.endDate) {
-      const start = new Date(data.startDate);
-      const end = new Date(data.endDate);
-      
-      if (end <= start) {
-        errors.push({ field: "endDate", message: "La fecha de fin debe ser posterior a la fecha de inicio" });
-      }
-    }
-  }
-
-  if (errors.length) {
-    throw new AppError("Datos inválidos", 400, "TRAINING_400", errors);
-  }
-
-  return { isValid: errors.length === 0, errors };
-}
-```
-
----
-
 ## 🎯 RESUMEN EJECUTIVO
 
-### **Este sistema permite:**
-1. ✅ Crear capacitaciones con datos básicos (título, subtítulo, descripción, imagen, fechas)
-2. ✅ Agregar múltiples niveles con bibliografía, clases magistrales y exámenes interactivos
-3. ✅ Inscribir estudiantes y asignar profesores
-4. ✅ Vista previa en tiempo real de cómo se verá la capacitación
-5. ✅ Subida de archivos multimedia (imágenes, videos, documentos)
-6. ✅ Editor de texto rico con formato HTML
+### **Funcionalidades completas del sistema:**
 
-### **Lo que falta implementar:**
-1. ❌ Sistema de borradores (capacitaciones incompletas)
-2. ❌ Validación de completitud antes de activar
-3. ❌ Sincronización correcta del campo assignedTeacher
-4. ❌ Indicadores visuales de datos pendientes
-5. ❌ Botón "Actualizar" diferenciado del botón "Guardar"
-6. ❌ Validación de fechas en el backend
-7. ❌ Checklist de completitud visible para el usuario
+**✅ Gestión de capacitaciones:**
+1. Crear capacitaciones con datos básicos (título, subtítulo, descripción, imagen, fechas)
+2. Modo borrador: capacitaciones se crean con `isActive: false` por defecto
+3. Validación exhaustiva antes de activar (bloquea activación si falta información)
+4. Botón contextual "Guardar" vs "Actualizar" según modo creación/edición
+5. Actualizar capacitaciones existentes
+6. Eliminar capacitaciones (con eliminación en cascada de archivos)
+
+**✅ Gestión de niveles:**
+1. Agregar múltiples niveles a una capacitación
+2. Cada nivel con título, descripción y número secuencial
+3. Bibliografía con múltiples recursos (PDFs, documentos, enlaces)
+4. Clase magistral con video, título, descripción y duración
+5. Examen interactivo con múltiples escenas y navegación tipo "elige tu aventura"
+
+**✅ Sistema de archivos multimedia:**
+1. Carpeta temporal durante creación (`/uploads/temp/`)
+2. Carpeta definitiva por capacitación (`/uploads/trainings/{trainingId}/`)
+3. Reemplazo atómico de archivos con eliminación automática del antiguo
+4. Movimiento masivo de archivos de temp a definitiva al guardar
+5. Eliminación completa de carpeta al borrar capacitación
+6. Soporte para múltiples formatos (videos, documentos, imágenes, audio, etc.)
+7. Límites configurables (100MB archivos, 25MB campos de texto)
+
+**✅ Editor de contenido rico:**
+1. Editor de texto con formato (negrita, cursiva, subrayado)
+2. Selector de tamaño de fuente (10-36px)
+3. Paleta de colores (70+ opciones)
+4. Contador de caracteres en tiempo real
+5. Sanitización de HTML para seguridad
+6. Placeholder personalizable
+
+**✅ Sistema de inscripciones:**
+1. Inscribir múltiples estudiantes (rol 'Alumno')
+2. Búsqueda y filtrado de estudiantes por nombre/email
+3. Selección masiva (seleccionar todos / deseleccionar todos)
+4. Asignar un profesor (rol 'Capacitador')
+5. Contador de inscritos y badges visuales de estado
+
+**✅ Vista previa en tiempo real:**
+1. Preview actualizado mientras se edita
+2. Cambio automático de vista según campo enfocado
+3. Preview de test completo o escena específica
+4. Navegación interactiva entre niveles y escenas
+5. Detección automática de YouTube para embed
+6. Preview de bibliografía editable
+
+**✅ Validación y UX:**
+1. Validación completa antes de permitir activar capacitación
+2. Modal de errores con lista detallada de requisitos faltantes
+3. Modal de éxito tras guardar/actualizar
+4. Modal de advertencias para acciones no válidas
+5. Confirmación antes de eliminar capacitaciones
+6. Indicadores de carga durante operaciones asíncronas
+
+### **Áreas de mejora identificadas:**
+1. 🔧 Sincronización bidireccional de `assignedTeacher` entre Training y User
+2. 🔧 Indicadores visuales de completitud por nivel
+3. 🔧 Validación de grafo de navegación del test (escenas huérfanas, IDs únicos)
+4. 🔧 Barra de progreso de completitud
+5. 🔧 Tooltips informativos sobre campos obligatorios
 
 ### **Archivos principales del sistema:**
 
@@ -1334,11 +1783,48 @@ validate(data = {}, options = {}) {
 - **Comunicación**: API REST con JSON
 - **Base de datos**: MongoDB con Mongoose ODM
 
-### **Manejo de archivos:**
-- Los archivos se almacenan en `back/uploads/`
-- Las rutas se guardan en la base de datos como `/uploads/nombre-archivo.ext`
+### **Sistema de gestión de archivos multimedia:**
+
+**Estructura de carpetas:**
+```
+back/uploads/
+├── temp/                          # Archivos temporales durante creación/edición
+└── trainings/
+    └── {trainingId}/              # Carpeta única por capacitación
+        ├── imagen-portada.jpg
+        ├── video-nivel1.mp4
+        ├── documento-bibliografia.pdf
+        └── ...
+```
+
+**Flujo de archivos:**
+
+1. **Durante creación de capacitación:**
+   - Archivos se suben a `/uploads/temp/` con `POST /training/upload-file`
+   - Frontend mantiene referencias temporales (`/uploads/temp/filename.ext`)
+   - Al guardar, se mueve todo a `/uploads/trainings/{trainingId}/` con `POST /training/move-temp-files`
+
+2. **Durante edición de capacitación:**
+   - Archivos nuevos van a `/uploads/temp/`
+   - Al reemplazar, se usa `POST /training/replace-file` que:
+     - Elimina el archivo antiguo de `/uploads/trainings/{trainingId}/`
+     - Mueve el nuevo archivo de temp a `/uploads/trainings/{trainingId}/`
+     - Retorna la nueva ruta definitiva
+
+3. **Al eliminar capacitación:**
+   - El backend elimina toda la carpeta `/uploads/trainings/{trainingId}/` con `fs.rmSync()`
+
+**Tracking de archivos en el frontend:**
+- `pendingImageFile`: Archivo de portada pendiente de subir
+- `pendingLevelFiles`: Objeto con archivos pendientes por nivel (`{ 'training-0': File, 'test-1': File, 'scene-0-2': File, 'bib-1-3': File }`)
+- `originalFiles`: Tracking de archivos originales para detectar cambios y eliminar antiguos al reemplazar
+
+**Límites y validaciones:**
+- Tamaño máximo de archivo: 100MB
+- Tamaño máximo de campo de texto: 25MB (para HTML con formato extenso)
+- Tipos permitidos: videos, documentos, imágenes, audio, archivos comprimidos, etc.
+- Las rutas se guardan en la base de datos como `/uploads/trainings/{trainingId}/nombre-archivo.ext`
 - El frontend accede a los archivos mediante `${VITE_API_URL}${filePath}`
-- Los archivos pendientes se mantienen en estado local hasta confirmar la operación
 
 ### **Seguridad:**
 - Sanitización de HTML en el editor de texto rico
@@ -1348,6 +1834,95 @@ validate(data = {}, options = {}) {
 
 ---
 
+---
+
+## 📡 API FRONTEND - REQUEST.JS
+
+**Ubicación:** `Front/src/API/Request.js`
+
+### **Funciones de capacitaciones:**
+
+```javascript
+// Listar todas las capacitaciones
+export async function getAllTrainings()
+
+// Listar solo capacitaciones activas
+export async function getAllActiveTrainings()
+
+// Obtener una capacitación por ID (con timestamp para evitar caché)
+export async function getTrainingById(trainingId)
+
+// Crear nueva capacitación
+export async function createTraining(trainingData)
+
+// Actualizar capacitación existente
+export async function updateTraining(trainingId, trainingData)
+
+// Eliminar capacitación (elimina training, niveles y carpeta de archivos)
+export async function deleteTraining(trainingId)
+```
+
+### **Funciones de niveles:**
+
+```javascript
+// Obtener todos los niveles de una capacitación
+export async function getAllLevelsInTraining(trainingId)
+
+// Agregar niveles a una capacitación
+export async function addLevelsToTraining(trainingId, levels)
+
+// Actualizar niveles de una capacitación
+export async function updateLevelsInTraining(trainingId, levels)
+```
+
+### **Funciones de archivos:**
+
+```javascript
+// Subir imagen a carpeta temporal
+export async function uploadTrainingImage(file)
+
+// Subir archivo multimedia a carpeta temporal
+export async function uploadTrainingFile(file)
+
+// Eliminar archivo del servidor
+export async function deleteTrainingFile(filePath)
+
+// Reemplazar archivo existente con uno nuevo
+// - Elimina el archivo antiguo
+// - Mueve el nuevo de temp a /uploads/trainings/{trainingId}/
+// - Retorna la nueva ruta
+export async function replaceTrainingFile(file, trainingId, oldFilePath)
+
+// Mover múltiples archivos de temp a carpeta definitiva
+export async function moveTempFiles(trainingId, tempFiles)
+```
+
+### **Funciones de inscripciones:**
+
+```javascript
+// Inscribir estudiantes a una capacitación
+export async function enrollStudentsToTraining(trainingId, studentIds)
+
+// Obtener usuarios inscritos en una capacitación
+export async function getUsersEnrolledInTraining(trainingId)
+
+// Obtener estudiantes (filtrar por rol 'Alumno')
+export async function getStudents(role = 'Alumno')
+
+// Obtener lista de profesores
+export async function listTeachers()
+```
+
+### **Funciones de utilidad:**
+
+```javascript
+// Resolver URLs de imágenes (prefija host del backend si es ruta relativa)
+export function resolveImageUrl(url)
+// Ejemplo: "/uploads/image.jpg" → "http://localhost:4000/uploads/image.jpg"
+```
+
+---
+
 **Fecha de documentación:** Octubre 2025  
 **Versión del sistema:** 1.0  
-**Estado:** En desarrollo
+**Estado:** Producción
