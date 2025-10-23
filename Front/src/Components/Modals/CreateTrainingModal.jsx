@@ -987,7 +987,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
                 }
                 
                 // Validar opciones
-                console.log('Validando opciones de la escena:', scene);
+      
                 if (!scene.options || scene.options.length < 2) {
                   activationErrors.push(`El Nivel ${levelNumber} - Escena ${sceneIdx + 1}: necesita al menos 2 opciones.`);
                 } else {
