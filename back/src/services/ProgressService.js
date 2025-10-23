@@ -50,12 +50,51 @@ class ProgressService {
     return result;
   }
 
-  async isLevelApproved(userId, trainingId, level) {
-    const uId = toObjectId(userId);
-    const tId = toObjectId(trainingId);
-    const lId = toObjectId(level.);
+  async  isLevelApproved(userId, trainingId, levelId) {
+  const tId = new ObjectId(trainingId);
+  const lId = Number(levelId); // según tu estructura el level es un número, no un ObjectId
 
+  // 1️⃣ Buscar el nivel correspondiente
+  const level = await Level.findOne({ trainingId: tId, levelNumber: lId });
+  if (!level) {
+    throw new Error("Nivel no encontrado");
   }
+
+  // 2️⃣ Calcular puntos totales posibles
+  let totalPoints = 0;
+  for (const scene of level.test.scenes) {
+    // Sumar los puntos más altos posibles por cada escena
+    const maxOption = Math.max(...scene.options.map(opt => opt.points));
+    totalPoints += maxOption;
+    // Si la escena tiene bonus (y es de cierre), también sumalo
+    totalPoints += scene.bonus || 0;
+  }
+
+  // 🔸 Supongamos que los puntos del usuario se guardan en algún registro
+  // por ejemplo en UserTrainingProgress (ajustá esto según tu modelo real)
+  const userProgress = await UserTrainingProgress.findOne({
+    userId: new ObjectId(userId),
+    trainingId: tId,
+    levelNumber: lId
+  });
+
+  if (!userProgress) {
+    throw new Error("No hay progreso de usuario registrado");
+  }
+
+  const userPoints = userProgress.points || 0;
+
+  // 3️⃣ Calcular el 80 %
+  const approvalThreshold = totalPoints * 0.8;
+
+  // 4️⃣ Retornar resultado
+  return {
+    approved: userPoints >= approvalThreshold,
+    userPoints,
+    totalPoints,
+    requiredPoints: approvalThreshold
+  };
+}
 
 
 }
