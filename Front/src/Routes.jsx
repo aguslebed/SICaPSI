@@ -55,8 +55,10 @@ async function authLoader({ request }) {
   const url = new URL(request.url);
   const currentPath = url.pathname.replace(/\/$/, '');
 
-  // If trainer and currently not under /trainer -> redirect to /trainer
-  if (role === 'Capacitador' && !currentPath.startsWith('/trainer')) {
+  // If trainer and currently not under /trainer -> redirect to /trainer,
+  // EXCEPT when accessing student level views (allow trainers to view/do levels)
+  const isStudentLevelView = /\/userPanel\/[^/]+\/[^/]+\/(levelTest|training|bibliogrhapy)/.test(currentPath);
+  if (role === 'Capacitador' && !currentPath.startsWith('/trainer') && !isStudentLevelView) {
     throw redirect('/trainer');
   }
 

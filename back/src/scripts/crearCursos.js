@@ -5,6 +5,7 @@ import User from '../models/User.js';
 import Training from '../models/Training.js';
 import Level from '../models/Level.js';
 import PrivateMessage from '../models/PrivateMessage.js'; 
+import UserLevelProgress from '../models/UserLevelProgress.js'; 
 import { sampleLevels } from './cursos_y_niveles/levels.js';
 import { sampleCourses } from './cursos_y_niveles/training.js';
 import { sampleAdministrators } from './cursos_y_niveles/administrators.js';
@@ -34,7 +35,8 @@ async function initializeDatabase() {
       User.deleteMany({}),
       Training.deleteMany({}),
       Level.deleteMany({}),
-      PrivateMessage.deleteMany({})
+      PrivateMessage.deleteMany({}),
+      UserLevelProgress.deleteMany({})
     ]);
     // Crear usuarios de simulación por rol (solo Administrator y Manager)
     info('👥 Creando usuarios iniciales (Administrator y Manager)...');
@@ -203,6 +205,37 @@ async function initializeDatabase() {
       }
     }
 
+    // Generar progreso simulado: para cada alumno en cada training, marcar algunos niveles como completados
+    info('📈 Generando progreso simulado por alumno y training...');
+    const progressToInsert = [];
+    for (const student of existingStudents) {
+      for (const training of createdTrainings) {
+        // Obtener niveles del training
+        const levelsForTraining = await Level.find({ trainingId: training._id }).sort({ levelNumber: 1 }).select('_id trainingId').lean();
+        if (!levelsForTraining.length) continue;
+        // Regla simple de demo: alumno1 completa 1 nivel, alumno2 completa 2 niveles, alumno3 completa todos los niveles
+        const idx = existingStudents.findIndex(s => s._id.toString() === student._id.toString());
+        let completeCount = 1 + idx; // 1,2,3
+        if (completeCount > levelsForTraining.length) completeCount = levelsForTraining.length;
+        for (let i = 0; i < completeCount; i++) {
+          const lvl = levelsForTraining[i];
+          progressToInsert.push({
+            userId: student._id,
+            trainingId: training._id,
+            levelId: lvl._id,
+            status: 'completed',
+            completed: true,
+            completedAt: new Date()
+          });
+        }
+      }
+    }
+    if (progressToInsert.length) {
+      // insertMany con ordered:false para evitar fallar si hay duplicados raros
+      await UserLevelProgress.insertMany(progressToInsert, { ordered: false });
+      info(`✅ Registros de progreso creados: ${progressToInsert.length}`);
+    }
+
   // Crear / asegurar un docente por curso y generar mensajes personalizados
   info('👩‍🏫 Creando/asegurando docentes por curso y generando mensajes personalizados...');
     const teacherByTraining = new Map();
@@ -300,6 +333,7 @@ async function initializeDatabase() {
   const totalManagers = await User.countDocuments({ role: 'Directivo' });
   const totalTrainers = await User.countDocuments({ role: 'Capacitador' });
   const totalStudents = await User.countDocuments({ role: 'Alumno' });
+  const totalProgress = await UserLevelProgress.countDocuments();
   info('✅ Base de datos inicializada exitosamente!');
   info('\n📊 RESUMEN:');
   info(`   Usuarios totales: ${totalUsers}`);
@@ -310,6 +344,7 @@ async function initializeDatabase() {
   info(`   Trainings: ${createdTrainings.length}`);
   info(`   Niveles: ${createdLevels.length}`);
   info(`   Mensajes: ${(await PrivateMessage.countDocuments())}`);
+  info(`   Progresos: ${totalProgress}`);
     
   console.log('\n🔑 Credenciales de acceso (email / password):');
     // Agrupar por rol para una mejor lectura
