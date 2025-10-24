@@ -717,3 +717,45 @@ export async function enrollStudentsToTraining(trainingId, studentIds) {
     }
   }
 }
+
+// --- PROGRESS / LEVEL APPROVAL ---
+// Checks whether a level is approved given the user's level object (with results)
+export async function checkLevelApproved(trainingId, userId,levelId, levelWithResults) {
+  try {
+    const { data } = await api.post(`progress/trainings/${encodeURIComponent(trainingId)}/levels/${encodeURIComponent(levelId)}/checkApproved`, {
+      level: levelWithResults,
+      userId: userId,
+      trainingId: trainingId
+    });
+  
+    return data;
+  } catch (error) {
+    console.error('Error checking level approval:', error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al verificar aprobación');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+// Obtiene el progreso de un usuario en un curso específico
+export async function getTrainingProgress(trainingId, userId) {
+  try {
+    const { data } = await api.post(`progress/trainings/${encodeURIComponent(trainingId)}/progress`, {
+      userId: userId
+    });
+    return data;
+  } catch (error) {
+    console.error('Error obteniendo progreso del curso:', error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al obtener progreso');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}

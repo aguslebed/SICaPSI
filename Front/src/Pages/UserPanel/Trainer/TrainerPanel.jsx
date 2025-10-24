@@ -7,7 +7,7 @@ import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
 // Panel principal de usuario
 const UserPanel = () => {
   const { userData } = useUser();
- 
+  console.log(userData," --desde userPanel.jsx--")
 
   // Si los datos aún no están cargados
   if (!userData) {
@@ -41,7 +41,6 @@ const UserPanel = () => {
                   key={Training._id}
                   titulo={Training.title}
                   subtitulo={Training.subtitle}
-                  porcentaje={Training.progressPercentage} // Si tienes el progreso, puedes calcularlo aquí
                   estado={Training.isActive ? "activo" : "desactivado"}
                   link={`/trainer/${Training._id}`}
                   imagen={Training.image}

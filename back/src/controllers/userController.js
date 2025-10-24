@@ -95,8 +95,24 @@ export function makeUserController({ userService, trainingService, messageServic
           messageService.getMessagesForUser(userId)
         ]);
         if (!user) throw new AppError('Usuario no encontrado', 404);
+
+        // Enriquecer trainings con progreso
+        let trainingFormatted = training.map(t => trainingFormatter.format(t));
+        try {
+          const { default: ProgressService } = await import('../services/ProgressService.js');
+          const progressService = new ProgressService();
+          const trainingIds = training.map(t => t._id);
+          const progressByTraining = await progressService.getProgressByTraining(userId, trainingIds);
+          trainingFormatted = trainingFormatted.map(t => {
+            const p = progressByTraining[t._id?.toString?.() || t._id] || { totalLevels: t.totalLevels || (t.levels?.length || 0), levelsCompleted: 0, progressPercent: 0 };
+            return { ...t, totalLevels: p.totalLevels, levelsCompleted: p.levelsCompleted, progressPercent: p.progressPercent };
+          });
+        } catch (e) {
+          // Si falla el cálculo de progreso, seguimos sin romper la respuesta
+          trainingFormatted = trainingFormatted.map(t => ({ ...t, totalLevels: t.totalLevels || (t.levels?.length || 0), levelsCompleted: 0, progressPercent: 0 }));
+        }
+
         const userFormatted = userFormatter.toPublic(user);
-        const trainingFormatted = training.map(t => trainingFormatter.format(t));
         const messageFormatted = mensajes.map(m => messageFormatter.format(m));
         const uidStr = userId.toString();
         const unreadMessages = messageFormatted.filter(m => {

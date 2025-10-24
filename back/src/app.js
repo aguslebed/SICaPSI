@@ -15,6 +15,7 @@ import trainingRoutes from "./routes/trainingRoutes.js";
 import enrollmentRoutes from "./routes/enrollmentRoutes.js";
 import levelRoutes from "./routes/levelRoutes.js";
 import { startTrainingScheduler } from "./utils/trainingScheduler.js";
+import progressRoutes from "./routes/progressRoutes.js";
 
 
 // __dirname equivalent for ES Modules
@@ -87,7 +88,8 @@ class AppConfig {
     this.app.use("/messages", messageRoutes);
     this.app.use("/training", trainingRoutes);
     this.app.use("/enrollment", enrollmentRoutes);
-  this.app.use("/level", levelRoutes);
+    this.app.use("/level", levelRoutes);
+    this.app.use("/progress", progressRoutes);
   } 
 
 
