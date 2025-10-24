@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
 import { useUser } from "../../../context/UserContext";
 import { resolveImageUrl } from '../../../API/Request';
+import { useEffect } from "react";
 
 const LevelTest = () => {
   // Botón base: mantenemos cursor-pointer y legibilidad, pero adaptativo
@@ -38,15 +39,29 @@ const LevelTest = () => {
   }, [level]);
   const tests = scenes; 
   const testTitle = level?.test?.title;
-  console.log("Esta es la imagen:  ", level.test.imageUrl);
+
   const testImage = resolveImageUrl(level?.test?.imageUrl);
   // Estado para la simulación
   const [sceneIndex, setSceneIndex] = useState(null);
+  // Objeto local que irá acumulando las opciones elegidas por el usuario
+  const createInitialLevelWithResults = () => {
+    const copy = JSON.parse(JSON.stringify(level || {}));
+    // Normalizar shape de test
+    if (copy.test && Array.isArray(copy.test)) {
+      copy.test = { scenes: copy.test };
+    }
+    if (!copy.test) copy.test = { scenes: [] };
+    // Estructura que iremos llenando
+    copy.test.scenesResults = [];
+    return copy;
+  };
+  const [levelWithResults, setLevelWithResults] = useState(createInitialLevelWithResults);
 
   // Reiniciar video (volver al inicio)
   const handleRestart = () => {
     setSceneIndex(null);
     setPoints(0);
+    setLevelWithResults(createInitialLevelWithResults());
   }
 
   // Iniciar simulación (ir a la primera escena)
@@ -54,17 +69,50 @@ const LevelTest = () => {
 
   const [points,setPoints] = useState(0);
 
-  // Ir a la siguiente escena según opción
-  const handleOption = (nextId, optPoints) => {
+
+  useEffect(() => {
+      console.log('levelWithResults actualizado:', levelWithResults);
+    }, [levelWithResults]);
+
+  // Ir a la siguiente escena según opción y acumular resultado del usuario
+  const handleOption = (optObj, optIndex) => {
+    const nextId = optObj?.next;
+    const optPoints = Number(optObj?.points || 0);
     const nextIndex = tests.findIndex(test => test.idScene === nextId);
-    console.log(tests)
-    //Antes de seguir a la siguiente escena, acumula puntos
+
+    // Antes de seguir a la siguiente escena, acumula puntos
     setPoints(prevPoints => prevPoints + optPoints);
+
+    // Registrar la elección del usuario para la escena actual
+    const currentScene = tests[sceneIndex];
+    if (currentScene) {
+      const resultEntry = {
+        idScene: currentScene.idScene || currentScene._id || currentScene.id || null,
+        selectedOptionIndex: typeof optIndex === 'number' ? optIndex : undefined,
+        selectedOptionId: optObj && (optObj._id || optObj.id) ? (optObj._id || optObj.id) : undefined,
+        selectedOptionDescription: optObj?.description || undefined,
+        selectedOption: { ...optObj, points: optPoints },
+        points: optPoints
+      };
+
+      setLevelWithResults(prev => {
+        const next = JSON.parse(JSON.stringify(prev || {}));
+        if (!next.test) next.test = { scenes: [], scenesResults: [] };
+        if (!Array.isArray(next.test.scenesResults)) next.test.scenesResults = [];
+        next.test.scenesResults.push(resultEntry);
+        // Espejar en test.scenes para compatibilidad con isLevelApproved
+        next.test.scenes = JSON.parse(JSON.stringify(next.test.scenesResults));
+        return next;
+      });
+    }
+
     if (nextIndex !== -1) {
       setSceneIndex(nextIndex);
     } else {
       // Si no hay siguiente, termina la simulación
       setSceneIndex(null);
+      // Aquí ya queda armado levelWithResults con todas las elecciones
+      
     }
   };
 
@@ -105,7 +153,7 @@ const LevelTest = () => {
                     key={idx}
                     className="bg-[#009fe3] text-white font-bold rounded-lg hover:bg-[#0077b6] transition cursor-pointer w-full sm:w-64 min-h-12 px-4"
                     style={buttonStyle}
-                    onClick={() => handleOption(opt.next, opt.points)}
+                    onClick={() => handleOption(opt, idx)}
                   >
                     {opt.description}
                   </button>
