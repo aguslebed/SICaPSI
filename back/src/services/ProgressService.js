@@ -81,7 +81,14 @@ class ProgressService {
     }
   }
 
-  async  isLevelApproved(userId, trainingId, level) {
+  /**
+   * Evalúa si un nivel está aprobado según las respuestas del usuario.
+   * @param {string|ObjectId} userId
+   * @param {string|ObjectId} trainingId
+   * @param {Object} level - objeto level que incluye las respuestas del usuario
+   * @param {number} passThreshold - porcentaje mínimo para aprobar (por defecto 80)
+   */
+  async isLevelApproved(userId, trainingId, level, passThreshold = 80) {
     // Validate inputs
     if (!userId || !trainingId || !level) {
       return { approved: false, earnedPoints: 0, totalPoints: 0, percentage: 0 };
@@ -196,8 +203,10 @@ class ProgressService {
     if (earned > totalPossible) earned = totalPossible;
 
     const percentage = totalPossible > 0 ? (earned / totalPossible) * 100 : 0;
-    //Se considera un nivel aprobado si el porcentaje es mayor o igual a 80% (Cambiar el 80 por el numero que sea)
-    const approved = percentage >= 80;
+  // Determinar umbral de aprobación (por defecto 80%)
+  const threshold = Number(passThreshold ?? 80);
+  // Se considera un nivel aprobado si el porcentaje es mayor o igual al umbral
+  const approved = percentage >= threshold;
 
     // Build a simplified list of selected options to store (avoid duplicating full level)
         const selectedOptions = [];
