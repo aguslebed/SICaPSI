@@ -2,6 +2,7 @@ import React from "react";
 import admisionImg from "../../assets/admision2.png";
 import profesorImg from "../../assets/profesor.png";
 import cursoImg from "../../assets/curso.png";
+
 import usuarioImg from "../../assets/usuario.png";
 import { Link, useNavigate } from "react-router-dom";
 import NavBar from "../../Components/Student/NavBar";
@@ -14,37 +15,15 @@ export default function AdminPanel() {
   const options = [
     {
       title: "Admisión de Usuarios",
-      link: "adminPanel/admisionUsuario",
+      link: "/adminPanel/admisionUsuario",
       isImage: true,
       image: admisionImg,
-      onClick: async () => {
-        setLoading(true);
-        try {
-          const data = await fetchAdmisionUsuarios();
-          navigate("/adminPanel/admisionUsuario", { state: { data } });
-        } catch (error) {
-          console.error("Error fetching data for AdmisionUsuario:", error);
-        } finally {
-          setLoading(false);
-        }
-      },
     },
     {
       title: "Gestión de Usuarios",
       link: "/adminPanel/gestionUsuario",
       isImage: true,
       image: usuarioImg,
-       onClick: async () => {
-        setLoading(true);
-        try {
-          // const data = await getAllUsers();
-          navigate("/adminPanel/gestionUsuario");
-        } catch (error) {
-          console.error("Error fetching data for GestionUsuario:", error);
-        } finally {
-          setLoading(false);
-        }
-      },
     },
     {
       title: "Gestión de Capacitación",
@@ -57,16 +36,6 @@ export default function AdminPanel() {
       link: "/adminPanel/gestionProfesores",
       isImage: true,
       image: profesorImg,
-        onClick: async () => {
-        setLoading(true);
-        try {
-          navigate("/adminPanel/gestionProfesores");
-        } catch (error) {
-          console.error("Error fetching data for GestionUsuario:", error);
-        } finally {
-          setLoading(false);
-        }
-      },
     },
   ];
 

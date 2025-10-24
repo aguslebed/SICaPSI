@@ -22,20 +22,45 @@ import LevelModel from "../models/Level.js";
 // Multer storage for training files
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Asegurar que exista la carpeta base de uploads
+const baseUploadsDir = path.resolve(__dirname, "..", "..", "uploads");
+if (!fs.existsSync(baseUploadsDir)) {
+    fs.mkdirSync(baseUploadsDir, { recursive: true });
+    console.log('✅ Carpeta uploads creada:', baseUploadsDir);
+}
+
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, path.resolve(__dirname, "..", "..", "uploads"));
+        try {
+            // Siempre guardar en carpeta temporal al subir
+            const uploadDir = path.resolve(__dirname, "..", "..", "uploads", "temp");
+            
+            // Crear directorio si no existe
+            if (!fs.existsSync(uploadDir)) {
+                fs.mkdirSync(uploadDir, { recursive: true });
+                console.log('✅ Carpeta temporal creada:', uploadDir);
+            }
+            
+            cb(null, uploadDir);
+        } catch (error) {
+            console.error('❌ Error creando directorio:', error);
+            cb(error);
+        }
     },
     filename: function (req, file, cb) {
         const ext = path.extname(file.originalname);
         const base = path.basename(file.originalname, ext).replace(/[^a-z0-9_-]/gi, '_');
         const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        cb(null, `training-${base}-${unique}${ext}`);
+        cb(null, `${base}-${unique}${ext}`);
     }
 });
 const upload = multer({ 
     storage,
-    limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
+    limits: { 
+        fileSize: 100 * 1024 * 1024, // 100MB limit para archivos
+        fieldSize: 25 * 1024 * 1024  // 25MB limit para campos de texto (HTML con formato puede ser extenso)
+    },
     fileFilter: (req, file, cb) => {
         // Lista ampliada de tipos de archivo permitidos
         const allowedTypes = [
@@ -99,7 +124,11 @@ router.delete("/delete-file", (req, res) => {
         
         // Verificar si el archivo existe
         if (!fs.existsSync(absolutePath)) {
-            return res.status(404).json({ message: 'Archivo no encontrado' });
+            console.warn('⚠️ Archivo no encontrado, continuando:', filePath);
+            return res.status(200).json({ 
+                message: 'Archivo no encontrado (ya eliminado)',
+                filePath: filePath
+            });
         }
         
         // Eliminar archivo
@@ -115,6 +144,53 @@ router.delete("/delete-file", (req, res) => {
     }
 });
 
+// Replace file endpoint - Reemplazar archivo antiguo con uno nuevo
+router.post("/replace-file", upload.single('file'), (req, res) => {
+    try {
+        const { oldFilePath, trainingId } = req.body;
+        
+        if (!req.file) {
+            return res.status(400).json({ message: 'No se proporcionó archivo nuevo' });
+        }
+        
+        if (!trainingId) {
+            return res.status(400).json({ message: 'Se requiere trainingId' });
+        }
+        
+        // Si hay archivo antiguo, eliminarlo
+        if (oldFilePath && oldFilePath !== '__PENDING_UPLOAD__' && oldFilePath.startsWith('/uploads/')) {
+            const oldAbsolutePath = path.resolve(__dirname, "..", "..", oldFilePath.replace('/uploads/', 'uploads/'));
+            
+            if (fs.existsSync(oldAbsolutePath)) {
+                fs.unlinkSync(oldAbsolutePath);
+            }
+        }
+        
+        // Mover el nuevo archivo de temp a la carpeta del training
+        const tempPath = req.file.path;
+        const finalFolder = path.resolve(__dirname, "..", "..", "uploads", "trainings", trainingId);
+        
+        if (!fs.existsSync(finalFolder)) {
+            fs.mkdirSync(finalFolder, { recursive: true });
+        }
+        
+        const finalPath = path.join(finalFolder, req.file.filename);
+        fs.renameSync(tempPath, finalPath);
+        
+        const newFilePath = `/uploads/trainings/${trainingId}/${req.file.filename}`;
+        
+        res.status(200).json({
+            message: 'Archivo reemplazado exitosamente',
+            filePath: newFilePath,
+            originalName: req.file.originalname,
+            fileSize: req.file.size
+        });
+    } catch (error) {
+        console.error('❌ Error reemplazando archivo:', error);
+        res.status(500).json({ message: 'Error interno del servidor', error: error.message });
+    }
+});
+
 router.get("/:id", controller.getTrainingById)
 router.patch("/:id", controller.updateTraining)
 router.delete("/:id", controller.deleteTraining)
@@ -126,15 +202,70 @@ router.post("/upload-image", upload.single('image'), (req, res) => {
             return res.status(400).json({ message: 'No se proporcionó archivo' });
         }
         
-        const filePath = `/uploads/${req.file.filename}`;
+        // Guardar en temp, devolver ruta temporal
+        const tempPath = `/uploads/temp/${req.file.filename}`;
+        console.log('✅ Imagen subida a temporal:', tempPath);
         res.status(200).json({ 
             message: 'Imagen subida exitosamente',
-            filePath: filePath,
+            filePath: tempPath,
             originalName: req.file.originalname
         });
     } catch (error) {
         console.error('Error subiendo imagen:', error);
         res.status(500).json({ message: 'Error interno del servidor' });
+    }
+});
+
+// Mover archivos de carpeta temporal a carpeta definitiva con trainingId
+router.post("/move-temp-files", (req, res) => {
+    try {
+        const { trainingId, tempFiles } = req.body;
+        
+        if (!trainingId || !Array.isArray(tempFiles) || tempFiles.length === 0) {
+            return res.status(400).json({ message: 'Se requiere trainingId y tempFiles (array)' });
+        }
+        
+        const tempFolder = path.resolve(__dirname, "..", "..", "uploads", "temp");
+        const finalFolder = path.resolve(__dirname, "..", "..", "uploads", "trainings", trainingId);
+        
+        // Crear carpeta final si no existe
+        if (!fs.existsSync(finalFolder)) {
+            fs.mkdirSync(finalFolder, { recursive: true });
+            console.log('✅ Carpeta de training creada:', finalFolder);
+        }
+        
+        const movedFiles = [];
+        
+        // Mover cada archivo especificado
+        for (const tempPath of tempFiles) {
+            // Extraer nombre del archivo de la ruta /uploads/temp/filename
+            const filename = path.basename(tempPath);
+            const sourcePath = path.join(tempFolder, filename);
+            const destPath = path.join(finalFolder, filename);
+            
+            if (!fs.existsSync(sourcePath)) {
+                console.warn(`⚠️ Archivo temporal no encontrado: ${sourcePath}`);
+                continue;
+            }
+            
+            // Mover archivo
+            fs.renameSync(sourcePath, destPath);
+            
+            movedFiles.push({
+                oldPath: tempPath,
+                newPath: `/uploads/trainings/${trainingId}/${filename}`
+            });
+        }
+        
+        console.log(`✅ Movidos ${movedFiles.length} archivos a training ${trainingId}`);
+        
+        res.status(200).json({
+            message: 'Archivos movidos exitosamente',
+            movedFiles: movedFiles
+        });
+    } catch (error) {
+        console.error('❌ Error moviendo archivos:', error);
+        res.status(500).json({ message: 'Error interno del servidor', error: error.message });
     }
 });
 
@@ -144,11 +275,14 @@ router.post("/upload-file", upload.single('file'), (req, res) => {
             return res.status(400).json({ message: 'No se proporcionó archivo' });
         }
         
-        const filePath = `/uploads/${req.file.filename}`;
+        // Guardar en temp, devolver ruta temporal
+        const tempPath = `/uploads/temp/${req.file.filename}`;
+        
+        console.log('✅ Archivo subido a temporal:', { tempPath, size: req.file.size });
         
         const response = {
             message: 'Archivo subido exitosamente',
-            filePath: filePath,
+            filePath: tempPath,
             originalName: req.file.originalname,
             fileSize: req.file.size,
             mimeType: req.file.mimetype

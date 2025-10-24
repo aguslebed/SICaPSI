@@ -1,4 +1,5 @@
 import React from 'react';
+import RichTextInput, { getPlainTextFromRichText } from './RichTextInput';
 import LevelTraining from './LevelTraining';
 import LevelBibliography from './LevelBibliography';
 import LevelTestEditor from './LevelTestEditor';
@@ -24,7 +25,9 @@ export default function LevelsEditor(props) {
     setSelectedOption,
     isLevelComplete, // Nueva prop para verificar completitud del nivel
     showWarningModal, // Nueva prop para mostrar modal de advertencia
-    onBibliographyTempChange // Nueva prop para pasar valores temporales al preview
+    onBibliographyTempChange, // Nueva prop para pasar valores temporales al preview
+    editingBibliographyIndex,
+    setEditingBibliographyIndex
   } = props;
 
   // (Removed debug logs) - previously logged level data for debugging
@@ -48,14 +51,13 @@ export default function LevelsEditor(props) {
                   Título nivel {levels[selectedLevel].levelNumber}
                 </td>
                 <td className="px-1.5 md:px-2 py-0.5 md:py-1 border border-gray-300">
-                  <input
+                  <RichTextInput
                     value={levels[selectedLevel].title}
-                    onChange={(e) => updateLevelField(selectedLevel, 'title', e.target.value)}
-                    maxLength={50}
-                    className="w-full border-0 px-0 py-0.5 md:py-1 text-xs md:text-sm placeholder:text-xs md:placeholder:text-sm font-normal focus:ring-0 focus:outline-none bg-transparent"
-                    placeholder="Ingrese el titulo del nivel (Max caracter: 50)"
+                    onChange={(html) => updateLevelField(selectedLevel, 'title', html)}
+                    maxLength={100}
+                    placeholder="Ingrese el título del nivel (Max caracteres: 100)"
                   />
-                  <p className="text-[9px] md:text-[10px] text-gray-500 mt-0.5 text-right">{levels[selectedLevel].title.length}/50 caracteres</p>
+                  <p className="text-[9px] md:text-[10px] text-gray-500 mt-0.5 text-right">{getPlainTextFromRichText(levels[selectedLevel].title).length}/100 caracteres</p>
                 </td>
               </tr>
             </tbody>
@@ -121,6 +123,9 @@ export default function LevelsEditor(props) {
             onClick={() => {
               setExpandedSubsection('training');
               setActiveSection('training');
+              if (setEditingBibliographyIndex) {
+                setEditingBibliographyIndex(null);
+              }
             }}
             className={`px-1.5 md:px-2 py-0.5 md:py-1 text-xs md:text-sm font-medium transition-colors cursor-pointer whitespace-nowrap border-r border-gray-300 ${
               expandedSubsection === 'training'
@@ -135,6 +140,9 @@ export default function LevelsEditor(props) {
             onClick={() => {
               setExpandedSubsection('test');
               setActiveSection('test');
+              if (setEditingBibliographyIndex) {
+                setEditingBibliographyIndex(null);
+              }
             }}
             className={`px-1.5 md:px-2 py-0.5 md:py-1 text-xs md:text-sm font-medium transition-colors cursor-pointer whitespace-nowrap ${
               expandedSubsection === 'test'
@@ -170,6 +178,8 @@ export default function LevelsEditor(props) {
             handleFileDelete={handleFileDelete}
             showWarningModal={showWarningModal}
             onTempValuesChange={onBibliographyTempChange}
+            editingIndex={editingBibliographyIndex}
+            setEditingIndex={setEditingBibliographyIndex}
           />
         )}
 
@@ -185,6 +195,7 @@ export default function LevelsEditor(props) {
             handleFileUpload={handleFileUpload}
             handleFileDelete={handleFileDelete}
             showWarningModal={showWarningModal}
+            setActiveSection={setActiveSection}
           />
         )}
       </div>

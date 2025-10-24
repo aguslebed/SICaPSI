@@ -167,7 +167,7 @@ export class UserService extends IUserService {
    */
   async getEnrolledStudents(trainingId) {
     return await this.User.find({
-      role: 'Guardia',
+      role: "Alumno",
       assignedTraining: trainingId
     })
     .select('firstName lastName email documentNumber status')

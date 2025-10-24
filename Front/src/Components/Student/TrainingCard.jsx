@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from 'react-router-dom';
 import { resolveImageUrl } from '../../API/Request';
+import { normalizeRichTextValue, getPlainTextFromRichText } from '../Modals/CreateTrainingModal/RichTextInput';
 
 const TrainingCard = ({ titulo, subtitulo, porcentaje, estado, link, imagen }) => {
   const navigate = useNavigate();
@@ -35,8 +36,8 @@ const TrainingCard = ({ titulo, subtitulo, porcentaje, estado, link, imagen }) =
 
       {/* Contenido */}
       <div className="absolute top-4 left-4 text-white z-10">
-        <h3 className="text-xl font-bold">{titulo}</h3>
-        <p className="text-sm">{subtitulo}</p>
+        <h3 className="text-xl font-bold break-words" dangerouslySetInnerHTML={{ __html: normalizeRichTextValue(titulo) || 'Sin título' }} />
+        <p className="text-sm break-words" dangerouslySetInnerHTML={{ __html: normalizeRichTextValue(subtitulo) || 'Sin subtítulo' }} />
       </div>
 
       {/* Barra de progreso (siempre que esté activo) */}

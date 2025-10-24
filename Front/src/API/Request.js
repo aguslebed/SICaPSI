@@ -555,10 +555,12 @@ export async function uploadTrainingImage(file) {
 }
 
 // Subir archivo de video/material para training
-export async function uploadTrainingFile(file) {
+export async function uploadTrainingFile(file, trainingId) {
   const form = new FormData();
   form.append('file', file);
+  
   try {
+    // Siempre sube a carpeta temporal, no necesita trainingId
     const { data } = await api.post('/training/upload-file', form, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
@@ -586,6 +588,52 @@ export async function deleteTrainingFile(filePath) {
     console.error("❌ Error eliminando archivo:", error);
     if (error.response) {
       throw new Error(error.response.data?.message || 'Error al eliminar archivo');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+// Reemplazar archivo existente con uno nuevo
+export async function replaceTrainingFile(file, trainingId, oldFilePath) {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('trainingId', trainingId);
+  if (oldFilePath) {
+    form.append('oldFilePath', oldFilePath);
+  }
+  
+  try {
+    const { data } = await api.post('/training/replace-file', form, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return data;
+  } catch (error) {
+    console.error("❌ Error reemplazando archivo:", error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al reemplazar archivo');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+// Mover archivos de carpeta temporal a definitiva
+export async function moveTempFiles(trainingId, tempFiles) {
+  try {
+    const { data } = await api.post('/training/move-temp-files', {
+      trainingId,
+      tempFiles
+    });
+    return data;
+  } catch (error) {
+    console.error("❌ Error moviendo archivos:", error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al mover archivos');
     } else if (error.request) {
       throw new Error('Error de conexión con el servidor');
     } else {

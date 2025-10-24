@@ -98,18 +98,24 @@ export class TrainingService extends ITrainingService {
      }
    }
 
-   const updatedTraining = await this.Training.findByIdAndUpdate(
-     trainingId, 
-     trainingData, 
-     { new: true, runValidators: true }
-   )
-   .populate({ path: 'createdBy', select: 'firstName lastName email', model: this.User })
-   .populate({ path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level })
-   .exec();
-
-   if (!updatedTraining) {
+   // Obtener la capacitación actual
+   const training = await this.Training.findById(trainingId);
+   
+   if (!training) {
      throw new Error("Capacitación no encontrada");
    }
+
+   // Actualizar campos
+   Object.assign(training, trainingData);
+   
+   // Guardar (esto ejecutará el middleware pre-save que actualiza isActive según fechas)
+   await training.save();
+
+   // Populate y retornar
+   const updatedTraining = await this.Training.findById(trainingId)
+     .populate({ path: 'createdBy', select: 'firstName lastName email', model: this.User })
+     .populate({ path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level })
+     .exec();
 
    return updatedTraining;
  }
@@ -127,7 +133,25 @@ export class TrainingService extends ITrainingService {
    // Eliminar la capacitación
    await this.Training.findByIdAndDelete(trainingId);
 
-   return { message: "Capacitación y niveles asociados eliminados exitosamente" };
+   // Eliminar carpeta de archivos multimedia
+   const fs = await import('fs');
+   const path = await import('path');
+   const { fileURLToPath } = await import('url');
+   
+   const __filename = fileURLToPath(import.meta.url);
+   const __dirname = path.dirname(__filename);
+   const trainingFolder = path.resolve(__dirname, "..", "..", "uploads", "trainings", trainingId);
+   
+   if (fs.existsSync(trainingFolder)) {
+     try {
+       fs.rmSync(trainingFolder, { recursive: true, force: true });
+       console.log(`✅ Carpeta eliminada: ${trainingFolder}`);
+     } catch (error) {
+       console.error(`⚠️ Error eliminando carpeta ${trainingFolder}:`, error);
+     }
+   }
+
+   return { message: "Capacitación, niveles y archivos asociados eliminados exitosamente" };
  }
 
 

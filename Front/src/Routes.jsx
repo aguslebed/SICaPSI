@@ -35,6 +35,12 @@ const GestionUsuario = lazy(() => import('./Pages/AdminPanel/GestionUsuario'));
 const GestionCapacitacion = lazy(() => import('./Pages/AdminPanel/GestionCapacitacion'));
 const GestionProfesores = lazy(() => import('./Pages/AdminPanel/GestionProfesores'));
 const ProfesorEditar = lazy(() => import('./Pages/AdminPanel/ProfesorEditar'));
+// Directivo panel
+const DirectivoHome = lazy(() => import('./Pages/DirectivoPanel/Index'));
+const DirectivoGestion = lazy(() => import('./Pages/DirectivoPanel/GestionDirectivo'));
+const ValidarContenido = lazy(() => import('./Pages/DirectivoPanel/ValidarContenido'));
+const Estadisticas = lazy(() => import('./Pages/DirectivoPanel/Estadisticas'));
+const Registros = lazy(() => import('./Pages/DirectivoPanel/Registros'));
 
 async function authLoader({ request }) {
   try {
@@ -52,6 +58,11 @@ async function authLoader({ request }) {
   // If trainer and currently not under /trainer -> redirect to /trainer
   if (role === 'Capacitador' && !currentPath.startsWith('/trainer')) {
     throw redirect('/trainer');
+  }
+
+  // If directivo and currently not under /directivoPanel -> redirect to /directivoPanel
+  if (role === 'Directivo' && !currentPath.startsWith('/directivoPanel')) {
+    throw redirect('/directivoPanel');
   }
 
   // If not trainer and currently under /trainer -> redirect to /userPanel
@@ -95,12 +106,38 @@ export const router = createBrowserRouter([
       { path: 'admisionUsuario', element: <AdmisionUsuario /> },
       { path: 'gestionUsuario', element: <GestionUsuario /> },
       { path: 'gestionCapacitacion', element: <GestionCapacitacion /> },
-  { path: 'gestionProfesores', element: <GestionProfesores /> },
-  { path: 'profesorEditar/:id', element: <ProfesorEditar /> },
+      { path: 'gestionProfesores', element: <GestionProfesores /> },
+      { path: 'profesorEditar/:id', element: <ProfesorEditar /> },
+  // Nota: la gestión de directivos se aloja ahora en /directivoPanel
       // Crear Usuario: debe renderizar el Register.jsx
       { path: 'gestionUsuario/crearUsuario', element: <Registrarse /> },
       { path: 'gestionUsuario/modificarUsuario', element: <AdminActualizarUsuario /> }
 
+    ]
+  },
+  {
+    path: '/directivoPanel',
+    element: <ProtectedLayout />,
+    loader: async function directivoLoader() {
+      try {
+        await checkAuth();
+      } catch {
+        throw redirect('/login');
+      }
+      const me = await getMe();
+      const role = me?.user?.role;
+      if (role !== 'Directivo') {
+        throw redirect('/userPanel');
+      }
+      return { me };
+    },
+    errorElement: <RouteError />,
+    children: [
+      { index: true, element: <DirectivoHome /> },
+      { path: 'gestionDirectivo', element: <DirectivoGestion /> },
+      { path: 'validarContenido', element: <ValidarContenido /> },
+      { path: 'estadisticas', element: <Estadisticas /> },
+      { path: 'registros', element: <Registros /> }
     ]
   },
   {

@@ -2,11 +2,14 @@
 import mongoose from "mongoose";
 
 const TrainingSchema = new mongoose.Schema({
-  title: {type: String, required: true, trim: true},
-  subtitle: {type: String, required: true},
-  description: {type: String, required: true},
-  image: {type: String, required: true},
-  isActive: {type: Boolean, default: true},
+  title: {type: String, required: true, trim: true, maxlength: 500},
+  subtitle: {type: String, required: true, maxlength: 750},
+  description: {type: String, required: true, maxlength: 5000},
+  image: {type: String, required: false, default: '__PENDING_UPLOAD__'},
+  isActive: {type: Boolean, default: false},
+  pendingApproval: {type: Boolean, default: false},
+  rejectedBy: {type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null},
+  rejectionReason: {type: String, default: '', maxlength: 1000},
   createdBy: {type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true},
   levels: [{type: mongoose.Schema.Types.ObjectId, ref: 'Level'}],
   totalLevels: {type: Number, default: 0},
@@ -30,8 +33,7 @@ const TrainingSchema = new mongoose.Schema({
 // Índices para mejor performance
 TrainingSchema.index({ createdBy: 1 });
 TrainingSchema.index({ isActive: 1 });
-// No usar índice único en title para permitir actualizaciones
-// La validación de duplicados se hace en el servicio
-// TrainingSchema.index({ title: 1 }, { unique: true, sparse: true });
+// Índice único en title - no puede haber dos capacitaciones con el mismo título
+TrainingSchema.index({ title: 1 }, { unique: true });
 
 export default mongoose.model("Training", TrainingSchema);

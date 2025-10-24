@@ -1,8 +1,9 @@
 import React from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useUser } from "../../../context/UserContext";
 import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
 import { resolveImageUrl } from "../../../API/Request";
+import { normalizeRichTextValue, getPlainTextFromRichText } from "../../../Components/Modals/CreateTrainingModal/RichTextInput";
 
 const TrainingIndex = () => {
   const { idTraining } = useParams();
@@ -12,6 +13,9 @@ const TrainingIndex = () => {
   }
   const training = userData.training.find(c => c._id === idTraining);
   if (!training) return <p className="text-center mt-20">Capacitación no encontrada</p>;
+
+  const sanitizedDescription = normalizeRichTextValue(training.description || "");
+  const hasDescription = getPlainTextFromRichText(sanitizedDescription).trim().length > 0;
 
  
   return (
@@ -24,8 +28,8 @@ const TrainingIndex = () => {
               className="h-48 bg-black bg-center bg-cover flex flex-col justify-center text-white px-8"
               style={{ backgroundImage: `url(${resolveImageUrl(training.image)})` }}
             >
-              <h1 className="text-3xl font-bold">{training.title}</h1>
-              <p className="text-lg">{training.subtitle}</p>
+              <h1 className="text-3xl font-bold break-words" dangerouslySetInnerHTML={{ __html: normalizeRichTextValue(training.title) || 'Sin título' }} />
+              <p className="text-lg break-words" dangerouslySetInnerHTML={{ __html: normalizeRichTextValue(training.subtitle) || 'Sin subtítulo' }} />
             </div>
             {/* Barra de progress */}
             <div className="w-full bg-gray-200 h-6">
@@ -39,7 +43,15 @@ const TrainingIndex = () => {
             {/* Descripción */}
             <div className="p-6">
               <h2 className="font-semibold mb-2">Descripción de la capacitación</h2>
-              <p>{training.description}</p>
+              {hasDescription ? (
+                <div
+                  className="text-gray-700 leading-relaxed break-words"
+                  dir="ltr"
+                  dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
+                />
+              ) : (
+                <p className="text-gray-500 italic">Sin descripción</p>
+              )}
             </div>
           </div>
         </div>

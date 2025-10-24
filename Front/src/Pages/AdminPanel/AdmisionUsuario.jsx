@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { CheckCircle, XCircle, Search, Filter, Bold } from 'lucide-react';
 import NavBar from '../../Components/Student/NavBar';
 import { useLocation } from 'react-router-dom';
-import { listUsers, updateUser } from '../../API/Request';
+import { listUsers, updateUser, deleteUser } from '../../API/Request';
 import './AdminPanel.css';
 
 const tipos = [
@@ -21,6 +21,15 @@ export default function AdmisionUsuario() {
   const itemsPerPage = 10;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Modal states for confirm / success / error flows
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [actionToConfirm, setActionToConfirm] = useState(null); // 'approve' | 'reject'
+  const [userToProcess, setUserToProcess] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessageModal, setErrorMessageModal] = useState('');
 
   const [busqueda, setBusqueda] = useState('');
   const [tipo, setTipo] = useState([]);
@@ -182,54 +191,52 @@ export default function AdmisionUsuario() {
     });
   };
 
-  // Funciones para las acciones de aprobar/rechazar
-  const aprobarUsuario = async (usuario) => {
-    try {
-      // Confirmación antes de aprobar
-      if (!window.confirm(`¿Estás seguro de que deseas aprobar al usuario ${usuario.nombre} ${usuario.apellido}?`)) {
-        return;
-      }
-
-      console.log('Aprobando usuario:', usuario);
-      
-      // Actualizar el status del usuario a 'available' si está deshabilitado
-      await updateUser(usuario.id, { status: 'available' });
-      
-      // Actualizar los datos localmente para reflejar el cambio inmediatamente
-      const datosActualizados = data.map(u => 
-        u.id === usuario.id ? { ...u, estado: 'available' } : u
-      );
-      setData(datosActualizados);
-      
-      alert(`Usuario ${usuario.nombre} ${usuario.apellido} aprobado correctamente`);
-    } catch (error) {
-      console.error('Error al aprobar usuario:', error);
-      alert(`Error al aprobar el usuario: ${error.message}`);
-    }
+  // Open confirmation modal for approve
+  const openConfirmApprove = (usuario) => {
+    setActionToConfirm('approve');
+    setUserToProcess(usuario);
+    setShowConfirmModal(true);
   };
 
-  const rechazarUsuario = async (usuario) => {
+  // Open confirmation modal for reject
+  const openConfirmReject = (usuario) => {
+    setActionToConfirm('reject');
+    setUserToProcess(usuario);
+    setShowConfirmModal(true);
+  };
+
+  const cancelConfirm = () => {
+    setShowConfirmModal(false);
+    setUserToProcess(null);
+    setActionToConfirm(null);
+  };
+
+  // Perform the confirmed action (approve or reject)
+  const confirmAction = async () => {
+    if (!userToProcess || !actionToConfirm) return;
+    setLoading(true);
     try {
-      // Confirmación antes de rechazar
-      if (!window.confirm(`¿Estás seguro de que deseas rechazar/desactivar al usuario ${usuario.nombre} ${usuario.apellido}?`)) {
-        return;
+      if (actionToConfirm === 'approve') {
+        await updateUser(userToProcess.id, { status: 'available' });
+        setData(prev => prev.filter(u => u.id !== userToProcess.id));
+        setSuccessMessage(`Usuario ${userToProcess.nombre} ${userToProcess.apellido} aprobado correctamente y removido de admisión`);
+      } else if (actionToConfirm === 'reject') {
+        await deleteUser(userToProcess.id);
+        setData(prev => prev.filter(u => u.id !== userToProcess.id));
+        setSuccessMessage(`Usuario ${userToProcess.nombre} ${userToProcess.apellido} fue rechazado y eliminado`);
       }
 
-      console.log('Rechazando usuario:', usuario);
-      
-      // Actualizar el status del usuario a 'disabled'
-      await updateUser(usuario.id, { status: 'disabled' });
-      
-      // Actualizar los datos localmente para reflejar el cambio inmediatamente
-      const datosActualizados = data.map(u => 
-        u.id === usuario.id ? { ...u, estado: 'disabled' } : u
-      );
-      setData(datosActualizados);
-      
-      alert(`Usuario ${usuario.nombre} ${usuario.apellido} ha sido desactivado`);
-    } catch (error) {
-      console.error('Error al rechazar usuario:', error);
-      alert(`Error al rechazar el usuario: ${error.message}`);
+      setShowConfirmModal(false);
+      setShowSuccessModal(true);
+      setUserToProcess(null);
+      setActionToConfirm(null);
+    } catch (err) {
+      console.error('Error en acción de admisión:', err);
+      setErrorMessageModal(err?.message || 'Error desconocido');
+      setShowConfirmModal(false);
+      setShowErrorModal(true);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -437,7 +444,7 @@ export default function AdmisionUsuario() {
                             <button 
                               className="admin-action-btn" 
                               title="Aprobar"
-                              onClick={() => aprobarUsuario(u)}
+                              onClick={() => openConfirmApprove(u)}
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none">
                                 <circle cx="12" cy="12" r="10" fill="#22c55e"/>
@@ -447,7 +454,7 @@ export default function AdmisionUsuario() {
                             <button 
                               className="admin-action-btn" 
                               title="Rechazar"
-                              onClick={() => rechazarUsuario(u)}
+                              onClick={() => openConfirmReject(u)}
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none">
                                 <circle cx="12" cy="12" r="10" fill="#ef4444"/>
@@ -495,6 +502,45 @@ export default function AdmisionUsuario() {
           </section>
         </div>
       </main>
+      {/* Confirm Modal */}
+      {showConfirmModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+          <div style={{ background: 'white', padding: 24, borderRadius: 10, maxWidth: 480, width: '90%' }}>
+            <h3 style={{ marginBottom: 12 }}>{actionToConfirm === 'approve' ? 'Confirmar aprobación' : 'Confirmar rechazo'}</h3>
+            <p style={{ marginBottom: 20 }}>¿Estás seguro de que deseas {actionToConfirm === 'approve' ? 'aprobar' : 'rechazar'} al usuario <strong>{userToProcess?.nombre} {userToProcess?.apellido}</strong>?</p>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+              <button onClick={cancelConfirm} style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db', background: 'white', cursor: 'pointer' }}>Cancelar</button>
+              <button onClick={confirmAction} disabled={loading} style={{ padding: '8px 12px', borderRadius: 6, border: 'none', background: actionToConfirm === 'approve' ? '#10b981' : '#ef4444', color: 'white', cursor: loading ? 'not-allowed' : 'pointer' }}>{loading ? 'Procesando...' : (actionToConfirm === 'approve' ? 'Aprobar' : 'Rechazar')}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+          <div style={{ background: 'white', padding: 24, borderRadius: 10, maxWidth: 480, width: '90%', textAlign: 'center' }}>
+            <h3 style={{ marginBottom: 12 }}>Operación exitosa</h3>
+            <p style={{ marginBottom: 20 }}>{successMessage}</p>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button onClick={() => setShowSuccessModal(false)} style={{ padding: '8px 12px', borderRadius: 6, border: 'none', background: '#10b981', color: 'white', width: '100%', cursor: 'pointer' }}>OK</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error Modal */}
+      {showErrorModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+          <div style={{ background: 'white', padding: 24, borderRadius: 10, maxWidth: 480, width: '90%', textAlign: 'center' }}>
+            <h3 style={{ marginBottom: 12, color: '#ef4444' }}>Error</h3>
+            <p style={{ marginBottom: 20 }}>{errorMessageModal}</p>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button onClick={() => setShowErrorModal(false)} style={{ padding: '8px 12px', borderRadius: 6, border: 'none', background: '#ef4444', color: 'white', width: '100%', cursor: 'pointer' }}>Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

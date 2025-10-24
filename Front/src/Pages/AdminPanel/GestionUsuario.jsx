@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, Outlet } from 'react-router-dom';
 import NavBar from '../../Components/Student/NavBar';
-import { deleteUser as deleteUserApi, getAllUsers } from '../../API/Request';
+import { updateUser as updateUserApi, getAllUsers } from '../../API/Request';
 import LoadingOverlay from '../../Components/Shared/LoadingOverlay';
+import ErrorModal from '../../Components/Modals/ErrorModal';
 import './AdminPanel.css';
 
 
@@ -37,14 +38,12 @@ function formatDate(dateStr) {
 export default function GestionUsuario() {
   // Estados para los filtros aplicados
   const [tipo, setTipo] = useState('');
-  const [estado, setEstado] = useState('');
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
   const [filtersApplied, setFiltersApplied] = useState(false);
 
   // Estados para los filtros en edición (inputs)
   const [tipoEdit, setTipoEdit] = useState('');
-  const [estadoEdit, setEstadoEdit] = useState('');
   const [fechaDesdeEdit, setFechaDesdeEdit] = useState('');
   const [fechaHastaEdit, setFechaHastaEdit] = useState('');
   
@@ -53,11 +52,9 @@ export default function GestionUsuario() {
   const [fechaDesdeVisible, setFechaDesdeVisible] = useState(false);
   const [fechaHastaVisible, setFechaHastaVisible] = useState(false);
   
-  // Estados para los dropdowns de Tipo y Estado
+  // Estados para los dropdowns de Tipo
   const [tipoMenu, setTipoMenu] = useState(false);
-  const [estadoMenu, setEstadoMenu] = useState(false);
   const [tiposSeleccionados, setTiposSeleccionados] = useState([]);
-  const [estadosSeleccionados, setEstadosSeleccionados] = useState([]);
 
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
@@ -72,10 +69,10 @@ export default function GestionUsuario() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState(null);
 
   // Referencias para los dropdowns
   const tipoMenuRef = useRef(null);
-  const estadoMenuRef = useRef(null);
   const fechaMenuRef = useRef(null);
 
   // Cerrar dropdowns al hacer click fuera
@@ -83,9 +80,6 @@ export default function GestionUsuario() {
     function handleClickOutside(event) {
       if (tipoMenuRef.current && !tipoMenuRef.current.contains(event.target)) {
         setTipoMenu(false);
-      }
-      if (estadoMenuRef.current && !estadoMenuRef.current.contains(event.target)) {
-        setEstadoMenu(false);
       }
       if (fechaMenuRef.current && !fechaMenuRef.current.contains(event.target)) {
         setFechaMenu(false);
@@ -103,7 +97,10 @@ export default function GestionUsuario() {
       setLoading(true);
       try {
         const data = await getAllUsers();
-        setUsers(data.items);
+        const items = Array.isArray(data.items) ? data.items : (data.items || []);
+        // Mostrar solo usuarios habilitados (available) en esta pantalla
+        const enabled = items.filter(u => String(u.status || '').toLowerCase() === 'available');
+        setUsers(enabled);
         // console.log(data.items);
       } finally {
         setLoading(false);
@@ -135,33 +132,6 @@ export default function GestionUsuario() {
         result = result.filter(u => getRoleLabel(u.role) === tipo);
       }
 
-      // Filtrado por estados - primero usar las selecciones múltiples si existen
-      if (estadosSeleccionados && estadosSeleccionados.length > 0) {
-        // Soportar variantes del backend (inglés/español)
-        const estadoMapLookup = {
-          'Habilitado': ['available', 'habilitado'],
-          'Deshabilitado': ['disabled', 'deshabilitado'],
-          'Pendiente': ['pending', 'pendiente']
-        };
-        // mapped será la lista plana de valores aceptables en minúsculas
-        const mapped = estadosSeleccionados
-          .map(e => estadoMapLookup[e] || [])
-          .flat()
-          .map(m => String(m).toLowerCase());
-  const availableStatuses = Array.from(new Set((users || []).map(u => String(u.status || '').toLowerCase())));
-        if (mapped.length > 0) {
-          result = result.filter(u => mapped.includes(String(u.status || '').toLowerCase()));
-        }
-      } else if (estado) {
-        const estadoMapLookup = {
-          'Habilitado': ['available', 'habilitado'],
-          'Deshabilitado': ['disabled', 'deshabilitado'],
-          'Pendiente': ['pending', 'pendiente']
-        };
-        const expectedList = (estadoMapLookup[estado] || []).map(s => String(s).toLowerCase());
-        result = result.filter(u => expectedList.includes(String(u.status || '').toLowerCase()));
-      }
-
       // Filtrado por fechas
       if (fechaDesde) {
         result = result.filter(u => new Date(u.createdAt) >= new Date(fechaDesde));
@@ -174,12 +144,11 @@ export default function GestionUsuario() {
     setFilteredUsers(result);
     // Resetear página cuando cambian filtros o usuarios
     setPage(1);
-  }, [users, searchApplied, tipo, estado, fechaDesde, fechaHasta, filtersApplied, tiposSeleccionados, estadosSeleccionados]);
+  }, [users, searchApplied, tipo, fechaDesde, fechaHasta, filtersApplied, tiposSeleccionados]);
 
   // Aplica los filtros (excepto búsqueda)
   const aplicarFiltros = () => {
     setTipo(tipoEdit);
-    setEstado(estadoEdit);
     setFechaDesde(fechaDesdeEdit);
     setFechaHasta(fechaHastaEdit);
     setFiltersApplied(true);
@@ -190,16 +159,13 @@ export default function GestionUsuario() {
   // Limpia todos los filtros
   const limpiarFiltros = () => {
     setTipo('');
-    setEstado('');
     setFechaDesde('');
     setFechaHasta('');
     setTipoEdit('');
-    setEstadoEdit('');
     setFechaDesdeEdit('');
     setFechaHastaEdit('');
     setFiltersApplied(false);
     setTiposSeleccionados([]);
-    setEstadosSeleccionados([]);
   };
 
   // Funciones para manejar cambios en los checkboxes
@@ -220,23 +186,6 @@ export default function GestionUsuario() {
     });
   };
 
-  const handleEstadoChange = (estadoValue) => {
-    setEstadosSeleccionados(prev => {
-      const newSelection = prev.includes(estadoValue)
-        ? prev.filter(e => e !== estadoValue)
-        : [...prev, estadoValue];
-      // Actualizar estadoEdit basado en la selección
-      if (newSelection.length === 1) {
-        setEstadoEdit(newSelection[0]);
-      } else if (newSelection.length === 0 || newSelection.length === estadosOpciones.length) {
-        setEstadoEdit('');
-      } else {
-        setEstadoEdit(newSelection[0]); // Tomar el primero si hay múltiples
-      }
-      return newSelection;
-    });
-  };
-
   const tipos = [
     { label: 'Capacitador', value: 'Capacitador' },
     { label: 'Alumno', value: 'Alumno' },
@@ -244,11 +193,6 @@ export default function GestionUsuario() {
     { label: 'Directivo', value: 'Directivo' },
   ];
 
-  const estadosOpciones = [
-    { label: 'Habilitado', value: 'Habilitado' },
-    { label: 'Pendiente', value: 'Pendiente' },
-    { label: 'Deshabilitado', value: 'Deshabilitado' },
-  ];
 
   const openDeleteModal = (user) => {
     setUserToDelete(user);
@@ -260,7 +204,8 @@ export default function GestionUsuario() {
     
     try {
       setLoading(true);
-      await deleteUserApi(userToDelete._id);
+      // Soft-delete: marcar como 'disabled' en lugar de borrar
+      await updateUserApi(userToDelete._id, { status: 'disabled' });
       const updatedUsers = users.filter(u => u._id !== userToDelete._id);
       setUsers(updatedUsers);
       setFilteredUsers(updatedUsers);
@@ -268,7 +213,13 @@ export default function GestionUsuario() {
       setShowSuccessModal(true);
       setUserToDelete(null);
     } catch (error) {
-      alert(error.message || "Error al eliminar usuario");
+      console.error('Error al eliminar usuario:', error);
+      // Use modal to show error
+      const msg = error?.message || 'Error al eliminar usuario';
+      // create a simple error modal state if needed
+      // Reuse showSuccessModal for success; we'll show a quick error modal
+      setShowDeleteModal(false);
+      setErrorModalMessage(msg);
     } finally {
       setLoading(false);
     }
@@ -359,43 +310,7 @@ export default function GestionUsuario() {
               )}
             </div>
             
-            {/* Filtro Estado */}
-            <div className="admin-filter-group admin-dropdown" ref={estadoMenuRef}>
-              <button onClick={() => setEstadoMenu(!estadoMenu)} className="admin-dropdown-btn">
-                Estado
-                <img width="14" height="14" src="https://img.icons8.com/ios-glyphs/60/chevron-down.png" alt="chevron-down"/>
-              </button>
-              {estadoMenu && (
-                <div className="admin-dropdown-menu">
-                  {estadosOpciones.map((est) => (
-                    <label 
-                      key={est.value} 
-                      className="admin-dropdown-item"
-                      onClick={() => handleEstadoChange(est.value)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <span
-                        style={{
-                          width: 18,
-                          height: 18,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          borderRadius: 4,
-                          background: '#fff',
-                          border: '1px solid #bdbdbd'
-                        }}
-                      >
-                        {estadosSeleccionados.includes(est.value) && (
-                          <span style={{ fontSize: 12, color: '#18b620ff', fontWeight: 'bold' }}>✓</span>
-                        )}
-                      </span>
-                      {est.label}
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
+            {/* Estado filter removed - this page shows only enabled users */}
             
             {/* Filtro Fecha */}
             <div className="admin-filter-group admin-dropdown" ref={fechaMenuRef}>
@@ -458,7 +373,6 @@ export default function GestionUsuario() {
                 <th>Apellido</th>
                 <th>Email</th>
                 <th>DNI</th>
-                <th>Estado</th>
                 <th>Fecha de creación</th>
                 <th>Tipo</th>
                 <th>Acciones</th>
@@ -483,16 +397,6 @@ export default function GestionUsuario() {
                         <td data-label="Apellido">{u.lastName}</td>
                         <td data-label="Email">{u.email}</td>
                         <td data-label="DNI">{u.documentNumber}</td>
-                        <td data-label="Estado">
-                          <span 
-                            className="inline-block px-3 py-1 rounded-full text-white text-xs font-medium text-center"
-                            style={{ minWidth: '110px', backgroundColor: 
-                              estado.color === 'bg-green-500' ? '#10b981' : 
-                              estado.color === 'bg-yellow-400' ? '#facc15' : '#ef4444' }}
-                          >
-                            {estado.label}
-                          </span>
-                        </td>
                         <td data-label="Fecha">{formatDate(u.createdAt)}</td>
                         <td data-label="Tipo">
                           <span 
@@ -607,8 +511,8 @@ export default function GestionUsuario() {
                 color: '#4b5563',
                 fontSize: '0.95rem'
               }}>
-                ¿Estás seguro de que deseas eliminar al usuario <strong>{userToDelete?.nombre} {userToDelete?.apellido}</strong>? 
-                Esta acción no se puede deshacer.
+                ¿Estás seguro de que deseas eliminar al usuario <strong>{userToDelete?.firstName} {userToDelete?.lastName}</strong>? 
+                Esta acción deshabilitará al usuario y no podrá acceder al sistema.
               </p>
               <div style={{ 
                 display: 'flex', 
@@ -741,6 +645,7 @@ export default function GestionUsuario() {
           </div>
         )}
       </main>
+      {errorModalMessage && <ErrorModal mensaje={errorModalMessage} onClose={() => setErrorModalMessage(null)} />}
     </>
   );
 }

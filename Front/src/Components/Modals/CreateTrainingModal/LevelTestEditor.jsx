@@ -1,6 +1,23 @@
 import React from 'react';
+import RichTextInput, { getPlainTextFromRichText } from './RichTextInput';
 
-export default function LevelTestEditor({ level, levelIndex, updateLevelField, selectedScene, setSelectedScene, selectedOption, setSelectedOption, handleFileUpload, handleFileDelete, showWarningModal }) {
+export default function LevelTestEditor({ level, levelIndex, updateLevelField, selectedScene, setSelectedScene, selectedOption, setSelectedOption, handleFileUpload, handleFileDelete, showWarningModal, setActiveSection }) {
+  
+  // Función para cambiar a vista de test (sin escena seleccionada)
+  const handleFocusTest = () => {
+    setSelectedScene(null);
+    if (setActiveSection) {
+      setActiveSection('test');
+    }
+  };
+  
+  // Función para cambiar a vista de escena específica
+  const handleFocusScene = (sceneIndex) => {
+    setSelectedScene(sceneIndex);
+    if (setActiveSection) {
+      setActiveSection('test');
+    }
+  };
   return (
     <div className="border border-gray-300 rounded-sm p-1.5 md:p-1.5 lg:p-2 xl:p-2 bg-white space-y-2">
       {/* Información general del test */}
@@ -21,15 +38,14 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
               Título
             </td>
             <td className="px-1.5 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 border border-gray-300">
-              <input 
-                value={level.test.title} 
-                onChange={(e) => updateLevelField(levelIndex, 'test.title', e.target.value)} 
-                onFocus={() => { setSelectedScene(null); }}
-                maxLength={50}
-                className="w-full border-0 px-0 py-0.5 md:py-0.5 lg:py-0.5 xl:py-1 text-xs md:text-xs lg:text-xs xl:text-sm placeholder:text-xs md:placeholder:text-xs lg:placeholder:text-xs xl:placeholder:text-sm font-normal focus:ring-0 focus:outline-none bg-transparent" 
-                placeholder="Ingrese el título del test (Max caracteres: 50)" 
+              <RichTextInput
+                value={level.test.title}
+                onChange={(html) => updateLevelField(levelIndex, 'test.title', html)}
+                onFocus={handleFocusTest}
+                maxLength={100}
+                placeholder="Ingrese el título del test (Max caracteres: 100)"
               />
-              <p className="text-[10px] md:text-[10px] lg:text-[11px] xl:text-xs text-gray-500 mt-0.5 md:mt-0.5 lg:mt-0.5 xl:mt-1 text-right">{level.test.title.length}/50 caracteres</p>
+              <p className="text-[10px] md:text-[10px] lg:text-[11px] xl:text-xs text-gray-500 mt-0.5 md:mt-0.5 lg:mt-0.5 xl:mt-1 text-right">{getPlainTextFromRichText(level.test.title).length}/100 caracteres</p>
             </td>
           </tr>
           <tr>
@@ -37,16 +53,14 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
               Descripción
             </td>
             <td className="px-1.5 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 border border-gray-300">
-              <textarea 
-                value={level.test.description} 
-                onChange={(e) => updateLevelField(levelIndex, 'test.description', e.target.value)} 
-                onFocus={() => { setSelectedScene(null); }}
-                maxLength={100}
-                className="w-full border-0 px-0 py-0.5 md:py-0.5 lg:py-0.5 xl:py-1 text-xs md:text-xs lg:text-xs xl:text-sm placeholder:text-xs md:placeholder:text-xs lg:placeholder:text-xs xl:placeholder:text-sm font-normal focus:ring-0 focus:outline-none bg-transparent resize-none" 
-                rows={2} 
-                placeholder="Ingrese la descripcion de la evaluación (Max 100 caracteres)" 
+              <RichTextInput
+                value={level.test.description}
+                onChange={(html) => updateLevelField(levelIndex, 'test.description', html)}
+                onFocus={handleFocusTest}
+                maxLength={250}
+                placeholder="Ingrese la descripción de la evaluación (Max caracteres: 250)"
               />
-              <p className="text-[10px] md:text-[10px] lg:text-[11px] xl:text-xs text-gray-500 mt-0.5 md:mt-0.5 lg:mt-0.5 xl:mt-1 text-right">{level.test.description.length}/100 caracteres</p>
+              <p className="text-[10px] md:text-[10px] lg:text-[11px] xl:text-xs text-gray-500 mt-0.5 md:mt-0.5 lg:mt-0.5 xl:mt-1 text-right">{getPlainTextFromRichText(level.test.description).length}/250 caracteres</p>
             </td>
           </tr>
           <tr>
@@ -59,7 +73,7 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                   <input
                     value={level.test.imageUrl || ''}
                     onChange={(e) => updateLevelField(levelIndex, 'test.imageUrl', e.target.value)}
-                    onFocus={() => { setSelectedScene(null); }}
+                    onFocus={handleFocusTest}
                     className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-xs placeholder:text-xs font-normal focus:ring-2 focus:ring-green-200 focus:border-transparent"
                     placeholder="URL de imagen o deja vacío para subir archivo"
                   />
@@ -91,10 +105,10 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                         try {
                           const currentImageUrl = level.test.imageUrl;
                           if (currentImageUrl && typeof currentImageUrl === 'string' && currentImageUrl.startsWith('/uploads/')) {
-                            try { await handleFileDelete(currentImageUrl, levelIndex); } catch (err) { console.error(err); }
+                            // No eliminar hasta guardar
                           }
 
-                          const response = await handleFileUpload(file, levelIndex);
+                          const response = await handleFileUpload(file, levelIndex, 'test');
                           const filePath = typeof response === 'string' ? response : response?.filePath;
                           if (!filePath) {
                             throw new Error('No se recibió la ruta del archivo');
@@ -102,9 +116,9 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                           updateLevelField(levelIndex, 'test.imageUrl', filePath);
                           e.target.value = '';
                         } catch (error) {
-                          console.error('Error subiendo imagen del test:', error);
+                          console.error('Error preparando imagen del test:', error);
                           if (showWarningModal) {
-                            showWarningModal(`Error subiendo imagen: ${error.message}`);
+                            showWarningModal(`Error: ${error.message}`);
                           }
                           e.target.value = '';
                         }
@@ -118,15 +132,7 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                     {level.test.imageUrl && (
                       <button
                         type="button"
-                        onClick={async () => {
-                          const currentImageUrl = level.test.imageUrl;
-                          if (currentImageUrl && typeof currentImageUrl === 'string' && currentImageUrl.startsWith('/uploads/')) {
-                            try {
-                              await handleFileDelete(currentImageUrl, levelIndex);
-                            } catch (error) {
-                              console.error('Error eliminando imagen del test:', error);
-                            }
-                          }
+                        onClick={() => {
                           updateLevelField(levelIndex, 'test.imageUrl', '');
                         }}
                         className="text-red-600 hover:text-red-800 text-xs px-1.5 py-0.5 border border-red-200 rounded-md cursor-pointer"
@@ -151,6 +157,7 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                   id={`test-active-${levelIndex}`} 
                   checked={level.test.isActive} 
                   onChange={(e) => updateLevelField(levelIndex, 'test.isActive', e.target.checked)} 
+                  onFocus={handleFocusTest}
                   className="w-3.5 h-3.5 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
                 />
                 <label htmlFor={`test-active-${levelIndex}`} className="text-xs cursor-pointer">Test activo</label>
@@ -245,6 +252,7 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                         newScenes[selectedScene] = { ...newScenes[selectedScene], idScene: parseInt(e.target.value) || 0 };
                         updateLevelField(levelIndex, 'test.scenes', newScenes);
                       }}
+                      onFocus={() => handleFocusScene(selectedScene)}
                       className="w-full border-0 px-0 py-0.5 text-xs placeholder:text-xs font-normal focus:ring-0 focus:outline-none bg-transparent"
                       placeholder="ID numérico único de la escena"
                       min="1"
@@ -256,19 +264,18 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                     Descripción
                   </td>
                   <td className="px-1.5 py-1 border border-gray-300">
-                    <textarea
-                      value={level.test.scenes[selectedScene].description || ''}
-                      onChange={(e) => {
-                        const newScenes = [...(level.test.scenes || [])];
-                        newScenes[selectedScene] = { ...newScenes[selectedScene], description: e.target.value };
-                        updateLevelField(levelIndex, 'test.scenes', newScenes);
-                      }}
-                      maxLength={50}
-                      className="w-full border-0 px-0 py-0.5 text-xs placeholder:text-xs font-normal focus:ring-0 focus:outline-none bg-transparent resize-none"
-                      rows="2"
-                      placeholder="Ingrese la descripción de la escena (Max caracteres: 50)"
-                    />
-                    <p className="text-[10px] text-gray-500 mt-0.5 text-right">{(level.test.scenes[selectedScene].description || '').length}/50 caracteres</p>
+                      <RichTextInput
+                        value={level.test.scenes[selectedScene].description || ''}
+                        onChange={(html) => {
+                          const newScenes = [...(level.test.scenes || [])];
+                          newScenes[selectedScene] = { ...newScenes[selectedScene], description: html };
+                          updateLevelField(levelIndex, 'test.scenes', newScenes);
+                        }}
+                        onFocus={() => handleFocusScene(selectedScene)}
+                        maxLength={500}
+                        placeholder="Ingrese la descripción de la escena (Max caracteres: 500)"
+                      />
+                    <p className="text-[10px] text-gray-500 mt-0.5 text-right">{getPlainTextFromRichText(level.test.scenes[selectedScene].description || '').length}/500 caracteres</p>
                   </td>
                 </tr>
                 <tr>
@@ -285,17 +292,14 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                           newScenes[selectedScene] = { ...newScenes[selectedScene], videoUrl: e.target.value };
                           updateLevelField(levelIndex, 'test.scenes', newScenes);
                         }}
+                        onFocus={() => handleFocusScene(selectedScene)}
                         className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-xs placeholder:text-xs font-normal focus:ring-2 focus:ring-green-200 focus:border-transparent"
                         placeholder="URL del video o deja vacío para subir archivo"
                       />
                       {level.test.scenes[selectedScene].videoUrl && (
                         <button
                           type="button"
-                          onClick={async () => {
-                            const currentVideoUrl = level.test.scenes[selectedScene].videoUrl;
-                            if (currentVideoUrl && typeof currentVideoUrl === 'string' && currentVideoUrl.startsWith('/uploads/')) {
-                              try { await handleFileDelete(currentVideoUrl, levelIndex); } catch (error) { console.error('Error eliminando video de escena:', error); }
-                            }
+                          onClick={() => {
                             const newScenes = [...(level.test.scenes || [])];
                             newScenes[selectedScene] = { ...newScenes[selectedScene], videoUrl: '' };
                             updateLevelField(levelIndex, 'test.scenes', newScenes);
@@ -310,34 +314,30 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                         <input
                           type="file"
                           className="hidden"
-                          accept="video/mp4,video/webm,video/ogg"
+                          accept="video/mp4,video/quicktime,video/x-msvideo,video/x-matroska,video/webm,video/ogg"
                           onChange={async (e) => {
                             const file = e.target.files?.[0];
                             if (!file) return;
 
-                            if (file.size > 50 * 1024 * 1024) {
+                            if (file.size > 100 * 1024 * 1024) {
                               if (showWarningModal) {
-                                showWarningModal('El archivo es demasiado grande. Máximo 50 MB.');
+                                showWarningModal('El archivo es demasiado grande. Máximo 100 MB.');
                               }
                               e.target.value = '';
                               return;
                             }
 
-                            if (!file.type.match(/^video\/(mp4|webm|ogg)$/)) {
+                            if (!file.type.match(/^video\/(mp4|quicktime|x-msvideo|x-matroska|webm|ogg)$/)) {
                               if (showWarningModal) {
-                                showWarningModal('Formato no válido. Solo MP4, WebM, OGG.');
+                                showWarningModal('Formato no válido. Solo MP4, MOV, AVI, MKV, WebM, OGG.');
                               }
                               e.target.value = '';
                               return;
                             }
 
                             try {
-                              const currentVideoUrl = level.test.scenes[selectedScene].videoUrl;
-                              if (currentVideoUrl && typeof currentVideoUrl === 'string' && currentVideoUrl.startsWith('/uploads/')) {
-                                try { await handleFileDelete(currentVideoUrl, levelIndex); } catch (error) { console.error('Error eliminando video anterior:', error); }
-                              }
-
-                              const response = await handleFileUpload(file, levelIndex);
+                              // Reemplazar video (no eliminar archivo anterior hasta guardar)
+                              const response = await handleFileUpload(file, levelIndex, 'scene', selectedScene);
                               const filePath = typeof response === 'string' ? response : response?.filePath;
                               if (!filePath) {
                                 throw new Error('No se recibió la ruta del archivo');
@@ -346,9 +346,9 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                               newScenes[selectedScene] = { ...newScenes[selectedScene], videoUrl: filePath };
                               updateLevelField(levelIndex, 'test.scenes', newScenes);
                             } catch (error) {
-                              console.error('Error subiendo video:', error);
+                              console.error('Error preparando video:', error);
                               if (showWarningModal) {
-                                showWarningModal(`Error subiendo video: ${error.message}`);
+                                showWarningModal(`Error: ${error.message}`);
                               }
                             } finally {
                               e.target.value = '';
@@ -357,7 +357,7 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                         />
                       </label>
                     </div>
-                    <div className="text-[10px] text-indigo-600 mt-0.5 text-right">Menor a 50 Mb - Formatos: MP4, WebM, OGG</div>
+                    <div className="text-[10px] text-indigo-600 mt-0.5 text-right">Menor a 100 Mb - Formatos: MP4, MOV, AVI, MKV, WebM, OGG</div>
                   </td>
                 </tr>
                 <tr>
@@ -375,6 +375,7 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                             newScenes[selectedScene] = { ...newScenes[selectedScene], lastOne: e.target.checked };
                             updateLevelField(levelIndex, 'test.scenes', newScenes);
                           }}
+                          onFocus={() => handleFocusScene(selectedScene)}
                           className="w-3.5 h-3.5 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
                         />
                         <span>Última escena</span>
@@ -393,6 +394,7 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                               updateLevelField(levelIndex, 'test.scenes', newScenes);
                             }
                           }}
+                          onFocus={() => handleFocusScene(selectedScene)}
                           className="w-16 px-1.5 py-0.5 border border-gray-300 rounded-sm text-xs"
                         />
                       </div>
@@ -489,9 +491,12 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                               newScenes[selectedScene] = { ...newScenes[selectedScene], options: newOptions };
                               updateLevelField(levelIndex, 'test.scenes', newScenes);
                             }}
+                            onFocus={() => handleFocusScene(selectedScene)}
+                            maxLength={100}
                             className="w-full border-0 px-0 py-0.5 text-xs placeholder:text-xs font-normal focus:ring-0 focus:outline-none bg-transparent"
                             placeholder="Texto del botón (ej: Acercarse y abrir la puerta)"
                           />
+                          <p className="text-[10px] text-gray-500 mt-0.5 text-right">{(level.test.scenes[selectedScene].options[selectedOption].description || '').length}/100 caracteres</p>
                         </td>
                       </tr>
                       <tr>
@@ -509,6 +514,7 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                               newScenes[selectedScene] = { ...newScenes[selectedScene], options: newOptions };
                               updateLevelField(levelIndex, 'test.scenes', newScenes);
                             }}
+                            onFocus={() => handleFocusScene(selectedScene)}
                             className="w-full border-0 px-0 py-0.5 text-xs placeholder:text-xs font-normal focus:ring-0 focus:outline-none bg-transparent"
                             min="0"
                             placeholder="Puntos que otorga esta opción"
@@ -530,6 +536,7 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                               newScenes[selectedScene] = { ...newScenes[selectedScene], options: newOptions };
                               updateLevelField(levelIndex, 'test.scenes', newScenes);
                             }}
+                            onFocus={() => handleFocusScene(selectedScene)}
                             className="w-full border-0 px-0 py-0.5 text-xs placeholder:text-xs font-normal focus:ring-0 focus:outline-none bg-transparent"
                             placeholder="ID de la siguiente escena (vacío = fin del test)"
                             min="1"

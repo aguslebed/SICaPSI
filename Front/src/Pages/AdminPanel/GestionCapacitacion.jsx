@@ -8,7 +8,7 @@ import ErrorListModal from '../../Components/Modals/ErrorListModal';
 import WarningModal from '../../Components/Modals/WarningModal';
 import ConfirmActionModal from '../../Components/Modals/ConfirmActionModal';
 import { useState, useEffect, useRef } from 'react';
-import { getAllActiveTrainings, getAllTrainings, createTraining, updateTraining, addLevelsToTraining, updateLevelsInTraining, deleteTraining, getTrainingById, enrollStudentsToTraining } from '../../API/Request';
+import { getAllActiveTrainings, getAllTrainings, createTraining, updateTraining, addLevelsToTraining, updateLevelsInTraining, deleteTraining, getTrainingById, enrollStudentsToTraining, deleteTrainingFile, uploadTrainingFile, moveTempFiles, replaceTrainingFile } from '../../API/Request';
 import LoadingOverlay from '../../Components/Shared/LoadingOverlay';
 import './AdminPanel.css';
 
@@ -78,8 +78,11 @@ export default function GestionCapacitacion() {
   ];
 
   const estadosOpciones = [
-    { label: 'Habilitado', value: 'activo' },
-    { label: 'Deshabilitado', value: 'inactivo' },
+    { label: 'Borrador', value: 'borrador' },
+    { label: 'Pendiente de Aprobación', value: 'pendiente' },
+    { label: 'Activa', value: 'activa' },
+    { label: 'Rechazada', value: 'rechazada' },
+    { label: 'Finalizada', value: 'finalizada' },
     { label: 'Asignado', value: 'asignado' },
     { label: 'Sin asignar', value: 'sin_asignar' },
   ];
@@ -151,142 +154,158 @@ export default function GestionCapacitacion() {
     }
   };
 
-  // Función para manejar la creación de capacitaciones
+  // Función para manejar la creación/actualización de capacitaciones
   const handleCreateTraining = async (trainingData, levels, additionalData = {}) => {
+    const {
+      selectedStudents = [],
+      isEditing = false,
+      trainingId,
+      pendingUploads = null,
+      omissionMessages = []
+    } = additionalData;
+    // Ya no necesitamos filesToDeleteFromLevels ni oldImageToDelete
+
     setLoading(true);
     try {
-      const { selectedStudents = [], isEditing = false, trainingId } = additionalData;
 
-      
       let finalTrainingId = trainingId;
-      
+      const sanitizedLevels = Array.isArray(levels) ? levels : [];
+
       if (isEditing) {
-        // Actualizar capacitación existente
-
         const updatedTraining = await updateTraining(trainingId, trainingData);
-
         finalTrainingId = updatedTraining._id;
-        
-        // Actualizar niveles si existen
-        if (levels && levels.length > 0) {
 
-          
-          // Preparar niveles con trainingId y descripción por defecto
-          const levelsWithTrainingId = levels.map((level, idx) => {
-            // Asegurar título por defecto si no existe, para evitar validación del backend
-            const levelNumber = level.levelNumber || (idx + 1);
-            const safeTitle = level.title && level.title.trim() ? level.title : `Título nivel ${levelNumber}`;
-            const safeLevel = { ...level, title: safeTitle, levelNumber };
-            // Asegurar que training tenga los campos requeridos
-            const training = safeLevel.training || {};
-            const processedTraining = {
-              title: training.title || `Clase Magistral - ${safeLevel.title}`,
-              description: training.description || '',
-              url: training.url || 'https://www.youtube.com/embed/placeholder',
-              duration: training.duration || 0
-            };
+        const levelsWithTrainingId = sanitizedLevels.map(level => ({
+          ...level,
+          trainingId: finalTrainingId
+        }));
+        await updateLevelsInTraining(finalTrainingId, levelsWithTrainingId);
 
-            // Asegurar que test tenga los campos requeridos
-            const test = safeLevel.test || {};
-            const processedTest = {
-              title: test.title || `Evaluación - ${safeLevel.title}`,
-              description: test.description || '',
-              imageUrl: test.imageUrl || '',
-              isActive: test.isActive !== undefined ? test.isActive : true,
-              scenes: test.scenes || []
-            };
-
-            return {
-              ...safeLevel,
-              trainingId: finalTrainingId,
-              description: safeLevel.description || `Descripción del ${safeLevel.title}`,
-              training: processedTraining,
-              test: processedTest,
-              bibliography: safeLevel.bibliography || [] // Asegurar que la bibliografía se incluya
-            };
-          });
-          
-          await updateLevelsInTraining(finalTrainingId, levelsWithTrainingId);
-
-        }
+        // Ya no necesitamos eliminar archivos manualmente porque replaceTrainingFile lo hace automáticamente
       } else {
-        // 1. Crear la capacitación primero
-        const newTraining = await createTraining(trainingData);
+        const uploadResults = {};
+        const tempFilePaths = []; // Recolectar rutas temporales
 
-        finalTrainingId = newTraining._id;
-        
-        // 2. Si hay niveles, crearlos y asociarlos
-        if (levels && levels.length > 0) {
+        // Subir imagen a carpeta temporal
+        if (pendingUploads?.presentationFile) {
+          const response = await uploadTrainingFile(pendingUploads.presentationFile);
+          const uploadedPath = typeof response === 'string' ? response : response?.filePath;
+          if (!uploadedPath) {
+            throw new Error('No se recibió la ruta del archivo de imagen');
+          }
+          uploadResults['presentation-image'] = uploadedPath;
+          tempFilePaths.push(uploadedPath);
+          trainingData.image = uploadedPath; // Guardar ruta temporal por ahora
+        } else {
+          trainingData.image = '__PENDING_UPLOAD__';
+        }
 
+        // Crear training en MongoDB (obtiene ID)
+        const createdTraining = await createTraining(trainingData);
+        finalTrainingId = createdTraining._id;
+
+        // Subir archivos de niveles a temporal
+        if (pendingUploads?.levelFiles) {
+          for (const [fileKey, file] of Object.entries(pendingUploads.levelFiles)) {
+            const response = await uploadTrainingFile(file);
+            const uploadedPath = typeof response === 'string' ? response : response?.filePath;
+            if (!uploadedPath) {
+              throw new Error(`No se recibió la ruta del archivo ${fileKey}`);
+            }
+            uploadResults[fileKey] = uploadedPath;
+            tempFilePaths.push(uploadedPath);
+          }
+        }
+
+        // Mover todos los archivos de temp a carpeta definitiva
+        if (tempFilePaths.length > 0) {
+          const moveResult = await moveTempFiles(finalTrainingId, tempFilePaths);
           
-          // Preparar niveles con trainingId y descripción por defecto
-          const levelsWithTrainingId = levels.map((level, idx) => {
-            // Asegurar título por defecto si no existe, para evitar validación del backend
-            const levelNumber = level.levelNumber || (idx + 1);
-            const safeTitle = level.title && level.title.trim() ? level.title : `Título nivel ${levelNumber}`;
-            const safeLevel = { ...level, title: safeTitle, levelNumber };
-            // Asegurar que training tenga los campos requeridos
-            const training = safeLevel.training || {};
-            const processedTraining = {
-              title: training.title || `Clase Magistral - ${safeLevel.title}`,
-              description: training.description || '',
-              url: training.url || 'https://www.youtube.com/embed/placeholder',
-              duration: training.duration || 0
-            };
+          // Actualizar rutas en uploadResults
+          if (moveResult.movedFiles && moveResult.movedFiles.length > 0) {
+            for (const moved of moveResult.movedFiles) {
+              // Actualizar uploadResults con nuevas rutas
+              for (const [key, oldPath] of Object.entries(uploadResults)) {
+                if (oldPath === moved.oldPath) {
+                  uploadResults[key] = moved.newPath;
+                }
+              }
+              
+              // Si es la imagen principal, actualizar en el training
+              if (moved.oldPath === trainingData.image) {
+                await updateTraining(finalTrainingId, { image: moved.newPath });
+              }
+            }
+          }
+        }
 
-            // Asegurar que test tenga los campos requeridos
-            const test = safeLevel.test || {};
-            const processedTest = {
-              title: test.title || `Evaluación - ${safeLevel.title}`,
-              description: test.description || '',
-              imageUrl: test.imageUrl || '',
-              isActive: test.isActive !== undefined ? test.isActive : true,
-              scenes: test.scenes || []
-            };
+        // Resolver placeholders en niveles con las rutas actualizadas
+        const resolvePlaceholder = (value) => {
+          if (typeof value === 'string' && value.startsWith('__UPLOAD__::')) {
+            const key = value.substring('__UPLOAD__::'.length);
+            const resolved = uploadResults[key];
+            if (!resolved) {
+              throw new Error(`No se pudo resolver el archivo pendiente "${key}"`);
+            }
+            return resolved;
+          }
+          return value;
+        };
 
-            return {
-              ...safeLevel,
-              trainingId: finalTrainingId,
-              description: safeLevel.description || `Descripción del ${safeLevel.title}`,
-              training: processedTraining,
-              test: processedTest,
-              bibliography: safeLevel.bibliography || [] // Asegurar que la bibliografía se incluya
-            };
-          });
+        const resolvedLevels = sanitizedLevels.map(level => {
+          const resolvedLevel = { ...level, trainingId: finalTrainingId };
           
-          await addLevelsToTraining(finalTrainingId, levelsWithTrainingId);
+          if (resolvedLevel.training) {
+            resolvedLevel.training.url = resolvePlaceholder(resolvedLevel.training.url);
+          }
+          
+          if (resolvedLevel.test) {
+            resolvedLevel.test.imageUrl = resolvePlaceholder(resolvedLevel.test.imageUrl);
+            if (resolvedLevel.test.scenes) {
+              resolvedLevel.test.scenes = resolvedLevel.test.scenes.map(scene => ({
+                ...scene,
+                videoUrl: resolvePlaceholder(scene.videoUrl)
+              }));
+            }
+          }
+          
+          if (resolvedLevel.bibliography) {
+            resolvedLevel.bibliography = resolvedLevel.bibliography.map(item => ({
+              ...item,
+              url: resolvePlaceholder(item.url)
+            }));
+          }
+          
+          return resolvedLevel;
+        });
 
+        if (resolvedLevels.length > 0) {
+          await addLevelsToTraining(finalTrainingId, resolvedLevels);
         }
       }
-      
-      // 3. Si hay guardias seleccionados, inscribirlos
-      if (selectedStudents && selectedStudents.length > 0) {
 
+      if (selectedStudents && selectedStudents.length > 0) {
         try {
           await enrollStudentsToTraining(finalTrainingId, selectedStudents);
-
         } catch (enrollError) {
           console.warn('Error inscribiendo guardias:', enrollError);
-          // No fallar toda la operación si falla la inscripción
-          setWarningMessage(`Capacitación creada, pero hubo un problema inscribiendo guardias: ${enrollError.message}`);
+          setWarningMessage(`Capacitación guardada, pero hubo un problema inscribiendo guardias: ${enrollError.message}`);
           setShowWarningModal(true);
         }
       }
-      
-      // 4. Refrescar la lista
+
       await refreshTrainings();
-      
-      // El modal de éxito se muestra en CreateTrainingModal
-      // NO cerrar el modal aquí - se cerrará cuando el usuario acepte el modal de éxito
+
+      if (!isEditing && finalTrainingId) {
+        const createdTraining = await getTrainingById(finalTrainingId);
+        setEditingTraining(createdTraining);
+      }
     } catch (error) {
       console.error('Error procesando capacitación:', error);
-      const { isEditing = false } = additionalData;
       setErrorMessages([`Error al ${isEditing ? 'actualizar' : 'crear'} capacitación: ${error.message}`]);
       setErrorModalTitle(isEditing ? 'No se puede actualizar la capacitación' : 'No se puede crear la capacitación');
       setErrorModalMessageText('Revise los siguientes detalles e intente nuevamente:');
       setShowErrorModal(true);
-      // Propagar el error al llamador (p. ej. CreateTrainingModal) para que
-      // pueda decidir no mostrar su modal de éxito cuando la operación falla.
       throw error;
     } finally {
       setLoading(false);
@@ -311,6 +330,64 @@ export default function GestionCapacitacion() {
     
     setLoading(true);
     try {
+      // 1. Primero obtener la capacitación completa para conocer todos sus archivos
+      const trainingData = await getTrainingById(trainingId);
+      
+      // 2. Recopilar todos los archivos que deben eliminarse
+      const filesToDelete = [];
+      
+      // 2.1 Imagen de presentación
+      if (trainingData.image && trainingData.image.startsWith('/uploads/')) {
+        filesToDelete.push(trainingData.image);
+      }
+      
+      // 2.2 Archivos en niveles
+      if (trainingData.levels && trainingData.levels.length > 0) {
+        trainingData.levels.forEach(level => {
+          // Video de capacitación
+          if (level.training?.url && level.training.url.startsWith('/uploads/')) {
+            filesToDelete.push(level.training.url);
+          }
+          
+          // Imagen del test
+          if (level.test?.imageUrl && level.test.imageUrl.startsWith('/uploads/')) {
+            filesToDelete.push(level.test.imageUrl);
+          }
+          
+          // Videos de escenas del test
+          if (level.test?.scenes && level.test.scenes.length > 0) {
+            level.test.scenes.forEach(scene => {
+              if (scene.videoUrl && scene.videoUrl.startsWith('/uploads/')) {
+                filesToDelete.push(scene.videoUrl);
+              }
+            });
+          }
+          
+          // Archivos de bibliografía
+          if (level.bibliography && level.bibliography.length > 0) {
+            level.bibliography.forEach(bib => {
+              if (bib.url && bib.url.startsWith('/uploads/')) {
+                filesToDelete.push(bib.url);
+              }
+            });
+          }
+        });
+      }
+      
+      // 3. Eliminar archivos del servidor
+      if (filesToDelete.length > 0) {
+        console.log('Eliminando archivos asociados:', filesToDelete);
+        for (const filePath of filesToDelete) {
+          try {
+            await deleteTrainingFile(filePath);
+          } catch (error) {
+            console.warn(`No se pudo eliminar el archivo ${filePath}:`, error);
+            // Continuar con los demás archivos aunque falle alguno
+          }
+        }
+      }
+      
+      // 4. Eliminar la capacitación de la base de datos
       await deleteTraining(trainingId);
       await refreshTrainings();
       setSuccessMessage('Capacitación eliminada exitosamente');
@@ -434,18 +511,24 @@ export default function GestionCapacitacion() {
     // Filtro por estados aplicados
     if (appliedEstados.length > 0) {
       filtered = filtered.filter(training => {
-        const isNowActive = isTrainingActiveNow(training);
-        const hasActivo = appliedEstados.includes('activo') && isNowActive;
-        const hasInactivo = appliedEstados.includes('inactivo') && !isNowActive;
+        // Helper: verificar si la capacitación ha finalizado (endDate pasó)
+        const isExpired = training.endDate && new Date(training.endDate) < new Date();
+        
+        const isBorrador = appliedEstados.includes('borrador') && !training.isActive && !training.pendingApproval && !training.rejectedBy && !isExpired;
+        const isPendiente = appliedEstados.includes('pendiente') && !training.isActive && training.pendingApproval && !training.rejectedBy;
+        const isActiva = appliedEstados.includes('activa') && training.isActive && !training.pendingApproval && !training.rejectedBy;
+        const isRechazada = appliedEstados.includes('rechazada') && !training.isActive && !training.pendingApproval && training.rejectedBy;
+        const isFinalizada = appliedEstados.includes('finalizada') && !training.isActive && !training.pendingApproval && !training.rejectedBy && isExpired;
         const hasAsignado = appliedEstados.includes('asignado') && training.createdBy;
         const hasSinAsignar = appliedEstados.includes('sin_asignar') && !training.createdBy;
-        return hasActivo || hasInactivo || hasAsignado || hasSinAsignar;
+        return isBorrador || isPendiente || isActiva || isRechazada || isFinalizada || hasAsignado || hasSinAsignar;
       });
     }
     
-    // Filtro por mostrar inactivas aplicado
+    // Filtro por mostrar inactivas aplicado (ahora filtra borradores, pendientes y finalizadas)
     if (!appliedMostrarInactivas) {
-      filtered = filtered.filter(training => isTrainingActiveNow(training));
+      // Si no mostrar inactivas, solo mostrar activas
+      filtered = filtered.filter(training => training.isActive && !training.pendingApproval);
     }
     
     return filtered;
@@ -613,7 +696,9 @@ export default function GestionCapacitacion() {
                 ) : getPaginatedTrainings().items.length === 0 && !loading ? (
                   <tr>
                     <td className="admin-empty" colSpan={6}>
-                      {mostrarInactivas ? 'No hay capacitaciones para mostrar.' : 'No hay capacitaciones activas. Active "Mostrar capacitaciones inactivas" para ver todas.'}
+                      {appliedMostrarInactivas 
+                        ? 'No se encontraron capacitaciones con los filtros aplicados.' 
+                        : 'No hay capacitaciones aprobadas. Active "Mostrar todas las capacitaciones" para ver borradores y pendientes.'}
                     </td>
                   </tr>
                 ) : (
@@ -626,15 +711,30 @@ export default function GestionCapacitacion() {
                     const profesor = t.createdBy ? `${t.createdBy.firstName || ''} ${t.createdBy.lastName || ''}`.trim() : '-';
                     const estado = t.createdBy ? 'Asignado' : 'Sin asignar';
                     
-                    // Estado visual (mostrar Habilitado/Deshabilitado)
-                    const estadoActivo = t.isActive ? 'Habilitado' : 'Deshabilitado';
-                    const estadoColor = t.isActive ? 'var(--success-color)' : 'var(--danger-color)';
+                    // Determinar estado de aprobación
+                    const isExpired = t.endDate && new Date(t.endDate) < new Date();
+                    let estadoAprobacion = 'Borrador';
+                    let estadoColor = '#6b7280'; // gris para borrador
+                    
+                    if (t.isActive && !t.pendingApproval && !t.rejectedBy) {
+                      estadoAprobacion = 'Activa';
+                      estadoColor = '#10b981'; // verde
+                    } else if (!t.isActive && t.pendingApproval && !t.rejectedBy) {
+                      estadoAprobacion = 'Pendiente';
+                      estadoColor = '#f59e0b'; // amarillo/naranja
+                    } else if (!t.isActive && !t.pendingApproval && t.rejectedBy) {
+                      estadoAprobacion = 'Rechazada';
+                      estadoColor = '#ef4444'; // rojo
+                    } else if (!t.isActive && !t.pendingApproval && !t.rejectedBy && isExpired) {
+                      estadoAprobacion = 'Finalizada';
+                      estadoColor = '#8b5cf6'; // violeta/morado
+                    }
                     
                     return (
                       <tr key={t._id}>
                         <td data-label="Capacitación">
-                          <div style={{ fontWeight: 600 }}>{t.title}</div>
-                          <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>{t.subtitle}</div>
+                          <div style={{ fontWeight: 600 }} dangerouslySetInnerHTML={{ __html: t.title || '' }} />
+                          <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }} dangerouslySetInnerHTML={{ __html: t.subtitle || '' }} />
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
                             Progreso: {t.progressPercentage || 0}%
                           </div>
@@ -648,10 +748,10 @@ export default function GestionCapacitacion() {
                               display: 'inline-block',
                               width: '120px',
                               textAlign: 'center',
-                              backgroundColor: t.isActive ? '#10b981' : '#ef4444'
+                              backgroundColor: estadoColor
                             }}
                           >
-                            {estadoActivo}
+                            {estadoAprobacion}
                           </span>
                         </td>
                         <td data-label="Creado">
