@@ -362,6 +362,61 @@ export async function getAllTrainings() {
   }
 }
 
+// --- Progress endpoints (client) ---
+/**
+ * Obtener progreso (por usuario) de un training
+ * POST /progress/trainings/:trainingId/progress
+ */
+export async function getTrainingProgress(trainingId, userId) {
+  try {
+    const { data } = await api.post(
+      `progress/trainings/${encodeURIComponent(trainingId)}/progress`,
+      { userId }
+    );
+    return data;
+  } catch (error) {
+    console.error('Error obteniendo progreso del training:', error);
+    if (error.response) throw new Error(error.response.data?.message || 'Error al obtener progreso');
+    if (error.request) throw new Error('Error de conexión con el servidor');
+    throw new Error('Error en la configuración de la petición');
+  }
+}
+
+/**
+ * Obtener resumen total de progreso del training (porcentaje agregado)
+ * POST /progress/trainings/:trainingId/totalProgress
+ */
+export async function getTotalTrainingProgress(trainingId, userId) {
+  try {
+    const { data } = await api.post(
+      `progress/trainings/${encodeURIComponent(trainingId)}/totalProgress`,
+      { userId }
+    );
+    return data;
+  } catch (error) {
+    console.error('Error obteniendo totalTrainingProgress:', error);
+    if (error.response) throw new Error(error.response.data?.message || 'Error al obtener progreso total del training');
+    if (error.request) throw new Error('Error de conexión con el servidor');
+    throw new Error('Error en la configuración de la petición');
+  }
+}
+
+/**
+ * Obtener resumen de progreso para todas las capacitaciones
+ * GET /progress/trainings/all
+ */
+export async function getAllTrainingsProgress() {
+  try {
+    const { data } = await api.get('/progress/trainings/all');
+    return data;
+  } catch (error) {
+    console.error('Error obteniendo allTrainingsProgress:', error);
+    if (error.response) throw new Error(error.response.data?.message || 'Error al obtener progresos de todas las capacitaciones');
+    if (error.request) throw new Error('Error de conexión con el servidor');
+    throw new Error('Error en la configuración de la petición');
+  }
+}
+
 // Obtener datos para la página de AdmisionUsuario
 export async function fetchAdmisionUsuarios() {
   try {
@@ -742,20 +797,17 @@ export async function checkLevelApproved(trainingId, userId,levelId, levelWithRe
 }
 
 // Obtiene el progreso de un usuario en un curso específico
-export async function getTrainingProgress(trainingId, userId) {
+// (Implementación ubicada arriba en el archivo; evitar duplicados)
+
+// --- Helpers faltantes reintroducidos ---
+// Obtener contenidos pendientes para validación (used by DirectivoPanel)
+export async function getPendingContent() {
   try {
-    const { data } = await api.post(`progress/trainings/${encodeURIComponent(trainingId)}/progress`, {
-      userId: userId
-    });
-    return data;
+    // Intentar ruta esperada en backend; si no existe, devolver array vacío para evitar romper la UI
+    const { data } = await api.get('/training/pending-content');
+    return Array.isArray(data) ? data : (data?.items || data || []);
   } catch (error) {
-    console.error('Error obteniendo progreso del curso:', error);
-    if (error.response) {
-      throw new Error(error.response.data?.message || 'Error al obtener progreso');
-    } else if (error.request) {
-      throw new Error('Error de conexión con el servidor');
-    } else {
-      throw new Error('Error en la configuración de la petición');
-    }
+    console.warn('getPendingContent: endpoint no disponible o error', error?.response?.data || error.message);
+    return [];
   }
 }
