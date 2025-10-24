@@ -12,4 +12,8 @@ export class IProgressService {
   // Evalúa si un nivel está aprobado dado el objeto level (con resultados del usuario)
   // Retorna { approved, earnedPoints, totalPoints, percentage, selectedOptions }
   async isLevelApproved(userId, trainingId, level) { throw new Error('Not implemented'); }
+
+  async totalTrainingProgress(userId, trainingId) { throw new Error('Not implemented'); }
+
+
 }

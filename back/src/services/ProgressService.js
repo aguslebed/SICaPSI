@@ -42,6 +42,91 @@ class ProgressService {
     return result;
   }
 
+
+  async totalTrainingProgress(trainingId){
+    if (!trainingId) return { totalLevels: 0, totalUsers: 0, totalLevelsCompleted: 0, averagePercent: 0 };
+
+    const tId = toObjectId(trainingId);
+
+    try {
+      // Contar niveles totales del curso
+      const totalLevels = await Level.countDocuments({ trainingId: tId });
+
+      // Agregación: contar niveles completados por cada usuario para este curso
+      const perUserAgg = await UserLevelProgress.aggregate([
+        { $match: { trainingId: tId, completed: true } },
+        { $group: { _id: "$userId", levelsCompleted: { $sum: 1 } } }
+      ]);
+
+      const totalUsers = perUserAgg.length;
+      const totalLevelsCompleted = perUserAgg.reduce((sum, r) => sum + (r.levelsCompleted || 0), 0);
+
+      // Promedio en porcentaje: promedio de (levelsCompleted / totalLevels) por usuario
+      const averagePercent = (totalUsers > 0 && totalLevels > 0)
+        ? Math.round((totalLevelsCompleted / (totalUsers * totalLevels)) * 100)
+        : 0;
+
+      return {
+        totalLevels,
+        totalUsers,
+        totalLevelsCompleted,
+        averagePercent
+      };
+    } catch (err) {
+      console.error('ProgressService.totalTrainingProgress: error', err);
+      return { totalLevels: 0, totalUsers: 0, totalLevelsCompleted: 0, averagePercent: 0 };
+    }
+  }
+
+  /**
+   * Devuelve un arreglo con el resumen de progreso para todas las capacitaciones.
+   * Cada elemento tiene la forma: { trainingId, totalLevels, totalUsers, totalLevelsCompleted, averagePercent }
+   */
+  async allTrainingsProgress() {
+    try {
+      // Totales de niveles por training
+      const levelsAgg = await Level.aggregate([
+        { $group: { _id: "$trainingId", totalLevels: { $sum: 1 } } }
+      ]);
+
+      const totalsMap = {};
+      for (const row of levelsAgg) totalsMap[String(row._id)] = row.totalLevels;
+
+      // Agregación sobre UserLevelProgress: primero agrupar por training+user para contar niveles completados por usuario,
+      // luego agrupar por training para obtener totalUsers y totalLevelsCompleted
+      const perTrainingAgg = await UserLevelProgress.aggregate([
+        { $match: { completed: true } },
+        { $group: { _id: { trainingId: "$trainingId", userId: "$userId" }, levelsCompleted: { $sum: 1 } } },
+        { $group: { _id: "$_id.trainingId", totalUsers: { $sum: 1 }, totalLevelsCompleted: { $sum: "$levelsCompleted" } } }
+      ]);
+
+      const perTrainMap = {};
+      for (const r of perTrainingAgg) {
+        perTrainMap[String(r._id)] = { totalUsers: r.totalUsers || 0, totalLevelsCompleted: r.totalLevelsCompleted || 0 };
+      }
+
+      // Combine keys (trainings present in levelsAgg or perTrainingAgg)
+      const keys = new Set([...Object.keys(totalsMap), ...Object.keys(perTrainMap)]);
+      const result = [];
+
+      for (const k of keys) {
+        const totalLevels = totalsMap[k] || 0;
+        const totalUsers = perTrainMap[k]?.totalUsers || 0;
+        const totalLevelsCompleted = perTrainMap[k]?.totalLevelsCompleted || 0;
+        const averagePercent = (totalUsers > 0 && totalLevels > 0)
+          ? Math.round((totalLevelsCompleted / (totalUsers * totalLevels)) * 100)
+          : 0;
+
+        result.push({ trainingId: k, totalLevels, totalUsers, totalLevelsCompleted, averagePercent });
+      }
+
+      return result;
+    } catch (err) {
+      console.error('ProgressService.allTrainingsProgress: error', err);
+      return [];
+    }
+  }
+
   /**
    * Obtiene el progreso de un usuario en un curso específico
    * @param {string|ObjectId} userId - ID del usuario
@@ -81,7 +166,14 @@ class ProgressService {
     }
   }
 
-  async  isLevelApproved(userId, trainingId, level) {
+  /**
+   * Evalúa si un nivel está aprobado según las respuestas del usuario.
+   * @param {string|ObjectId} userId
+   * @param {string|ObjectId} trainingId
+   * @param {Object} level - objeto level que incluye las respuestas del usuario
+   * @param {number} passThreshold - porcentaje mínimo para aprobar (por defecto 80)
+   */
+  async isLevelApproved(userId, trainingId, level, passThreshold = 80) {
     // Validate inputs
     if (!userId || !trainingId || !level) {
       return { approved: false, earnedPoints: 0, totalPoints: 0, percentage: 0 };
@@ -120,10 +212,18 @@ class ProgressService {
     // Compute total possible points for the level
     let totalPossible = 0;
     for (const scene of dbScenes) {
+      // Saltar escenas finales (lastOne) en el cálculo de puntos totales
+      if (scene.lastOne === true) {
+        continue;
+      }
+      
       const opts = Array.isArray(scene.options) ? scene.options : [];
-      const maxOpt = opts.length > 0 ? Math.max(...opts.map(o => (o && o.points) ? Number(o.points) : 0)) : 0;
+      // Tomar la opción con MÁS puntos (puede ser negativa si todas lo son)
+      const maxOpt = opts.length > 0 ? Math.max(...opts.map(o => Number(o?.points ?? 0))) : 0;
       const bonus = Number(scene.bonus || 0);
-      totalPossible += maxOpt + bonus;
+      // Solo sumar si la mejor opción + bonus es positiva (mínimo 0 por escena)
+      const sceneMax = Math.max(0, maxOpt + bonus);
+      totalPossible += sceneMax;
     }
 
     // Extract user's scene results from the provided `level` object.
@@ -181,6 +281,7 @@ class ProgressService {
         // If user provided the whole selectedOption object
         if (userScene.selectedOption && typeof userScene.selectedOption.points === 'number') {
           earned += Number(userScene.selectedOption.points);
+          console.log(earned,"--earned despues de sumar selectedOption.points---");
           continue;
         }
 
@@ -196,8 +297,10 @@ class ProgressService {
     if (earned > totalPossible) earned = totalPossible;
 
     const percentage = totalPossible > 0 ? (earned / totalPossible) * 100 : 0;
-    //Se considera un nivel aprobado si el porcentaje es mayor o igual a 80% (Cambiar el 80 por el numero que sea)
-    const approved = percentage >= 80;
+  // Determinar umbral de aprobación (por defecto 80%)
+  const threshold = Number(passThreshold ?? 80);
+  // Se considera un nivel aprobado si el porcentaje es mayor o igual al umbral
+  const approved = percentage >= threshold;
 
     // Build a simplified list of selected options to store (avoid duplicating full level)
         const selectedOptions = [];
@@ -252,7 +355,6 @@ class ProgressService {
         console.error('❌ ProgressService.isLevelApproved: error upserting UserLevelProgress', err);
       }
     }
-    console.log(result, "---result desde ProgressService.js---");
     return result;
   }
 

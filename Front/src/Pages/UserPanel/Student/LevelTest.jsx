@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
 import { useUser } from "../../../context/UserContext";
-import { resolveImageUrl, checkLevelApproved } from '../../../API/Request';
+import { resolveImageUrl, checkLevelApproved, getAllTrainingsProgress } from '../../../API/Request';
 import { normalizeRichTextValue, getPlainTextFromRichText } from "../../../Components/Modals/CreateTrainingModal/RichTextInput";
 import { useEffect } from "react";
 import LevelResultModal from "../../../Components/Modals/LevelResultModal";
@@ -67,7 +67,14 @@ const LevelTest = () => {
   }
 
   // Reiniciar video (volver al inicio)
-  const handleRestart = () => {
+  const handleRestart = async () => {
+
+    if (levelWithResults?.test?.scenesResults?.length > 0) {
+      const result = await verificarResultados();
+      setEvaluationResult(result);
+      setShowResultModal(true);
+    }
+
     setSceneIndex(null);
     setPoints(0);
     setLevelWithResults(createInitialLevelWithResults());

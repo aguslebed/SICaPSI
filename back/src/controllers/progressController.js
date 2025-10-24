@@ -21,6 +21,15 @@ export function makeProgressController() {
       }
     },
 
+    async allTrainingsProgress(req, res, next) {
+      try {
+        const data = await progressService.allTrainingsProgress();
+        return res.status(200).json({ success: true, data });
+      } catch (err) {
+        next(err);
+      }
+    },
+
     async checkLevelApproved(req, res, next) {
       try {
         const userId = req.body.userId;
@@ -40,7 +49,25 @@ export function makeProgressController() {
       } catch (err) {
         next(err);
       }
-    }
+    },
+
+    async totalTrainingProgress(req, res, next) {
+      try {
+        const userId = req.body.userId || req.user?._id;
+        const trainingId = req.params.trainingId;
+
+        if (!userId) throw new AppError('No autorizado', 401);
+        if (!trainingId) throw new AppError('Falta trainingId', 400);
+
+        const progress = await progressService.totalTrainingProgress(trainingId);
+        return res.status(200).json({ success: true, data: progress });
+      } catch (err) {
+        next(err);
+      }
+    },
+
+
+
 
   };
 }
