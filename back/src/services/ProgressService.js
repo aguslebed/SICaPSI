@@ -42,6 +42,91 @@ class ProgressService {
     return result;
   }
 
+
+  async totalTrainingProgress(trainingId){
+    if (!trainingId) return { totalLevels: 0, totalUsers: 0, totalLevelsCompleted: 0, averagePercent: 0 };
+
+    const tId = toObjectId(trainingId);
+
+    try {
+      // Contar niveles totales del curso
+      const totalLevels = await Level.countDocuments({ trainingId: tId });
+
+      // Agregación: contar niveles completados por cada usuario para este curso
+      const perUserAgg = await UserLevelProgress.aggregate([
+        { $match: { trainingId: tId, completed: true } },
+        { $group: { _id: "$userId", levelsCompleted: { $sum: 1 } } }
+      ]);
+
+      const totalUsers = perUserAgg.length;
+      const totalLevelsCompleted = perUserAgg.reduce((sum, r) => sum + (r.levelsCompleted || 0), 0);
+
+      // Promedio en porcentaje: promedio de (levelsCompleted / totalLevels) por usuario
+      const averagePercent = (totalUsers > 0 && totalLevels > 0)
+        ? Math.round((totalLevelsCompleted / (totalUsers * totalLevels)) * 100)
+        : 0;
+
+      return {
+        totalLevels,
+        totalUsers,
+        totalLevelsCompleted,
+        averagePercent
+      };
+    } catch (err) {
+      console.error('ProgressService.totalTrainingProgress: error', err);
+      return { totalLevels: 0, totalUsers: 0, totalLevelsCompleted: 0, averagePercent: 0 };
+    }
+  }
+
+  /**
+   * Devuelve un arreglo con el resumen de progreso para todas las capacitaciones.
+   * Cada elemento tiene la forma: { trainingId, totalLevels, totalUsers, totalLevelsCompleted, averagePercent }
+   */
+  async allTrainingsProgress() {
+    try {
+      // Totales de niveles por training
+      const levelsAgg = await Level.aggregate([
+        { $group: { _id: "$trainingId", totalLevels: { $sum: 1 } } }
+      ]);
+
+      const totalsMap = {};
+      for (const row of levelsAgg) totalsMap[String(row._id)] = row.totalLevels;
+
+      // Agregación sobre UserLevelProgress: primero agrupar por training+user para contar niveles completados por usuario,
+      // luego agrupar por training para obtener totalUsers y totalLevelsCompleted
+      const perTrainingAgg = await UserLevelProgress.aggregate([
+        { $match: { completed: true } },
+        { $group: { _id: { trainingId: "$trainingId", userId: "$userId" }, levelsCompleted: { $sum: 1 } } },
+        { $group: { _id: "$_id.trainingId", totalUsers: { $sum: 1 }, totalLevelsCompleted: { $sum: "$levelsCompleted" } } }
+      ]);
+
+      const perTrainMap = {};
+      for (const r of perTrainingAgg) {
+        perTrainMap[String(r._id)] = { totalUsers: r.totalUsers || 0, totalLevelsCompleted: r.totalLevelsCompleted || 0 };
+      }
+
+      // Combine keys (trainings present in levelsAgg or perTrainingAgg)
+      const keys = new Set([...Object.keys(totalsMap), ...Object.keys(perTrainMap)]);
+      const result = [];
+
+      for (const k of keys) {
+        const totalLevels = totalsMap[k] || 0;
+        const totalUsers = perTrainMap[k]?.totalUsers || 0;
+        const totalLevelsCompleted = perTrainMap[k]?.totalLevelsCompleted || 0;
+        const averagePercent = (totalUsers > 0 && totalLevels > 0)
+          ? Math.round((totalLevelsCompleted / (totalUsers * totalLevels)) * 100)
+          : 0;
+
+        result.push({ trainingId: k, totalLevels, totalUsers, totalLevelsCompleted, averagePercent });
+      }
+
+      return result;
+    } catch (err) {
+      console.error('ProgressService.allTrainingsProgress: error', err);
+      return [];
+    }
+  }
+
   /**
    * Obtiene el progreso de un usuario en un curso específico
    * @param {string|ObjectId} userId - ID del usuario
@@ -188,6 +273,7 @@ class ProgressService {
         // If user provided the whole selectedOption object
         if (userScene.selectedOption && typeof userScene.selectedOption.points === 'number') {
           earned += Number(userScene.selectedOption.points);
+          console.log(earned,"--earned despues de sumar selectedOption.points---");
           continue;
         }
 
@@ -261,7 +347,6 @@ class ProgressService {
         console.error('❌ ProgressService.isLevelApproved: error upserting UserLevelProgress', err);
       }
     }
-    console.log(result, "---result desde ProgressService.js---");
     return result;
   }
 
