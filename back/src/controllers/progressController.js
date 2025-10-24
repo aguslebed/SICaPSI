@@ -6,6 +6,21 @@ export function makeProgressController() {
 
   return {
 
+    async getTrainingProgress(req, res, next) {
+      try {
+        const userId = req.body.userId || req.user?._id;
+        const trainingId = req.params.trainingId;
+
+        if (!userId) throw new AppError('No autorizado', 401);
+        if (!trainingId) throw new AppError('Falta trainingId', 400);
+
+        const progress = await progressService.getProgressForSingleTraining(userId, trainingId);
+        return res.status(200).json({ success: true, data: progress });
+      } catch (err) {
+        next(err);
+      }
+    },
+
     async checkLevelApproved(req, res, next) {
       try {
         const userId = req.body.userId;

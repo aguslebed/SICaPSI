@@ -42,6 +42,45 @@ class ProgressService {
     return result;
   }
 
+  /**
+   * Obtiene el progreso de un usuario en un curso específico
+   * @param {string|ObjectId} userId - ID del usuario
+   * @param {string|ObjectId} trainingId - ID del curso
+   * @returns {Object} { totalLevels, levelsCompleted, progressPercent }
+   */
+  async getProgressForSingleTraining(userId, trainingId) {
+    if (!userId || !trainingId) {
+      return { totalLevels: 0, levelsCompleted: 0, progressPercent: 0 };
+    }
+
+    const tId = toObjectId(trainingId);
+    const uId = toObjectId(userId);
+
+    try {
+      // Contar niveles totales del curso
+      const totalLevels = await Level.countDocuments({ trainingId: tId });
+
+      // Contar niveles completados por el usuario en este curso
+      const levelsCompleted = await UserLevelProgress.countDocuments({
+        userId: uId,
+        trainingId: tId,
+        completed: true
+      });
+
+      // Calcular porcentaje
+      const progressPercent = totalLevels > 0 ? Math.round((levelsCompleted / totalLevels) * 100) : 0;
+
+      return {
+        totalLevels,
+        levelsCompleted,
+        progressPercent
+      };
+    } catch (err) {
+      console.error('ProgressService.getProgressForSingleTraining: error', err);
+      return { totalLevels: 0, levelsCompleted: 0, progressPercent: 0 };
+    }
+  }
+
   async  isLevelApproved(userId, trainingId, level) {
     // Validate inputs
     if (!userId || !trainingId || !level) {

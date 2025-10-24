@@ -1,21 +1,71 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import CapacitacionCard from "../../../Components/Student/TrainingCard";
 import WelcomeModal from "../../../Components/Modals/WelcomeModal";
 import { useUser } from "../../../context/UserContext";
-import LoadingOverlay from "../../../Components/Shared/LoadingOverlay"; 
+import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
+import { getTrainingProgress } from "../../../API/Request"; 
 
 // Panel principal de usuario
 const UserPanel = () => {
   const { userData } = useUser();
+  const [trainingsWithProgress, setTrainingsWithProgress] = useState([]);
+  const [loading, setLoading] = useState(true);
  
   console.log(userData," --desde userPanel.jsx--")
+
+  // Cargar progreso de cada capacitación
+  useEffect(() => {
+    const loadTrainingProgress = async () => {
+      if (!userData || !userData.training) {
+        setLoading(false);
+        return;
+      }
+
+      const userId = userData?.user?._id || userData?._id;
+      if (!userId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const trainingsWithProgressData = await Promise.all(
+          userData.training.map(async (training) => {
+            try {
+              const progressResponse = await getTrainingProgress(training._id, userId);
+              const progressData = progressResponse.data || progressResponse;
+              return {
+                ...training,
+                progressPercent: progressData.progressPercent || 0
+              };
+            } catch (error) {
+              console.error(`Error obteniendo progreso de ${training._id}:`, error);
+              return {
+                ...training,
+                progressPercent: 0
+              };
+            }
+          })
+        );
+        
+        setTrainingsWithProgress(trainingsWithProgressData);
+      } catch (error) {
+        console.error('Error general cargando progresos:', error);
+        setTrainingsWithProgress(userData.training || []);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTrainingProgress();
+  }, [userData]);
+
   // Si los datos aún no están cargados
-  if (!userData) {
+  if (!userData || loading) {
     return <div className="min-h-[50vh] flex items-center justify-center"><LoadingOverlay label="Cargando datos de usuario..." /></div>;
   }
 
-  // training del usuario
-  const training = userData?.training || [];
+  // training del usuario con progreso actualizado
+  const training = trainingsWithProgress;
 
   // Renderizar solo los datos requeridos
   return (
