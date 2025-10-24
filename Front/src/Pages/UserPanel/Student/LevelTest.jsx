@@ -67,7 +67,14 @@ const LevelTest = () => {
   }
 
   // Reiniciar video (volver al inicio)
-  const handleRestart = () => {
+  const handleRestart = async () => {
+
+    if (levelWithResults?.test?.scenesResults?.length > 0) {
+      const result = await verificarResultados();
+      setEvaluationResult(result);
+      setShowResultModal(true);
+    }
+
     setSceneIndex(null);
     setPoints(0);
     setLevelWithResults(createInitialLevelWithResults());
