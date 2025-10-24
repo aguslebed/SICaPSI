@@ -230,22 +230,25 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
           }
 
           // Validar opciones/botones de la escena
-          if (!scene.options || scene.options.length < 2) {
-            errors.push(`Nivel ${levelNum}, Escena ${sceneNum}: Debe tener al menos 2 botones de navegación`);
-          } else {
-            scene.options.forEach((option, optIdx) => {
-              if (!option.description || !option.description.trim()) {
-                errors.push(`Nivel ${levelNum}, Escena ${sceneNum}, Botón ${optIdx + 1}: Falta el texto del botón`);
-              }
-              // Requerir next sólo si la escena NO es final, la opción no es lastOne, y el nivel no tiene finales
-              const isFinalScene = Array.isArray(level.test?.scenes) && (scene.isFinal === true || sceneIdx === (level.test.scenes.length - 1));
-              const requireNext = !isFinalScene && (!option.lastOne || option.lastOne !== true) && !levelHasAnyFinal;
-              if (requireNext) {
-                if (option.next === undefined || option.next === null || option.next === '') {
-                  errors.push(`Nivel ${levelNum}, Escena ${sceneNum}, Botón ${optIdx + 1}: Falta la próxima escena`);
+          // Si la escena está marcada como lastOne, NO requiere opciones
+          if (!scene.lastOne) {
+            if (!scene.options || scene.options.length < 2) {
+              errors.push(`Nivel ${levelNum}, Escena ${sceneNum}: Debe tener al menos 2 botones de navegación`);
+            } else {
+              scene.options.forEach((option, optIdx) => {
+                if (!option.description || !option.description.trim()) {
+                  errors.push(`Nivel ${levelNum}, Escena ${sceneNum}, Botón ${optIdx + 1}: Falta el texto del botón`);
                 }
-              }
-            });
+                // Requerir next sólo si la escena NO es final, la opción no es lastOne, y el nivel no tiene finales
+                const isFinalScene = Array.isArray(level.test?.scenes) && (scene.isFinal === true || sceneIdx === (level.test.scenes.length - 1));
+                const requireNext = !isFinalScene && (!option.lastOne || option.lastOne !== true) && !levelHasAnyFinal;
+                if (requireNext) {
+                  if (option.next === undefined || option.next === null || option.next === '') {
+                    errors.push(`Nivel ${levelNum}, Escena ${sceneNum}, Botón ${optIdx + 1}: Falta la próxima escena`);
+                  }
+                }
+              });
+            }
           }
         });
       }

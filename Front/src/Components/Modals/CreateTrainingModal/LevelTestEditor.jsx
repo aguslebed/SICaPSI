@@ -372,7 +372,25 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                           checked={level.test.scenes[selectedScene].lastOne || false}
                           onChange={(e) => {
                             const newScenes = [...(level.test.scenes || [])];
-                            newScenes[selectedScene] = { ...newScenes[selectedScene], lastOne: e.target.checked };
+                            // Si se marca como última escena, limpiar las opciones
+                            if (e.target.checked) {
+                              newScenes[selectedScene] = { 
+                                ...newScenes[selectedScene], 
+                                lastOne: true,
+                                options: [] // Vaciar opciones cuando se marca como última escena
+                              };
+                              setSelectedOption(null); // Deseleccionar opción actual
+                            } else {
+                              // Si se desmarca, restaurar opciones vacías mínimas
+                              newScenes[selectedScene] = { 
+                                ...newScenes[selectedScene], 
+                                lastOne: false,
+                                options: [
+                                  { description: 'Opción A', points: 10, next: null },
+                                  { description: 'Opción B', points: 5, next: null }
+                                ]
+                              };
+                            }
                             updateLevelField(levelIndex, 'test.scenes', newScenes);
                           }}
                           onFocus={() => handleFocusScene(selectedScene)}
@@ -407,7 +425,7 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
             {/* Gestión de botones/opciones */}
             <div className="mt-1.5">
               <div className="flex items-center justify-end mb-1.5 px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded-sm">
-                {(!level.test.scenes[selectedScene].options || level.test.scenes[selectedScene].options.length < 2) && (
+                {(!level.test.scenes[selectedScene].options || level.test.scenes[selectedScene].options.length < 2) && !level.test.scenes[selectedScene].lastOne && (
                   <button
                     type="button"
                     onClick={() => {
@@ -425,9 +443,12 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                     + Agregar botón
                   </button>
                 )}
+                {level.test.scenes[selectedScene].lastOne && (
+                  <p className="text-xs text-gray-500 italic">Las escenas finales no requieren opciones de navegación</p>
+                )}
               </div>
 
-              {level.test.scenes[selectedScene].options && level.test.scenes[selectedScene].options.length > 0 && (
+              {!level.test.scenes[selectedScene].lastOne && level.test.scenes[selectedScene].options && level.test.scenes[selectedScene].options.length > 0 && (
                 <div className="mb-1.5">
                   <select
                     value={selectedOption !== null ? selectedOption : ''}
@@ -444,7 +465,7 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                 </div>
               )}
 
-              {selectedOption !== null && level.test.scenes[selectedScene].options && level.test.scenes[selectedScene].options[selectedOption] && (
+              {!level.test.scenes[selectedScene].lastOne && selectedOption !== null && level.test.scenes[selectedScene].options && level.test.scenes[selectedScene].options[selectedOption] && (
                 <div className="border border-gray-300 rounded-sm p-1.5 bg-gray-50">
                   <div className="flex justify-between items-center mb-1.5 pb-1.5 border-b border-gray-200">
                     <h6 className="text-xs font-medium text-gray-700">Editando: {level.test.scenes[selectedScene].options[selectedOption].description || `Botón ${selectedOption + 1}`}</h6>
