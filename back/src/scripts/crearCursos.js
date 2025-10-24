@@ -11,6 +11,7 @@ import { sampleCourses } from './cursos_y_niveles/training.js';
 import { sampleAdministrators } from './cursos_y_niveles/administrators.js';
 import { sampleManagers } from './cursos_y_niveles/managers.js';
 import { ensureTeacherForTraining } from './cursos_y_niveles/teachers.js';
+import { randomInt } from 'crypto'; // o usa Math.random si preferís
 
 // Configuración de conexión
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/SICAPSI';
@@ -205,27 +206,42 @@ async function initializeDatabase() {
       }
     }
 
-    // Generar progreso simulado: para cada alumno en cada training, marcar algunos niveles como completados
-    info('📈 Generando progreso simulado por alumno y training...');
+    info('📈 Generando progreso simulado aleatorio por alumno y training...');
     const progressToInsert = [];
+
     for (const student of existingStudents) {
       for (const training of createdTrainings) {
         // Obtener niveles del training
-        const levelsForTraining = await Level.find({ trainingId: training._id }).sort({ levelNumber: 1 }).select('_id trainingId').lean();
+        const levelsForTraining = await Level.find({ trainingId: training._id })
+          .sort({ levelNumber: 1 })
+          .select('_id trainingId')
+          .lean();
+
         if (!levelsForTraining.length) continue;
-        // Regla simple de demo: alumno1 completa 1 nivel, alumno2 completa 2 niveles, alumno3 completa todos los niveles
-        const idx = existingStudents.findIndex(s => s._id.toString() === student._id.toString());
-        let completeCount = 1 + idx; // 1,2,3
-        if (completeCount > levelsForTraining.length) completeCount = levelsForTraining.length;
-        for (let i = 0; i < completeCount; i++) {
-          const lvl = levelsForTraining[i];
+
+        // Cantidad aleatoria de niveles completados (entre 0 y total)
+        const completeCount = Math.floor(Math.random() * (levelsForTraining.length + 1)); // incluye 0
+
+        // Si el alumno no completó ninguno, pasar al siguiente
+        if (completeCount === 0) continue;
+
+        // Mezclar los niveles para que no siempre sean los primeros
+        const shuffledLevels = levelsForTraining.sort(() => Math.random() - 0.5);
+
+        // Tomar solo los "completeCount" primeros niveles mezclados
+        const completedLevels = shuffledLevels.slice(0, completeCount);
+
+        // Insertar progreso simulado
+        for (const lvl of completedLevels) {
           progressToInsert.push({
             userId: student._id,
             trainingId: training._id,
             levelId: lvl._id,
             status: 'completed',
             completed: true,
-            completedAt: new Date()
+            completedAt: new Date(
+              Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000 // fecha aleatoria dentro de 30 días atrás
+            )
           });
         }
       }

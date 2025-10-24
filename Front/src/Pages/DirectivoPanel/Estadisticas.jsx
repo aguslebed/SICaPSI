@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import './DirectivoPanel.css';
 import NavBar from '../../Components/Student/NavBar';
+import { getAllActiveTrainings, getStudents, getTrainingProgress } from '../../API/Request';
 
 export default function Estadisticas() {
-  const [loading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Filtros generales
   const [generalSearch, setGeneralSearch] = useState('');
@@ -13,33 +14,90 @@ export default function Estadisticas() {
   const [studentSearch, setStudentSearch] = useState('');
   const [studentCap, setStudentCap] = useState('all');
 
-  // Datos de ejemplo
+  // Datos
+  const [individualRows, setRowsRaw] = useState([]);
+
   const generalRows = [
     { cap: 1, nivel: 'Nivel 1', vistos: '100%', completados: '100%', inicio: '31/07/2025' },
     { cap: 2, nivel: 'Nivel 2', vistos: '80%', completados: '75%', inicio: '25/08/2025' },
     { cap: 3, nivel: 'Nivel 3', vistos: '40%', completados: '20%', inicio: '23/08/2025' },
   ];
 
-  const individualRows = [
-    { nombre: 'Juan Juan', cap: 1, nivel: '2/3', intentos: 5, avance: '50%', duracion: '90 min.', inicio: '31/07/2025' },
-    { nombre: 'Pedro Pedro', cap: 2, nivel: '3/3', intentos: 3, avance: '75%', duracion: '120 min.', inicio: '25/08/2025' },
-    { nombre: 'Pepito Pepito', cap: 3, nivel: '1/3', intentos: 2, avance: '100%', duracion: '180 min.', inicio: '23/08/2025' },
-  ];
-
   // --- FILTROS ---
-
   const filteredGeneral = generalRows.filter(r =>
     (generalCap === 'all' || r.cap === Number(generalCap)) &&
     (r.nivel.toLowerCase().includes(generalSearch.toLowerCase()) ||
-     String(r.cap).includes(generalSearch))
+      String(r.cap).includes(generalSearch))
   );
 
   const filteredIndividuals = individualRows.filter(r =>
-    (studentCap === 'all' || r.cap === Number(studentCap)) &&
+    (studentCap === 'all' || r.cap.includes(studentCap)) &&
     (r.nombre.toLowerCase().includes(studentSearch.toLowerCase()) ||
-     String(r.cap).includes(studentSearch))
+      r.cap.toLowerCase().includes(studentSearch.toLowerCase()))
   );
 
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+
+    (async () => {
+      try {
+
+        const data = await getStudents();
+        const students = Array.isArray(data) ? data : (data?.items || []);
+        const activeTrainings = await getAllActiveTrainings();
+
+        // Crear un mapa para lookup rápido de títulos por ID
+        const activeTrainingMap = new Map(activeTrainings.map(t => [t._id, t.title]));
+        const promises = [];
+
+        for (const student of students) {
+          for (const trainingId of student.assignedTraining || []) {
+            // Filtrar solo trainings activos
+            if (activeTrainingMap.has(trainingId)) {
+              promises.push(
+                getTrainingProgress(trainingId, student._id).then(response => ({
+                  student,
+                  trainingId,
+                  response
+                }))
+              );
+            }
+          }
+        }
+
+        // 3️⃣ Ejecutar todas las llamadas en paralelo
+        const results = await Promise.all(promises);
+
+        // 4️⃣ Mapear resultados en formato de tabla
+        const progressData = results
+          .filter(r => r.response?.success)
+          .map(({ student, trainingId, response }) => ({
+            nombre: `${student.firstName} ${student.lastName}`,
+            cap: activeTrainingMap.get(trainingId) || trainingId, // Mostrar título si activo, sino ID
+            nivel: `${response.data.levelsCompleted}/${response.data.totalLevels}`,
+            intentos: Math.floor(Math.random() * 5) + 1, // simulado
+            avance: `${response.data.progressPercent}%`,
+            duracion: `${Math.floor(Math.random() * 120) + 60} min.`,
+            inicio: student.createdAt, // placeholder
+          }));
+
+        // 5️⃣ Actualizar estado
+        if (alive) setRowsRaw(progressData);
+      } catch (error) {
+        console.error('Error obteniendo estadísticas:', error);
+        if (alive) setRowsRaw([]);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // --- RENDER ---
   return (
     <>
       {loading && <div className="loading-overlay">Cargando estadísticas...</div>}
@@ -47,7 +105,6 @@ export default function Estadisticas() {
 
       <main className="admin-container">
         <div className="admin-content-wrapper" style={{ maxWidth: 1100, margin: '1.25rem auto' }}>
-          
           {/* --- PROGRESO GENERAL --- */}
           <h1 className="admin-title">Progreso General</h1>
           <hr className="admin-divider" />
@@ -148,9 +205,9 @@ export default function Estadisticas() {
                       <th>Nombre</th>
                       <th>Capacitación</th>
                       <th>Nivel</th>
-                      <th>Nro.Intentos</th>
+                      {/* <th>Nro.Intentos</th> */}
                       <th>Avance</th>
-                      <th>Duración</th>
+                      {/* <th>Duración</th> */}
                       <th>Fecha de inicio</th>
                     </tr>
                   </thead>
@@ -161,10 +218,10 @@ export default function Estadisticas() {
                           <td>{r.nombre}</td>
                           <td>{r.cap}</td>
                           <td>{r.nivel}</td>
-                          <td>{r.intentos}</td>
+                          {/* <td>{r.intentos}</td> */}
                           <td>{r.avance}</td>
-                          <td>{r.duracion}</td>
-                          <td>{r.inicio}</td>
+                          {/* <td>{r.duracion}</td> */}
+                          <td>{r.inicio ? new Date(r.inicio).toLocaleDateString() : '-'}</td>
                         </tr>
                       ))
                     ) : (
