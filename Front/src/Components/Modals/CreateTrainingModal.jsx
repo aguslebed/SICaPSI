@@ -21,6 +21,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
   const [description, setDescription] = useState('');
   const [image, setImage] = useState('');
   const [isActive, setIsActive] = useState(false);
+  const [pendingApproval, setPendingApproval] = useState(false);
   const [assignedTeacher, setAssignedTeacher] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -127,8 +128,8 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [warningMessage, setWarningMessage] = useState('');
 
-  // Función de validación central para activación de capacitación
-  const validateTrainingForActivation = () => {
+  // Función de validación central para enviar capacitación a aprobar
+  const validateTrainingForApproval = () => {
     const errors = [];
 
     // Validar datos básicos de capacitación
@@ -156,26 +157,6 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
     // Validar que fecha fin sea posterior a fecha inicio
     if (startDate && endDate && new Date(endDate) <= new Date(startDate)) {
       errors.push('La fecha de fin debe ser posterior a la fecha de inicio');
-    }
-
-    // Validar fechas para habilitación
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Ignorar horario
-    
-    if (startDate) {
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
-      if (start > today) {
-        errors.push('No se puede habilitar la capacitación antes de la fecha de inicio.');
-      }
-    }
-    
-    if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(0, 0, 0, 0);
-      if (end < today) {
-        errors.push('No se puede habilitar la capacitación después de la fecha de fin. La fecha de finalización ya pasó.');
-      }
     }
 
     // Validar que exista al menos 1 nivel
@@ -286,50 +267,23 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
     };
   };
 
-  // Handler para validar antes de activar
-  const handleIsActiveChange = (checked) => {
-    // Si está intentando activar (checked === true)
-    if (checked) {
-      // Validar fechas primero
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      if (startDate) {
-        const start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
-        if (start > today) {
-          setWarningMessage('No se puede habilitar la capacitación antes de la fecha de inicio.');
-          setShowWarningModal(true);
-          return;
-        }
-      }
-      
-      if (endDate) {
-        const end = new Date(endDate);
-        end.setHours(0, 0, 0, 0);
-        if (end < today) {
-          setWarningMessage('No se puede habilitar la capacitación después de la fecha de fin. La fecha de finalización ya pasó.');
-          setShowWarningModal(true);
-          return;
-        }
-      }
-      
-      // Validar antes de activar (logs removed)
-      const validation = validateTrainingForActivation();
+  // Handler para enviar a aprobar
+  const handleSendForApproval = () => {
+    // Validar antes de enviar a aprobar
+    const validation = validateTrainingForApproval();
 
-      if (!validation.isValid) {
-        // Mostrar modal de errores
-        setErrorMessages(validation.errors);
-        setErrorModalTitle('No se puede habilitar la capacitación');
-        setErrorModalMessageText('Complete los siguientes requisitos antes de habilitar:');
-        setShowErrorModal(true);
-        // No activar
-        return;
-      }
+    if (!validation.isValid) {
+      // Mostrar modal de errores
+      setErrorMessages(validation.errors);
+      setErrorModalTitle('No se puede enviar a aprobar');
+      setErrorModalMessageText('Complete los siguientes requisitos antes de enviar a aprobar:');
+      setShowErrorModal(true);
+      return false;
     }
     
-    // Si la validación pasa o está desactivando, actualizar el estado
-    setIsActive(checked);
+    // Si la validación pasa, marcar como pendiente de aprobación
+    setPendingApproval(true);
+    return true;
   };
 
   // Función auxiliar para verificar si un nivel está completo
@@ -508,6 +462,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
       setDescription('');
       setImage('');
       setIsActive(false);
+      setPendingApproval(false);
       setAssignedTeacher('');
       setStartDate('');
       setEndDate('');
@@ -887,29 +842,22 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
       trainingId: editingTraining?._id
     }));
 
-    if (isActive) {
-      const activationErrors = [];
-      
-      // Validar fechas
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      if (start > today || end < today) {
-        activationErrors.push('La fecha actual debe estar dentro del rango de inicio y fin.');
-      }
+    if (pendingApproval) {
+      const approvalErrors = [];
       
       // Validar profesor asignado
       if (!assignedTeacher || !assignedTeacher.trim()) {
-        activationErrors.push('Debe tener un profesor asignado.');
+        approvalErrors.push('Debe tener un profesor asignado.');
       }
       
       // Validar estudiantes inscritos
       if (!selectedStudents || selectedStudents.length === 0) {
-        activationErrors.push('Debe tener al menos un estudiante inscrito.');
+        approvalErrors.push('Debe tener al menos un estudiante inscrito.');
       }
       
       // Validar que haya al menos un nivel completo
       if (sanitizedLevels.length === 0) {
-        activationErrors.push('Debe tener al menos un nivel creado.');
+        approvalErrors.push('Debe tener al menos un nivel creado.');
       } else {
         // Validar que cada nivel tenga los datos mínimos
         const sanitizePlain = value => getPlainTextFromRichText(value || '').trim();
@@ -921,12 +869,12 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
           
           // Validar título del nivel
           if (!sanitizePlain(level.title)) {
-            activationErrors.push(`El Nivel ${levelNumber} no tiene título.`);
+            approvalErrors.push(`El Nivel ${levelNumber} no tiene título.`);
           }
           
           // Validar bibliografía
           if (!level.bibliography || level.bibliography.length === 0) {
-            activationErrors.push(`El Nivel ${levelNumber} no tiene bibliografía.`);
+            approvalErrors.push(`El Nivel ${levelNumber} no tiene bibliografía.`);
           } else {
             let hasCompleteBib = false;
             level.bibliography.forEach((bib, bibIdx) => {
@@ -935,68 +883,68 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
               }
             });
             if (!hasCompleteBib) {
-              activationErrors.push(`El Nivel ${levelNumber} no tiene ninguna bibliografía completa (título, descripción y URL).`);
+              approvalErrors.push(`El Nivel ${levelNumber} no tiene ninguna bibliografía completa (título, descripción y URL).`);
             }
           }
           
           // Validar clase magistral
           if (!level.training) {
-            activationErrors.push(`El Nivel ${levelNumber} no tiene clase magistral.`);
+            approvalErrors.push(`El Nivel ${levelNumber} no tiene clase magistral.`);
           } else {
             if (!sanitizePlain(level.training.title)) {
-              activationErrors.push(`El Nivel ${levelNumber} - Clase magistral: falta título.`);
+              approvalErrors.push(`El Nivel ${levelNumber} - Clase magistral: falta título.`);
             }
             if (!sanitizePlain(level.training.description)) {
-              activationErrors.push(`El Nivel ${levelNumber} - Clase magistral: falta descripción.`);
+              approvalErrors.push(`El Nivel ${levelNumber} - Clase magistral: falta descripción.`);
             }
             if (!level.training.url || !level.training.url.trim()) {
-              activationErrors.push(`El Nivel ${levelNumber} - Clase magistral: falta video/URL.`);
+              approvalErrors.push(`El Nivel ${levelNumber} - Clase magistral: falta video/URL.`);
             }
             if (!level.training.duration || level.training.duration <= 0) {
-              activationErrors.push(`El Nivel ${levelNumber} - Clase magistral: falta duración.`);
+              approvalErrors.push(`El Nivel ${levelNumber} - Clase magistral: falta duración.`);
             }
           }
           
           // Validar evaluación/test
           if (!level.test) {
-            activationErrors.push(`El Nivel ${levelNumber} no tiene evaluación.`);
+            approvalErrors.push(`El Nivel ${levelNumber} no tiene evaluación.`);
           } else {
             if (!sanitizePlain(level.test.title)) {
-              activationErrors.push(`El Nivel ${levelNumber} - Evaluación: falta título.`);
+              approvalErrors.push(`El Nivel ${levelNumber} - Evaluación: falta título.`);
             }
             if (!sanitizePlain(level.test.description)) {
-              activationErrors.push(`El Nivel ${levelNumber} - Evaluación: falta descripción.`);
+              approvalErrors.push(`El Nivel ${levelNumber} - Evaluación: falta descripción.`);
             }
             if (!level.test.imageUrl || !level.test.imageUrl.trim()) {
-              activationErrors.push(`El Nivel ${levelNumber} - Evaluación: falta imagen.`);
+              approvalErrors.push(`El Nivel ${levelNumber} - Evaluación: falta imagen.`);
             }
             
             // Validar escenas
             if (!level.test.scenes || level.test.scenes.length === 0) {
-              activationErrors.push(`El Nivel ${levelNumber} - Evaluación: no tiene escenas.`);
+              approvalErrors.push(`El Nivel ${levelNumber} - Evaluación: no tiene escenas.`);
             } else {
               level.test.scenes.forEach((scene, sceneIdx) => {
                 if (!scene.idScene && scene.idScene !== 0) {
-                  activationErrors.push(`El Nivel ${levelNumber} - Escena ${sceneIdx + 1}: falta ID.`);
+                  approvalErrors.push(`El Nivel ${levelNumber} - Escena ${sceneIdx + 1}: falta ID.`);
                 }
                 if (!scene.videoUrl || !scene.videoUrl.trim()) {
-                  activationErrors.push(`El Nivel ${levelNumber} - Escena ${sceneIdx + 1}: falta video.`);
+                  approvalErrors.push(`El Nivel ${levelNumber} - Escena ${sceneIdx + 1}: falta video.`);
                 }
                 if (!sanitizePlain(scene.description)) {
-                  activationErrors.push(`El Nivel ${levelNumber} - Escena ${sceneIdx + 1}: falta descripción.`);
+                  approvalErrors.push(`El Nivel ${levelNumber} - Escena ${sceneIdx + 1}: falta descripción.`);
                 }
                 
                 // Validar opciones
       
                 if (!scene.options || scene.options.length < 2) {
-                  activationErrors.push(`El Nivel ${levelNumber} - Escena ${sceneIdx + 1}: necesita al menos 2 opciones.`);
+                  approvalErrors.push(`El Nivel ${levelNumber} - Escena ${sceneIdx + 1}: necesita al menos 2 opciones.`);
                 } else {
                   scene.options.forEach((option, optIdx) => {
                     if (!option.description || !option.description.trim()) {
-                      activationErrors.push(`El Nivel ${levelNumber} - Escena ${sceneIdx + 1} - Opción ${optIdx + 1}: falta descripción.`);
+                      approvalErrors.push(`El Nivel ${levelNumber} - Escena ${sceneIdx + 1} - Opción ${optIdx + 1}: falta descripción.`);
                     }
                     if (option.points === undefined || option.points === null) {
-                      activationErrors.push(`El Nivel ${levelNumber} - Escena ${sceneIdx + 1} - Opción ${optIdx + 1}: falta puntos.`);
+                      approvalErrors.push(`El Nivel ${levelNumber} - Escena ${sceneIdx + 1} - Opción ${optIdx + 1}: falta puntos.`);
                     }
                         const isFinalScene = Array.isArray(level.test?.scenes) && (scene.isFinal === true || sceneIdx === (level.test.scenes.length - 1));
                         // Requerir `next` sólo si:
@@ -1006,7 +954,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
                         const requireNext = !isFinalScene && (!option.lastOne || option.lastOne !== true) && !levelHasAnyFinal;
                         if (requireNext) {
                           if (option.next === undefined || option.next === null || option.next === '') {
-                            activationErrors.push(`El Nivel ${levelNumber} - Escena ${sceneIdx + 1} - Opción ${optIdx + 1}: falta próxima escena.`);
+                            approvalErrors.push(`El Nivel ${levelNumber} - Escena ${sceneIdx + 1} - Opción ${optIdx + 1}: falta próxima escena.`);
                           }
                         }
                   });
@@ -1017,10 +965,10 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
         });
       }
       
-      if (activationErrors.length > 0) {
-        setErrorMessages(activationErrors);
-        setErrorModalTitle('No se puede habilitar la capacitación');
-        setErrorModalMessageText('Complete los siguientes requisitos antes de habilitar:');
+      if (approvalErrors.length > 0) {
+        setErrorMessages(approvalErrors);
+        setErrorModalTitle('No se puede enviar a aprobar');
+        setErrorModalMessageText('Complete los siguientes requisitos antes de enviar a aprobar:');
         setShowErrorModal(true);
         return;
       }
@@ -1032,6 +980,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
       description: description.trim(),
       image: finalImagePath,
       isActive,
+      pendingApproval,
       report,
       totalLevels: sanitizedLevels.length,
       progressPercentage: 0,
@@ -1236,14 +1185,12 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
               image={image}
               startDate={startDate}
               endDate={endDate}
-              isActive={isActive}
               setTitle={setTitle}
               setSubtitle={setSubtitle}
               setDescription={setDescription}
               setImage={setImage}
               setStartDate={setStartDate}
               setEndDate={setEndDate}
-              setIsActive={handleIsActiveChange}
               uploadingFiles={uploadingFiles}
               uploadTrainingFile={uploadTrainingFile}
               deleteTrainingFile={deleteTrainingFile}
@@ -1331,6 +1278,25 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
                 <span>Cancelar</span>
+              </button>
+              <button 
+                onClick={() => {
+                  const canApprove = handleSendForApproval();
+                  if (canApprove) {
+                    handleSave();
+                  }
+                }}
+                disabled={pendingApproval || (isEditing && editingTraining?.pendingApproval)}
+                className={`px-5 py-2 rounded-lg text-xs font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2 ${
+                  pendingApproval || (isEditing && editingTraining?.pendingApproval)
+                    ? 'bg-gray-400 cursor-not-allowed text-white'
+                    : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white cursor-pointer'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Enviar a aprobar</span>
               </button>
               <button 
                 onClick={handleSave} 
@@ -1443,7 +1409,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
             // NO cerrar el modal de edición - permitir que el usuario siga trabajando
           }}
           isEditing={isEditing}
-          isActive={isActive}
+          pendingApproval={pendingApproval}
         />
       )}
 

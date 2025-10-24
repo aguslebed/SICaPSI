@@ -78,8 +78,11 @@ export default function GestionCapacitacion() {
   ];
 
   const estadosOpciones = [
-    { label: 'Habilitado', value: 'activo' },
-    { label: 'Deshabilitado', value: 'inactivo' },
+    { label: 'Borrador', value: 'borrador' },
+    { label: 'Pendiente de Aprobación', value: 'pendiente' },
+    { label: 'Activa', value: 'activa' },
+    { label: 'Rechazada', value: 'rechazada' },
+    { label: 'Finalizada', value: 'finalizada' },
     { label: 'Asignado', value: 'asignado' },
     { label: 'Sin asignar', value: 'sin_asignar' },
   ];
@@ -508,18 +511,24 @@ export default function GestionCapacitacion() {
     // Filtro por estados aplicados
     if (appliedEstados.length > 0) {
       filtered = filtered.filter(training => {
-        const isNowActive = isTrainingActiveNow(training);
-        const hasActivo = appliedEstados.includes('activo') && isNowActive;
-        const hasInactivo = appliedEstados.includes('inactivo') && !isNowActive;
+        // Helper: verificar si la capacitación ha finalizado (endDate pasó)
+        const isExpired = training.endDate && new Date(training.endDate) < new Date();
+        
+        const isBorrador = appliedEstados.includes('borrador') && !training.isActive && !training.pendingApproval && !training.rejectedBy && !isExpired;
+        const isPendiente = appliedEstados.includes('pendiente') && !training.isActive && training.pendingApproval && !training.rejectedBy;
+        const isActiva = appliedEstados.includes('activa') && training.isActive && !training.pendingApproval && !training.rejectedBy;
+        const isRechazada = appliedEstados.includes('rechazada') && !training.isActive && !training.pendingApproval && training.rejectedBy;
+        const isFinalizada = appliedEstados.includes('finalizada') && !training.isActive && !training.pendingApproval && !training.rejectedBy && isExpired;
         const hasAsignado = appliedEstados.includes('asignado') && training.createdBy;
         const hasSinAsignar = appliedEstados.includes('sin_asignar') && !training.createdBy;
-        return hasActivo || hasInactivo || hasAsignado || hasSinAsignar;
+        return isBorrador || isPendiente || isActiva || isRechazada || isFinalizada || hasAsignado || hasSinAsignar;
       });
     }
     
-    // Filtro por mostrar inactivas aplicado
+    // Filtro por mostrar inactivas aplicado (ahora filtra borradores, pendientes y finalizadas)
     if (!appliedMostrarInactivas) {
-      filtered = filtered.filter(training => isTrainingActiveNow(training));
+      // Si no mostrar inactivas, solo mostrar activas
+      filtered = filtered.filter(training => training.isActive && !training.pendingApproval);
     }
     
     return filtered;
@@ -687,7 +696,9 @@ export default function GestionCapacitacion() {
                 ) : getPaginatedTrainings().items.length === 0 && !loading ? (
                   <tr>
                     <td className="admin-empty" colSpan={6}>
-                      {mostrarInactivas ? 'No hay capacitaciones para mostrar.' : 'No hay capacitaciones activas. Active "Mostrar capacitaciones inactivas" para ver todas.'}
+                      {appliedMostrarInactivas 
+                        ? 'No se encontraron capacitaciones con los filtros aplicados.' 
+                        : 'No hay capacitaciones aprobadas. Active "Mostrar todas las capacitaciones" para ver borradores y pendientes.'}
                     </td>
                   </tr>
                 ) : (
@@ -700,9 +711,24 @@ export default function GestionCapacitacion() {
                     const profesor = t.createdBy ? `${t.createdBy.firstName || ''} ${t.createdBy.lastName || ''}`.trim() : '-';
                     const estado = t.createdBy ? 'Asignado' : 'Sin asignar';
                     
-                    // Estado visual (mostrar Habilitado/Deshabilitado)
-                    const estadoActivo = t.isActive ? 'Habilitado' : 'Deshabilitado';
-                    const estadoColor = t.isActive ? 'var(--success-color)' : 'var(--danger-color)';
+                    // Determinar estado de aprobación
+                    const isExpired = t.endDate && new Date(t.endDate) < new Date();
+                    let estadoAprobacion = 'Borrador';
+                    let estadoColor = '#6b7280'; // gris para borrador
+                    
+                    if (t.isActive && !t.pendingApproval && !t.rejectedBy) {
+                      estadoAprobacion = 'Activa';
+                      estadoColor = '#10b981'; // verde
+                    } else if (!t.isActive && t.pendingApproval && !t.rejectedBy) {
+                      estadoAprobacion = 'Pendiente';
+                      estadoColor = '#f59e0b'; // amarillo/naranja
+                    } else if (!t.isActive && !t.pendingApproval && t.rejectedBy) {
+                      estadoAprobacion = 'Rechazada';
+                      estadoColor = '#ef4444'; // rojo
+                    } else if (!t.isActive && !t.pendingApproval && !t.rejectedBy && isExpired) {
+                      estadoAprobacion = 'Finalizada';
+                      estadoColor = '#8b5cf6'; // violeta/morado
+                    }
                     
                     return (
                       <tr key={t._id}>
@@ -722,10 +748,10 @@ export default function GestionCapacitacion() {
                               display: 'inline-block',
                               width: '120px',
                               textAlign: 'center',
-                              backgroundColor: t.isActive ? '#10b981' : '#ef4444'
+                              backgroundColor: estadoColor
                             }}
                           >
-                            {estadoActivo}
+                            {estadoAprobacion}
                           </span>
                         </td>
                         <td data-label="Creado">

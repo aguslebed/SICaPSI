@@ -42,7 +42,10 @@ SICaPSI/
   subtitle: String (max 750, required) - Subtítulo descriptivo
   description: String (max 5000, required) - Descripción detallada
   image: String (default: '__PENDING_UPLOAD__') - URL o ruta de imagen de portada
-  isActive: Boolean (default: false) - Estado de habilitación
+  isActive: Boolean (default: false) - Estado de habilitación (controlado por Directivo)
+  pendingApproval: Boolean (default: false) - Indica si está pendiente de aprobación
+  rejectedBy: ObjectId (ref: User, default: null) - ID del Directivo que rechazó
+  rejectionReason: String (max 1000, default: '') - Motivo del rechazo
   createdBy: ObjectId (ref: User, required) - Administrador creador
   levels: [ObjectId] (ref: Level) - IDs de niveles asociados
   totalLevels: Number (default: 0) - Contador de niveles
@@ -65,8 +68,17 @@ SICaPSI/
 
 **Características especiales:**
 - El campo `image` usa `'__PENDING_UPLOAD__'` como valor por defecto para permitir guardar capacitaciones sin imagen inicialmente
-- El campo `isActive` por defecto es `false` para que las capacitaciones se creen deshabilitadas
+- El campo `isActive` por defecto es `false` y solo puede ser modificado por usuarios con rol Directivo
+- El campo `pendingApproval` indica si la capacitación ha sido enviada a aprobar y está esperando revisión
+- Los campos `rejectedBy` y `rejectionReason` se utilizan cuando un Directivo rechaza una capacitación
 - Timestamps automáticos (`createdAt`, `updatedAt`)
+
+**Estados del ciclo de vida:**
+- **Borrador**: `isActive: false`, `pendingApproval: false`, `rejectedBy: null` - En creación
+- **Pendiente**: `isActive: false`, `pendingApproval: true`, `rejectedBy: null` - Esperando aprobación
+- **Activa**: `isActive: true`, `pendingApproval: false`, `rejectedBy: null` - Aprobada y en curso
+- **Rechazada**: `isActive: false`, `pendingApproval: false`, `rejectedBy: {ID}` - Rechazada por Directivo
+- **Finalizada**: `isActive: false`, `pendingApproval: false`, `rejectedBy: null`, `endDate` vencida - Terminó por scheduler
 
 **Índices:**
 - `createdBy`: Para filtrar por administrador
@@ -158,6 +170,61 @@ SICaPSI/
   status: String (enum: ['available', 'disabled', 'pendiente']) - Estado de la cuenta
 }
 ```
+
+---
+
+## ⏰ SCHEDULER AUTOMÁTICO - trainingScheduler.js
+
+**Ubicación:** `back/src/utils/trainingScheduler.js`
+
+**Propósito:**
+Mantener el estado de las capacitaciones coherente respecto a sus fechas de vigencia. **IMPORTANTE:** El scheduler NO auto-habilita capacitaciones, solo las deshabilita cuando vencen.
+
+**Comportamiento:**
+- Se ejecuta automáticamente al iniciar la aplicación
+- Luego se programa para ejecutarse diariamente a medianoche (00:00)
+- Solo consulta capacitaciones con `isActive: true` y `endDate` definido
+- Si la fecha actual es mayor a `endDate`, deshabilita la capacitación:
+  - Establece `isActive: false`
+  - Establece `pendingApproval: false`
+  - Estado resultante: **Finalizada**
+
+**Funciones exportadas:**
+```javascript
+// Actualiza capacitaciones activas que hayan vencido
+export async function updateTrainingsActiveStatus()
+// Retorna: { success: boolean, updated: number }
+
+// Inicia el scheduler con ejecución inmediata y programación diaria
+export function startTrainingScheduler()
+```
+
+**Lógica de deshabilitación:**
+```javascript
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+
+const trainings = await Training.find({ 
+  endDate: { $ne: null }, 
+  isActive: true 
+});
+
+for (const training of trainings) {
+  const endDate = new Date(training.endDate);
+  endDate.setHours(0, 0, 0, 0);
+  
+  if (endDate < today) {
+    training.isActive = false;
+    training.pendingApproval = false; // Marca como finalizada
+    await training.save();
+  }
+}
+```
+
+**Notas de implementación:**
+- No usa `console.log` para evitar ruido en producción (solo `console.error` para errores)
+- La habilitación de capacitaciones es responsabilidad exclusiva de usuarios con rol Directivo
+- El scheduler solo realiza operaciones de deshabilitación automática
 
 ---
 
@@ -437,6 +504,13 @@ const [uploadingFiles, setUploadingFiles] = useState({});
   {/* Botones de acción */}
   <div className="actions">
     <button onClick={handleCancel}>Cancelar</button>
+    <button 
+      onClick={handleSendForApproval}
+      disabled={pendingApproval}
+      className={pendingApproval ? 'disabled' : ''}
+    >
+      Enviar a aprobar
+    </button>
     <button onClick={handleSave}>
       {isEditing ? 'Actualizar' : 'Guardar'} Capacitación
     </button>
@@ -444,11 +518,32 @@ const [uploadingFiles, setUploadingFiles] = useState({});
 </div>
 ```
 
+**Función para enviar a aprobar:**
+```javascript
+const handleSendForApproval = () => {
+  // Validar antes de enviar a aprobar
+  const validation = validateTrainingForApproval();
+
+  if (!validation.isValid) {
+    // Mostrar modal de errores
+    setErrorMessages(validation.errors);
+    setErrorModalTitle('No se puede enviar a aprobar');
+    setErrorModalMessageText('Complete los siguientes requisitos antes de enviar a aprobar:');
+    setShowErrorModal(true);
+    return false;
+  }
+  
+  // Si la validación pasa, marcar como pendiente de aprobación
+  setPendingApproval(true);
+  return true;
+};
+```
+
 **Función de guardado:**
 ```javascript
 const handleSave = async () => {
   // 1. Validar campos obligatorios
-  const errors = validateTrainingForActivation();
+  const errors = validateTrainingForApproval();
   if (errors.length > 0) {
     setErrorMessages(errors);
     setShowErrorModal(true);
@@ -531,13 +626,14 @@ const handleSave = async () => {
 - **Descripción**: Editor de texto rico con máximo 1000 caracteres
 - **Imagen**: Input de URL o selector de archivo local (max 5MB, formatos: JPG, PNG, GIF, WebP)
 - **Fechas**: Inputs de tipo date para inicio y fin
-- **Estado**: Checkbox para habilitar/deshabilitar la capacitación
 
 **Validaciones:**
 - Contador de caracteres en tiempo real para todos los campos de texto
 - Validación de tamaño de archivo (5MB máximo)
 - Vista previa de imagen usando FileReader
 - Los archivos se mantienen en estado pendiente hasta guardar
+
+**Nota:** El campo `isActive` (habilitación) ya no es visible en este formulario. La capacitación se envía a aprobar mediante el botón "Enviar a aprobar" en el footer del modal, y solo un Directivo puede habilitarla posteriormente.
 
 ---
 
@@ -1047,6 +1143,97 @@ const handleFocusScene = (sceneIndex) => {
 
 ## 🔄 FLUJO COMPLETO DE CREACIÓN
 
+### **Flujo de Aprobación de Capacitaciones**
+
+**Workflow completo implementado:**
+
+#### **1. Administrador crea capacitación (Estado: Borrador)**
+   - Completa todos los campos requeridos (título, subtítulo, descripción, imagen, fechas)
+   - Agrega niveles con bibliografía, clases magistrales y evaluaciones
+   - Inscribe estudiantes y asigna profesor
+   - Guarda la capacitación (estado: `isActive: false`, `pendingApproval: false`, `rejectedBy: null`)
+   - **Badge:** ⚪ Gris - "Borrador"
+
+#### **2. Administrador envía a aprobar (Estado: Pendiente)**
+   - Una vez cumplidos todos los requisitos, hace clic en "Enviar a aprobar"
+   - El botón permanece deshabilitado hasta que se cumplan todas las validaciones
+   - Al enviar, se actualiza: `pendingApproval: true`
+   - Aparece modal de éxito indicando que fue enviada a aprobación
+   - **Badge:** 🟡 Amarillo - "Pendiente"
+
+#### **3. Directivo revisa la capacitación** *(implementación futura)*
+   - Los Directivos ven las capacitaciones con `pendingApproval: true`
+   - Revisan el contenido completo (niveles, bibliografía, exámenes, etc.)
+   - Tienen dos opciones:
+
+   **Opción A: Aprobar (Estado: Activa)**
+   - Actualiza: `isActive: true`, `pendingApproval: false`, `rejectedBy: null`
+   - La capacitación queda disponible para los estudiantes
+   - **Badge:** 🟢 Verde - "Activa"
+
+   **Opción B: Rechazar (Estado: Rechazada)**
+   - Actualiza: `isActive: false`, `pendingApproval: false`, `rejectedBy: {DirectivoId}`
+   - Ingresa `rejectionReason` explicando el motivo del rechazo
+   - El Administrador puede corregir y reenviar a aprobar
+   - **Badge:** 🔴 Rojo - "Rechazada"
+
+#### **4. Finalización automática (Estado: Finalizada)**
+   - El scheduler (`trainingScheduler.js`) revisa diariamente a medianoche
+   - Si `endDate < fecha actual` y `isActive: true`:
+     - Actualiza: `isActive: false`, `pendingApproval: false`
+   - La capacitación ya no está disponible para nuevas inscripciones
+   - **Badge:** 🟣 Violeta - "Finalizada"
+
+#### **5. Reenvío después de rechazo**
+   - El Administrador puede corregir una capacitación rechazada
+   - Al hacer clic en "Enviar a aprobar" nuevamente:
+     - Actualiza: `pendingApproval: true`, `rejectedBy: null`, `rejectionReason: ''`
+   - Vuelve al estado **Pendiente** para nueva revisión
+
+#### **Validaciones para enviar a aprobar:**
+
+El sistema valida exhaustivamente antes de permitir el envío a aprobación:
+
+**Datos básicos de la capacitación:**
+- ✅ Título completo (texto plano, no vacío)
+- ✅ Subtítulo completo
+- ✅ Descripción completa
+- ✅ Imagen de portada cargada
+- ✅ Fecha de inicio establecida
+- ✅ Fecha de fin establecida
+- ✅ Fecha de fin posterior a fecha de inicio
+
+**Niveles y contenido:**
+- ✅ Al menos un nivel creado
+- ✅ Cada nivel debe tener:
+  - Título del nivel
+  - Al menos una bibliografía completa (título, descripción, URL/archivo)
+  - Clase magistral completa:
+    - Título de la clase
+    - Descripción de la clase
+    - Video (URL o archivo subido)
+    - Duración en minutos
+  - Evaluación/Test completo:
+    - Título del examen
+    - Descripción del examen
+    - Imagen de portada del examen
+    - Al menos una escena
+    - Cada escena con al menos 2 opciones de navegación
+
+**Asignaciones:**
+- ✅ Al menos un estudiante inscrito (rol 'Alumno')
+- ✅ Un profesor asignado (rol 'Capacitador')
+
+**Comportamiento del botón "Enviar a aprobar":**
+- Se deshabilita automáticamente si `pendingApproval: true` (ya enviada)
+- Se deshabilita si falta alguna validación
+- Muestra modal con lista detallada de errores si no pasa validaciones
+- Solo permite enviar cuando todos los requisitos están cumplidos
+
+---
+
+## 🔄 FLUJO DETALLADO DE CREACIÓN (LEGACY)
+
 ### **1. Usuario hace click en "Nueva Capacitación"**
 ```
 GestionCapacitacion.jsx
@@ -1161,6 +1348,57 @@ refreshTrainings()
 // Cerrar modal
 onClose()
 ```
+
+---
+
+## 📊 DIAGRAMA DE FLUJO DE ESTADOS
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    FLUJO DE ESTADOS                             │
+└─────────────────────────────────────────────────────────────────┘
+
+                         ┌──────────┐
+                         │ Borrador │  ⚪ Gris
+                         └────┬─────┘
+                              │
+                              │ Administrador:
+                              │ "Enviar a aprobar"
+                              ▼
+                      ┌───────────────┐
+               ┌──────┤   Pendiente   │  🟡 Amarillo
+               │      └───────────────┘
+               │              │
+        Directivo:      Directivo:
+        "Rechazar"     "Aprobar"
+               │              │
+               ▼              ▼
+         ┌──────────┐    ┌─────────┐
+         │Rechazada │    │ Activa  │  🟢 Verde
+         └────┬─────┘    └────┬────┘
+         🔴 Rojo               │
+               │               │ Scheduler:
+        Administrador:         │ endDate vencida
+        Corrige y              │ (medianoche diaria)
+        reenvía                ▼
+               │          ┌────────────┐
+               │          │ Finalizada │  🟣 Violeta
+               │          └────────────┘
+               │
+               └──────────────┐
+                              │
+                              ▼
+                      ┌───────────────┐
+                      │   Pendiente   │  (reenvío)
+                      └───────────────┘
+```
+
+**Leyenda de colores:**
+- ⚪ **Borrador**: Gris (#6b7280) - En construcción
+- 🟡 **Pendiente**: Amarillo/Naranja (#f59e0b) - Esperando revisión
+- 🟢 **Activa**: Verde (#10b981) - Aprobada y funcionando
+- 🔴 **Rechazada**: Rojo (#ef4444) - No aprobada, requiere correcciones
+- 🟣 **Finalizada**: Violeta (#8b5cf6) - Completada por vencimiento
 
 ---
 
@@ -1438,16 +1676,24 @@ async deleteTraining(trainingId) {
 
 ### **1. Modo borrador con validación flexible**
 ✅ **Implementado:**
-- Las capacitaciones se crean con `isActive: false` por defecto
+- Las capacitaciones se crean con `isActive: false` y `pendingApproval: false` por defecto
 - Los campos son opcionales durante creación (valores por defecto en modelos)
-- Validación exhaustiva solo al intentar activar `isActive`
+- Validación exhaustiva solo al intentar enviar a aprobar
 - Modal de errores muestra lista detallada de requisitos faltantes
 - Sistema de validación parcial con `isPartialUpdate` en el validador
+- El botón "Enviar a aprobar" permanece deshabilitado hasta cumplir todos los requisitos
 
-### **2. Botón contextual "Guardar" vs "Actualizar"**
+### **2. Botón contextual "Guardar", "Actualizar" y "Enviar a aprobar"**
 ✅ **Implementado:**
 ```jsx
-// En CreateTrainingModal.jsx
+// En CreateTrainingModal.jsx - Footer con 3 botones
+<button onClick={handleCancel}>Cancelar</button>
+<button 
+  onClick={handleSendForApproval}
+  disabled={pendingApproval}
+>
+  Enviar a aprobar
+</button>
 <button onClick={handleSave}>
   {isEditing ? 'Actualizar Capacitación' : 'Guardar Capacitación'}
 </button>
@@ -1481,10 +1727,10 @@ async deleteTraining(trainingId) {
 - Detección de YouTube para embedder videos correctamente
 - Preview de bibliografía editable desde la vista previa
 
-### **6. Validación completa antes de activar**
+### **5. Sistema de envío a aprobación**
 ✅ **Implementado:**
 ```javascript
-// Validaciones exhaustivas:
+// Validaciones exhaustivas antes de enviar a aprobar:
 - Título, subtítulo, descripción obligatorios
 - Fechas de inicio y fin obligatorias
 - Fecha de fin > fecha de inicio
@@ -1493,15 +1739,69 @@ async deleteTraining(trainingId) {
 - Cada examen con al menos una escena
 - Al menos un estudiante inscrito
 - Un profesor asignado
+
+// El botón "Enviar a aprobar" se deshabilita automáticamente cuando:
+- Ya se envió a aprobar (pendingApproval: true)
+- Falta algún requisito de la validación
+
+// Estados del training:
+- Borrador: isActive: false, pendingApproval: false, rejectedBy: null
+- Pendiente: isActive: false, pendingApproval: true, rejectedBy: null
+- Activa: isActive: true, pendingApproval: false, rejectedBy: null (solo Directivo)
+- Rechazada: isActive: false, pendingApproval: false, rejectedBy: {ID} (solo Directivo)
+- Finalizada: isActive: false, pendingApproval: false, rejectedBy: null, endDate vencida (scheduler)
 ```
 
-### **7. Gestión de inscripciones**
+### **6. Gestión de inscripciones**
 ✅ **Implementado:**
 - Búsqueda y filtrado de estudiantes
 - Selección múltiple con acciones masivas
 - Asignación de un profesor
 - Contador de inscritos
 - Estados visuales con badges
+
+### **7. Panel de Directivos para aprobación/rechazo**
+⏳ **Pendiente de implementación:**
+
+**Vista de capacitaciones pendientes:**
+- Vista especial para usuarios con rol 'Directivo'
+- Listado filtrado de capacitaciones con `pendingApproval: true`
+- Previsualización completa del contenido:
+  - Datos básicos (título, subtítulo, descripción, fechas)
+  - Todos los niveles con bibliografía, clases y exámenes
+  - Estudiantes inscritos y profesor asignado
+
+**Botón "Aprobar":**
+- Actualiza la capacitación:
+  ```javascript
+  {
+    isActive: true,
+    pendingApproval: false,
+    rejectedBy: null,
+    rejectionReason: ''
+  }
+  ```
+- Envía notificación al Administrador creador
+- Capacitación queda disponible según fechas establecidas
+
+**Botón "Rechazar":**
+- Muestra modal para ingresar motivo del rechazo
+- Actualiza la capacitación:
+  ```javascript
+  {
+    isActive: false,
+    pendingApproval: false,
+    rejectedBy: directivoId,
+    rejectionReason: 'Motivo ingresado...'
+  }
+  ```
+- Envía notificación al Administrador con el motivo
+- Administrador puede ver el motivo, corregir y reenviar
+
+**Historial de revisiones:**
+- Registro de quién aprobó/rechazó
+- Fecha de aprobación/rechazo
+- Motivos de rechazo previos (si aplica)
 
 ---
 
@@ -1751,6 +2051,7 @@ const handleIsActiveChange = (checked) => {
 - `back/src/routes/trainingRoutes.js` - Rutas de capacitaciones
 - `back/src/routes/levelRoutes.js` - Rutas de niveles
 - `back/src/routes/enrollmentRoutes.js` - Rutas de inscripciones
+- `back/src/utils/trainingScheduler.js` - Scheduler automático para deshabilitar capacitaciones vencidas
 
 **Frontend:**
 - `Front/src/Pages/AdminPanel/GestionCapacitacion.jsx` - Página principal

@@ -9,14 +9,12 @@ export default function PresentationForm(props) {
     image,
     startDate,
     endDate,
-    isActive,
     setTitle,
     setSubtitle,
     setDescription,
     setImage,
     setStartDate,
     setEndDate,
-    setIsActive,
     uploadingFiles,
     uploadTrainingFile,
     deleteTrainingFile,
@@ -156,31 +154,6 @@ export default function PresentationForm(props) {
                     
                   </div>
                 </div>
-              </div>
-            </td>
-          </tr>
-
-          <tr>
-            <td className="bg-gray-100 px-1.5 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 text-xs md:text-xs lg:text-xs xl:text-sm font-medium text-gray-700 border border-gray-300">Estado</td>
-            <td className="px-1.5 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 border border-gray-300">
-              <div className="flex items-center gap-2 md:gap-2 lg:gap-2.5 xl:gap-3">
-                <div className="flex items-center gap-1.5 md:gap-1.5 lg:gap-2 xl:gap-2">
-                  <input 
-                    type="checkbox" 
-                    id="isActive" 
-                    checked={isActive} 
-                    onChange={(e) => setIsActive(e.target.checked)} 
-                    className="w-3.5 h-3.5 md:w-3.5 md:h-3.5 lg:w-3.5 lg:h-3.5 xl:w-4 xl:h-4 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
-                  />
-                  <label 
-                    htmlFor="isActive" 
-                    className="text-xs md:text-xs lg:text-xs xl:text-sm cursor-pointer"
-                  >
-                    Habilitar Capacitación
-                  </label>
-                </div>
-
-                <span className="ml-auto inline-block px-2.5 py-0.5 md:px-3 md:py-0.5 lg:px-3.5 lg:py-0.5 xl:px-4 xl:py-1 rounded-full text-white text-[10px] md:text-xs lg:text-xs xl:text-sm font-bold text-center" style={{ minWidth: '85px', backgroundColor: isActive ? '#10b981' : '#ef4444' }}>{isActive ? 'HABILITADO' : 'DESHABILITADO'}</span>
               </div>
             </td>
           </tr>
