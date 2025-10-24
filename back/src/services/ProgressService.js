@@ -212,10 +212,18 @@ class ProgressService {
     // Compute total possible points for the level
     let totalPossible = 0;
     for (const scene of dbScenes) {
+      // Saltar escenas finales (lastOne) en el cálculo de puntos totales
+      if (scene.lastOne === true) {
+        continue;
+      }
+      
       const opts = Array.isArray(scene.options) ? scene.options : [];
-      const maxOpt = opts.length > 0 ? Math.max(...opts.map(o => (o && o.points) ? Number(o.points) : 0)) : 0;
+      // Tomar la opción con MÁS puntos (puede ser negativa si todas lo son)
+      const maxOpt = opts.length > 0 ? Math.max(...opts.map(o => Number(o?.points ?? 0))) : 0;
       const bonus = Number(scene.bonus || 0);
-      totalPossible += maxOpt + bonus;
+      // Solo sumar si la mejor opción + bonus es positiva (mínimo 0 por escena)
+      const sceneMax = Math.max(0, maxOpt + bonus);
+      totalPossible += sceneMax;
     }
 
     // Extract user's scene results from the provided `level` object.
