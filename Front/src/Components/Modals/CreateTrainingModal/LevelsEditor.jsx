@@ -195,6 +195,7 @@ export default function LevelsEditor(props) {
             handleFileUpload={handleFileUpload}
             handleFileDelete={handleFileDelete}
             showWarningModal={showWarningModal}
+            setActiveSection={setActiveSection}
           />
         )}
       </div>

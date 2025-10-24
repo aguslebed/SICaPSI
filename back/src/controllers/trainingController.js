@@ -50,8 +50,16 @@ export function makeTrainingController({ trainingService, trainingValidator }) {
         const { id } = req.params;
         const trainingData = req.body;
         console.log('📥 Datos recibidos para actualizar:', { id, trainingData });
-        const { isValid, errors } = trainingValidator.validate(trainingData, { isUpdate: true });
-        console.log('🔍 Validación:', { isValid, errors });
+        
+        // Detectar si es actualización parcial (solo algunos campos)
+        const fields = Object.keys(trainingData);
+        const isPartialUpdate = fields.length <= 3 && !fields.includes('levels');
+        
+        const { isValid, errors } = trainingValidator.validate(trainingData, { 
+          isUpdate: true, 
+          isPartialUpdate: isPartialUpdate 
+        });
+        console.log('🔍 Validación:', { isValid, errors, isPartialUpdate });
         if (!isValid) throw new AppError("Datos de capacitación inválidos", 400, "TRAINING_400", errors);
         const updatedTraining = await trainingService.updateTraining(id, trainingData);
         res.status(200).json(updatedTraining);

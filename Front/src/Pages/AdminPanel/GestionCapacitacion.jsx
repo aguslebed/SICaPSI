@@ -8,7 +8,7 @@ import ErrorListModal from '../../Components/Modals/ErrorListModal';
 import WarningModal from '../../Components/Modals/WarningModal';
 import ConfirmActionModal from '../../Components/Modals/ConfirmActionModal';
 import { useState, useEffect, useRef } from 'react';
-import { getAllActiveTrainings, getAllTrainings, createTraining, updateTraining, addLevelsToTraining, updateLevelsInTraining, deleteTraining, getTrainingById, enrollStudentsToTraining, deleteTrainingFile } from '../../API/Request';
+import { getAllActiveTrainings, getAllTrainings, createTraining, updateTraining, addLevelsToTraining, updateLevelsInTraining, deleteTraining, getTrainingById, enrollStudentsToTraining, deleteTrainingFile, uploadTrainingFile, moveTempFiles, replaceTrainingFile } from '../../API/Request';
 import LoadingOverlay from '../../Components/Shared/LoadingOverlay';
 import './AdminPanel.css';
 
@@ -151,148 +151,158 @@ export default function GestionCapacitacion() {
     }
   };
 
-  // Función para manejar la creación de capacitaciones
+  // Función para manejar la creación/actualización de capacitaciones
   const handleCreateTraining = async (trainingData, levels, additionalData = {}) => {
+    const {
+      selectedStudents = [],
+      isEditing = false,
+      trainingId,
+      pendingUploads = null,
+      omissionMessages = []
+    } = additionalData;
+    // Ya no necesitamos filesToDeleteFromLevels ni oldImageToDelete
+
     setLoading(true);
     try {
-      const { selectedStudents = [], isEditing = false, trainingId } = additionalData;
 
-      
       let finalTrainingId = trainingId;
-      
+      const sanitizedLevels = Array.isArray(levels) ? levels : [];
+
       if (isEditing) {
-        // Actualizar capacitación existente
-
         const updatedTraining = await updateTraining(trainingId, trainingData);
-
         finalTrainingId = updatedTraining._id;
-        
-        // Actualizar niveles si existen
-        if (levels && levels.length > 0) {
 
-          
-          // Preparar niveles con trainingId y descripción por defecto
-          const levelsWithTrainingId = levels.map((level, idx) => {
-            // Asegurar título por defecto si no existe, para evitar validación del backend
-            const levelNumber = level.levelNumber || (idx + 1);
-            const safeTitle = level.title && level.title.trim() ? level.title : `Título nivel ${levelNumber}`;
-            const safeLevel = { ...level, title: safeTitle, levelNumber };
-            // Asegurar que training tenga los campos requeridos
-            const training = safeLevel.training || {};
-            const processedTraining = {
-              title: training.title || '',
-              description: training.description || '',
-              url: training.url || '',
-              duration: training.duration || 0
-            };
+        const levelsWithTrainingId = sanitizedLevels.map(level => ({
+          ...level,
+          trainingId: finalTrainingId
+        }));
+        await updateLevelsInTraining(finalTrainingId, levelsWithTrainingId);
 
-            // Asegurar que test tenga los campos requeridos
-            const test = safeLevel.test || {};
-            const processedTest = {
-              title: test.title || '',
-              description: test.description || '',
-              imageUrl: test.imageUrl || '',
-              isActive: test.isActive !== undefined ? test.isActive : true,
-              scenes: test.scenes || []
-            };
-
-            return {
-              ...safeLevel,
-              trainingId: finalTrainingId,
-              description: safeLevel.description || '',
-              training: processedTraining,
-              test: processedTest,
-              bibliography: safeLevel.bibliography || [] // Asegurar que la bibliografía se incluya
-            };
-          });
-          
-          await updateLevelsInTraining(finalTrainingId, levelsWithTrainingId);
-
-        }
+        // Ya no necesitamos eliminar archivos manualmente porque replaceTrainingFile lo hace automáticamente
       } else {
-        // 1. Crear la capacitación primero
-        const newTraining = await createTraining(trainingData);
+        const uploadResults = {};
+        const tempFilePaths = []; // Recolectar rutas temporales
 
-        finalTrainingId = newTraining._id;
-        
-        // 2. Si hay niveles, crearlos y asociarlos
-        if (levels && levels.length > 0) {
+        // Subir imagen a carpeta temporal
+        if (pendingUploads?.presentationFile) {
+          const response = await uploadTrainingFile(pendingUploads.presentationFile);
+          const uploadedPath = typeof response === 'string' ? response : response?.filePath;
+          if (!uploadedPath) {
+            throw new Error('No se recibió la ruta del archivo de imagen');
+          }
+          uploadResults['presentation-image'] = uploadedPath;
+          tempFilePaths.push(uploadedPath);
+          trainingData.image = uploadedPath; // Guardar ruta temporal por ahora
+        } else {
+          trainingData.image = '__PENDING_UPLOAD__';
+        }
 
+        // Crear training en MongoDB (obtiene ID)
+        const createdTraining = await createTraining(trainingData);
+        finalTrainingId = createdTraining._id;
+
+        // Subir archivos de niveles a temporal
+        if (pendingUploads?.levelFiles) {
+          for (const [fileKey, file] of Object.entries(pendingUploads.levelFiles)) {
+            const response = await uploadTrainingFile(file);
+            const uploadedPath = typeof response === 'string' ? response : response?.filePath;
+            if (!uploadedPath) {
+              throw new Error(`No se recibió la ruta del archivo ${fileKey}`);
+            }
+            uploadResults[fileKey] = uploadedPath;
+            tempFilePaths.push(uploadedPath);
+          }
+        }
+
+        // Mover todos los archivos de temp a carpeta definitiva
+        if (tempFilePaths.length > 0) {
+          const moveResult = await moveTempFiles(finalTrainingId, tempFilePaths);
           
-          // Preparar niveles con trainingId y descripción por defecto
-          const levelsWithTrainingId = levels.map((level, idx) => {
-            // Asegurar título por defecto si no existe, para evitar validación del backend
-            const levelNumber = level.levelNumber || (idx + 1);
-            const safeTitle = level.title && level.title.trim() ? level.title : `Título nivel ${levelNumber}`;
-            const safeLevel = { ...level, title: safeTitle, levelNumber };
-            // Asegurar que training tenga los campos requeridos
-            const training = safeLevel.training || {};
-            const processedTraining = {
-              title: training.title || '',
-              description: training.description || '',
-              url: training.url || '',
-              duration: training.duration || 0
-            };
+          // Actualizar rutas en uploadResults
+          if (moveResult.movedFiles && moveResult.movedFiles.length > 0) {
+            for (const moved of moveResult.movedFiles) {
+              // Actualizar uploadResults con nuevas rutas
+              for (const [key, oldPath] of Object.entries(uploadResults)) {
+                if (oldPath === moved.oldPath) {
+                  uploadResults[key] = moved.newPath;
+                }
+              }
+              
+              // Si es la imagen principal, actualizar en el training
+              if (moved.oldPath === trainingData.image) {
+                await updateTraining(finalTrainingId, { image: moved.newPath });
+              }
+            }
+          }
+        }
 
-            // Asegurar que test tenga los campos requeridos
-            const test = safeLevel.test || {};
-            const processedTest = {
-              title: test.title || '',
-              description: test.description || '',
-              imageUrl: test.imageUrl || '',
-              isActive: test.isActive !== undefined ? test.isActive : true,
-              scenes: test.scenes || []
-            };
+        // Resolver placeholders en niveles con las rutas actualizadas
+        const resolvePlaceholder = (value) => {
+          if (typeof value === 'string' && value.startsWith('__UPLOAD__::')) {
+            const key = value.substring('__UPLOAD__::'.length);
+            const resolved = uploadResults[key];
+            if (!resolved) {
+              throw new Error(`No se pudo resolver el archivo pendiente "${key}"`);
+            }
+            return resolved;
+          }
+          return value;
+        };
 
-            return {
-              ...safeLevel,
-              trainingId: finalTrainingId,
-              description: safeLevel.description || '',
-              training: processedTraining,
-              test: processedTest,
-              bibliography: safeLevel.bibliography || [] // Asegurar que la bibliografía se incluya
-            };
-          });
+        const resolvedLevels = sanitizedLevels.map(level => {
+          const resolvedLevel = { ...level, trainingId: finalTrainingId };
           
-          await addLevelsToTraining(finalTrainingId, levelsWithTrainingId);
+          if (resolvedLevel.training) {
+            resolvedLevel.training.url = resolvePlaceholder(resolvedLevel.training.url);
+          }
+          
+          if (resolvedLevel.test) {
+            resolvedLevel.test.imageUrl = resolvePlaceholder(resolvedLevel.test.imageUrl);
+            if (resolvedLevel.test.scenes) {
+              resolvedLevel.test.scenes = resolvedLevel.test.scenes.map(scene => ({
+                ...scene,
+                videoUrl: resolvePlaceholder(scene.videoUrl)
+              }));
+            }
+          }
+          
+          if (resolvedLevel.bibliography) {
+            resolvedLevel.bibliography = resolvedLevel.bibliography.map(item => ({
+              ...item,
+              url: resolvePlaceholder(item.url)
+            }));
+          }
+          
+          return resolvedLevel;
+        });
 
+        if (resolvedLevels.length > 0) {
+          await addLevelsToTraining(finalTrainingId, resolvedLevels);
         }
       }
-      
-      // 3. Si hay guardias seleccionados, inscribirlos
-      if (selectedStudents && selectedStudents.length > 0) {
 
+      if (selectedStudents && selectedStudents.length > 0) {
         try {
           await enrollStudentsToTraining(finalTrainingId, selectedStudents);
-
         } catch (enrollError) {
           console.warn('Error inscribiendo guardias:', enrollError);
-          // No fallar toda la operación si falla la inscripción
-          setWarningMessage(`Capacitación creada, pero hubo un problema inscribiendo guardias: ${enrollError.message}`);
+          setWarningMessage(`Capacitación guardada, pero hubo un problema inscribiendo guardias: ${enrollError.message}`);
           setShowWarningModal(true);
         }
       }
-      
-      // 4. Refrescar la lista
+
       await refreshTrainings();
-      
-      // 5. Si se creó una nueva capacitación, actualizar editingTraining para cambiar a modo edición
+
       if (!isEditing && finalTrainingId) {
         const createdTraining = await getTrainingById(finalTrainingId);
         setEditingTraining(createdTraining);
       }
-      
-      // El modal de éxito se muestra en CreateTrainingModal
-      // NO cerrar el modal aquí - se cerrará cuando el usuario acepte el modal de éxito
     } catch (error) {
       console.error('Error procesando capacitación:', error);
-      const { isEditing = false } = additionalData;
       setErrorMessages([`Error al ${isEditing ? 'actualizar' : 'crear'} capacitación: ${error.message}`]);
       setErrorModalTitle(isEditing ? 'No se puede actualizar la capacitación' : 'No se puede crear la capacitación');
       setErrorModalMessageText('Revise los siguientes detalles e intente nuevamente:');
       setShowErrorModal(true);
-      // Propagar el error al llamador (p. ej. CreateTrainingModal) para que
-      // pueda decidir no mostrar su modal de éxito cuando la operación falla.
       throw error;
     } finally {
       setLoading(false);

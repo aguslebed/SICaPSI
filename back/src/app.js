@@ -54,12 +54,26 @@ class AppConfig {
 
     // Ensure uploads directory exists and serve it statically
     const uploadsDir = path.resolve(__dirname, "..", "uploads");
+    const trainingsDir = path.resolve(uploadsDir, "trainings");
+    const tempDir = path.resolve(uploadsDir, "temp");
+    
     try {
       if (!fs.existsSync(uploadsDir)) {
         fs.mkdirSync(uploadsDir, { recursive: true });
+        console.log("✅ Directorio uploads creado:", uploadsDir);
+      }
+      if (!fs.existsSync(trainingsDir)) {
+        fs.mkdirSync(trainingsDir, { recursive: true });
+        console.log("✅ Directorio trainings creado:", trainingsDir);
+      }
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+        console.log("✅ Directorio temp creado:", tempDir);
       }
     } catch (e) {
-      console.error("No se pudo crear el directorio de uploads:", e);
+      console.error("❌ No se pudo crear los directorios de uploads:", e);
+      console.error("   Ruta intentada:", uploadsDir);
+      console.error("   Error detallado:", e.message);
     }
     this.app.use("/uploads", express.static(uploadsDir));
   }
