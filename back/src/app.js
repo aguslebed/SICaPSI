@@ -73,7 +73,7 @@ class AppConfig {
     this.app.use("/messages", messageRoutes);
     this.app.use("/training", trainingRoutes);
     this.app.use("/enrollment", enrollmentRoutes);
-    this.app.use("/level", levelRoutes);
+  this.app.use("/level", levelRoutes);
   } 
 
 

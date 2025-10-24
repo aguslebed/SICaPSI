@@ -50,13 +50,17 @@ const NavBar = () => {
   
   // Rutas donde se debe mostrar el botón "Volver"
   const allowedRoutes = [
-    '/adminPanel/gestionUsuario/crearUsuario',
-    '/adminPanel/gestionUsuario/modificarUsuario',
-    '/adminPanel/admisionUsuario',
-    '/adminPanel/gestionUsuario',
-    '/adminPanel/gestionCursos',
-    '/adminPanel/gestionProfesores',
-    '/adminPanel/gestionCapacitacion',
+  '/adminPanel/gestionUsuario/crearUsuario',
+  '/adminPanel/gestionUsuario/modificarUsuario',
+  '/adminPanel/admisionUsuario',
+  '/adminPanel/gestionUsuario',
+  '/adminPanel/gestionCursos',
+  '/adminPanel/gestionProfesores',
+  '/adminPanel/gestionCapacitacion',
+  '/directivoPanel/validarContenido',
+  '/directivoPanel/registros',
+  '/directivoPanel/estadisticas',
+  '/directivoPanel/gestionDirectivo', // Agregado para mostrar el botón Volver en GestionDirectivo
   // La gestión directivo ahora vive en /directivoPanel
   ];
   

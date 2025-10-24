@@ -38,6 +38,9 @@ const ProfesorEditar = lazy(() => import('./Pages/AdminPanel/ProfesorEditar'));
 // Directivo panel
 const DirectivoHome = lazy(() => import('./Pages/DirectivoPanel/Index'));
 const DirectivoGestion = lazy(() => import('./Pages/DirectivoPanel/GestionDirectivo'));
+const ValidarContenido = lazy(() => import('./Pages/DirectivoPanel/ValidarContenido'));
+const Estadisticas = lazy(() => import('./Pages/DirectivoPanel/Estadisticas'));
+const Registros = lazy(() => import('./Pages/DirectivoPanel/Registros'));
 
 async function authLoader({ request }) {
   try {
@@ -131,7 +134,10 @@ export const router = createBrowserRouter([
     errorElement: <RouteError />,
     children: [
       { index: true, element: <DirectivoHome /> },
-      { path: 'gestionDirectivo', element: <DirectivoGestion /> }
+      { path: 'gestionDirectivo', element: <DirectivoGestion /> },
+      { path: 'validarContenido', element: <ValidarContenido /> },
+      { path: 'estadisticas', element: <Estadisticas /> },
+      { path: 'registros', element: <Registros /> }
     ]
   },
   {
