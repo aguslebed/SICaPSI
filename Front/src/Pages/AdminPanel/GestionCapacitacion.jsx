@@ -410,8 +410,34 @@ export default function GestionCapacitacion() {
       // Limpiar estado anterior primero
       setEditingTraining(null);
       
-  // Obtener datos frescos del backend
-  const trainingData = await getTrainingById(trainingId);
+      // Obtener datos frescos del backend
+      const trainingData = await getTrainingById(trainingId);
+      
+      // Validar que solo se pueda editar en estados Borrador o Rechazada
+      const isExpired = trainingData.endDate && new Date(trainingData.endDate) < new Date();
+      let estadoActual = 'Borrador';
+      
+      if (trainingData.isActive && !trainingData.pendingApproval && !trainingData.rejectedBy) {
+        estadoActual = 'Activa';
+      } else if (!trainingData.isActive && trainingData.pendingApproval && !trainingData.rejectedBy) {
+        estadoActual = 'Pendiente';
+      } else if (!trainingData.isActive && !trainingData.pendingApproval && trainingData.rejectedBy) {
+        estadoActual = 'Rechazada';
+      } else if (!trainingData.isActive && !trainingData.pendingApproval && !trainingData.rejectedBy && isExpired) {
+        estadoActual = 'Finalizada';
+      }
+      
+      // Solo permitir edición en Borrador o Rechazada
+      if (estadoActual !== 'Borrador' && estadoActual !== 'Rechazada') {
+        setErrorMessages([
+          `No se puede editar una capacitación en estado "${estadoActual}".`,
+          'Solo se pueden editar capacitaciones en estado "Borrador" o "Rechazada".'
+        ]);
+        setErrorModalTitle('Edición no permitida');
+        setErrorModalMessageText('La capacitación no se puede editar en su estado actual:');
+        setShowErrorModal(true);
+        return;
+      }
       
       setEditingTraining(trainingData);
       setOpenCreateTraining(true);
@@ -759,14 +785,28 @@ export default function GestionCapacitacion() {
                         </td>
                         <td data-label="Acciones">
                           <div className="admin-actions">
-                            <button 
-                              className="admin-action-btn" 
-                              title="Editar capacitación"
-                              onClick={() => handleEditTraining(t._id)}
-                              disabled={loading}
-                            >
-                              📝
-                            </button>
+                            {(() => {
+                              // Solo permitir edición en estados Borrador o Rechazada
+                              const canEdit = estadoAprobacion === 'Borrador' || estadoAprobacion === 'Rechazada';
+                              const editTitle = canEdit 
+                                ? 'Editar capacitación' 
+                                : `No se puede editar una capacitación en estado "${estadoAprobacion}"`;
+                              
+                              return (
+                                <button 
+                                  className="admin-action-btn" 
+                                  title={editTitle}
+                                  onClick={() => canEdit && handleEditTraining(t._id)}
+                                  disabled={loading || !canEdit}
+                                  style={{
+                                    opacity: canEdit ? 1 : 0.5,
+                                    cursor: canEdit ? 'pointer' : 'not-allowed'
+                                  }}
+                                >
+                                  📝
+                                </button>
+                              );
+                            })()}
                             <button 
                               className="admin-action-btn"
                               title="Eliminar capacitación"

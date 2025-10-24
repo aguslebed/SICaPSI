@@ -1,7 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import RichTextInput, { getPlainTextFromRichText } from './RichTextInput';
+import ConfirmActionModal from '../ConfirmActionModal';
 
 export default function LevelTestEditor({ level, levelIndex, updateLevelField, selectedScene, setSelectedScene, selectedOption, setSelectedOption, handleFileUpload, handleFileDelete, showWarningModal, setActiveSection }) {
+  const [showConfirmDeleteScene, setShowConfirmDeleteScene] = useState(false);
+  const [showConfirmDeleteSceneVideo, setShowConfirmDeleteSceneVideo] = useState(false);
+  const [showConfirmDeleteOption, setShowConfirmDeleteOption] = useState(false);
+  const [optionToDeleteIndex, setOptionToDeleteIndex] = useState(null);
   
   // Función para cambiar a vista de test (sin escena seleccionada)
   const handleFocusTest = () => {
@@ -75,7 +80,7 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                     onChange={(e) => updateLevelField(levelIndex, 'test.imageUrl', e.target.value)}
                     onFocus={handleFocusTest}
                     className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-xs placeholder:text-xs font-normal focus:ring-2 focus:ring-green-200 focus:border-transparent"
-                    placeholder="URL de imagen o deja vacío para subir archivo"
+                    placeholder="URL de imagen"
                   />
 
                   <label className="inline-block">
@@ -125,7 +130,7 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                       }}
                       className="hidden"
                     />
-                    <span className="inline-block px-3 py-1.5 bg-gray-500 border border-gray-500 rounded-lg text-xs text-white cursor-pointer hover:bg-gray-600">Choose File</span>
+                    <span className="inline-block px-3 py-1.5 bg-gray-500 border border-gray-500 rounded-lg text-xs text-white cursor-pointer hover:bg-gray-600">Seleccionar archivo</span>
                   </label>
 
                   <div className="flex items-center gap-1.5">
@@ -188,6 +193,33 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
             type="button"
             onClick={() => {
               const newScenes = [...(level.test.scenes || [])];
+
+              // Validar que la escena anterior no esté vacía
+              const prevScene = newScenes.length > 0 ? newScenes[newScenes.length - 1] : null;
+              const isSceneEmpty = (s) => {
+                if (!s) return true;
+                const desc = s.description || '';
+                const vid = s.videoUrl || '';
+                const opts = s.options || [];
+
+                // Detectar textos de opción por defecto como "Opción A", "Opción B" y tratarlos como vacíos
+                const isDefaultOptionText = (txt) => {
+                  if (!txt) return false;
+                  return /^\s*opci[oó]n\s+[A-Z]\s*$/i.test(String(txt).trim());
+                };
+
+                const hasAnyOptionText = opts.some(o => o.description && o.description.trim() && !isDefaultOptionText(o.description));
+
+                return !( (desc && String(desc).trim()) || (vid && String(vid).trim()) || hasAnyOptionText );
+              };
+
+              if (prevScene && isSceneEmpty(prevScene)) {
+                if (showWarningModal) {
+                  showWarningModal('Complete la escena anterior antes de crear una nueva.');
+                }
+                return;
+              }
+
               const newSceneId = newScenes.length > 0 ? Math.max(...newScenes.map(s => s.idScene || 0)) + 1 : 1;
               newScenes.push({
                 idScene: '',
@@ -216,10 +248,7 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
               <button
                 type="button"
                 onClick={() => {
-                  const newScenes = [...(level.test.scenes || [])];
-                  newScenes.splice(selectedScene, 1);
-                  updateLevelField(levelIndex, 'test.scenes', newScenes);
-                  setSelectedScene(null);
+                  setShowConfirmDeleteScene(true);
                 }}
                 className="text-red-600 hover:text-red-800 text-xs cursor-pointer"
               >
@@ -284,37 +313,33 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                   </td>
                   <td className="px-1.5 py-1 border border-gray-300">
                     <div className="flex items-center gap-1.5">
-                      <input
-                        type="url"
-                        value={level.test.scenes[selectedScene].videoUrl || ''}
-                        onChange={(e) => {
-                          const newScenes = [...(level.test.scenes || [])];
-                          newScenes[selectedScene] = { ...newScenes[selectedScene], videoUrl: e.target.value };
-                          updateLevelField(levelIndex, 'test.scenes', newScenes);
-                        }}
-                        onFocus={() => handleFocusScene(selectedScene)}
-                        className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-xs placeholder:text-xs font-normal focus:ring-2 focus:ring-green-200 focus:border-transparent"
-                        placeholder="URL del video o deja vacío para subir archivo"
-                      />
+                          <input
+                            type="url"
+                            value={level.test.scenes[selectedScene].videoUrl || ''}
+                            onChange={(e) => {
+                              const newScenes = [...(level.test.scenes || [])];
+                              newScenes[selectedScene] = { ...newScenes[selectedScene], videoUrl: e.target.value };
+                              updateLevelField(levelIndex, 'test.scenes', newScenes);
+                            }}
+                            onFocus={() => handleFocusScene(selectedScene)}
+                            className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-xs placeholder:text-xs font-normal focus:ring-2 focus:ring-green-200 focus:border-transparent"
+                            placeholder="URL del video"
+                          />
                       {level.test.scenes[selectedScene].videoUrl && (
                         <button
                           type="button"
-                          onClick={() => {
-                            const newScenes = [...(level.test.scenes || [])];
-                            newScenes[selectedScene] = { ...newScenes[selectedScene], videoUrl: '' };
-                            updateLevelField(levelIndex, 'test.scenes', newScenes);
-                          }}
+                          onClick={() => setShowConfirmDeleteSceneVideo(true)}
                           className="text-red-600 hover:text-red-800 text-xs px-1.5 py-0.5 border border-red-200 rounded-md cursor-pointer"
                         >
                           ✕
                         </button>
                       )}
                       <label className="bg-gray-500 border border-gray-500 text-white px-3 py-1.5 rounded-lg text-xs cursor-pointer hover:bg-gray-600">
-                        Choose File
+                        Seleccionar archivo
                         <input
                           type="file"
                           className="hidden"
-                          accept="video/mp4,video/quicktime,video/x-msvideo,video/x-matroska,video/webm,video/ogg"
+                          accept="video/mp4,video/webm,video/ogg"
                           onChange={async (e) => {
                             const file = e.target.files?.[0];
                             if (!file) return;
@@ -327,9 +352,9 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                               return;
                             }
 
-                            if (!file.type.match(/^video\/(mp4|quicktime|x-msvideo|x-matroska|webm|ogg)$/)) {
+                            if (!file.type.match(/^video\/(mp4|webm|ogg)$/)) {
                               if (showWarningModal) {
-                                showWarningModal('Formato no válido. Solo MP4, MOV, AVI, MKV, WebM, OGG.');
+                                showWarningModal('Formato no válido. Solo MP4, WebM, OGG (formatos web-compatibles).');
                               }
                               e.target.value = '';
                               return;
@@ -357,7 +382,7 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                         />
                       </label>
                     </div>
-                    <div className="text-[10px] text-indigo-600 mt-0.5 text-right">Menor a 100 Mb - Formatos: MP4, MOV, AVI, MKV, WebM, OGG</div>
+                    <div className="text-[10px] text-indigo-600 mt-0.5 text-right">Menor a 100 Mb - Menor a 100 Mb - formatos permitido: MP4, WebM, OGV</div>
                   </td>
                 </tr>
                 <tr>
@@ -451,12 +476,8 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                     <button
                       type="button"
                       onClick={() => {
-                        const newScenes = [...(level.test.scenes || [])];
-                        const newOptions = [...(newScenes[selectedScene].options || [])];
-                        newOptions.splice(selectedOption, 1);
-                        newScenes[selectedScene] = { ...newScenes[selectedScene], options: newOptions };
-                        updateLevelField(levelIndex, 'test.scenes', newScenes);
-                        setSelectedOption(null);
+                        setOptionToDeleteIndex(selectedOption);
+                        setShowConfirmDeleteOption(true);
                       }}
                       className="text-red-600 hover:text-red-800 text-xs cursor-pointer"
                     >
@@ -551,6 +572,61 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
           </div>
         )}
       </div>
+      {/* Confirmación eliminar escena */}
+      <ConfirmActionModal
+        open={showConfirmDeleteScene}
+        onClose={() => setShowConfirmDeleteScene(false)}
+        title="Eliminar escena"
+        message="¿Confirma que desea eliminar esta escena? Esta acción no se puede deshacer."
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        onConfirm={() => {
+          const newScenes = [...(level.test.scenes || [])];
+          newScenes.splice(selectedScene, 1);
+          updateLevelField(levelIndex, 'test.scenes', newScenes);
+          setSelectedScene(null);
+          setShowConfirmDeleteScene(false);
+        }}
+      />
+
+      {/* Confirmación eliminar video de escena */}
+      <ConfirmActionModal
+        open={showConfirmDeleteSceneVideo}
+        onClose={() => setShowConfirmDeleteSceneVideo(false)}
+        title="Eliminar video"
+        message="¿Confirma que desea eliminar el video de esta escena?"
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        onConfirm={() => {
+          const newScenes = [...(level.test.scenes || [])];
+          if (newScenes[selectedScene]) {
+            newScenes[selectedScene] = { ...newScenes[selectedScene], videoUrl: '' };
+            updateLevelField(levelIndex, 'test.scenes', newScenes);
+          }
+          setShowConfirmDeleteSceneVideo(false);
+        }}
+      />
+      {/* Confirmación eliminar opción */}
+      <ConfirmActionModal
+        open={showConfirmDeleteOption}
+        onClose={() => setShowConfirmDeleteOption(false)}
+        title="Eliminar botón"
+        message="¿Confirma que desea eliminar este botón/opción?"
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        onConfirm={() => {
+          const newScenes = [...(level.test.scenes || [])];
+          if (newScenes[selectedScene] && typeof optionToDeleteIndex === 'number') {
+            const newOptions = [...(newScenes[selectedScene].options || [])];
+            newOptions.splice(optionToDeleteIndex, 1);
+            newScenes[selectedScene] = { ...newScenes[selectedScene], options: newOptions };
+            updateLevelField(levelIndex, 'test.scenes', newScenes);
+            setSelectedOption(null);
+          }
+          setShowConfirmDeleteOption(false);
+          setOptionToDeleteIndex(null);
+        }}
+      />
     </div>
   );
 }

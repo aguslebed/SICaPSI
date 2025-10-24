@@ -10,6 +10,7 @@ import EnrollStudents from './CreateTrainingModal/EnrollStudents';
 import ErrorListModal from './ErrorListModal';
 import SuccessModal from './SuccessModal';
 import WarningModal from './WarningModal';
+import LoadingOverlay from '../Shared/LoadingOverlay';
 
 export default function CreateTrainingModal({ open, onClose, onSave, editingTraining }) {
   const { user } = useContext(UserContext);
@@ -73,6 +74,11 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
   // Estado para la bibliografía seleccionada (edición desde la vista previa)
   const [editingBibliographyIndex, setEditingBibliographyIndex] = useState(null);
 
+  // Estado para detectar cambios no guardados
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  // Snapshot de datos después del último guardado exitoso
+  const [lastSavedState, setLastSavedState] = useState(null);
+
   // Cuando se abre el modal (crear o editar), asegurar que el punto de inicio sea "Capacitación"
   // y limpiar subsecciones/selecciones para evitar abrir en la última modificación.
   useEffect(() => {
@@ -83,9 +89,48 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
       setSelectedScene(null);
       setSelectedOption(null);
       setEditingBibliographyIndex(null);
+      setHasUnsavedChanges(false);
+      setLastSavedState(null); // Resetear snapshot al abrir
     }
     // sólo cuando cambia 'open'
   }, [open]);
+
+  // Detectar cambios en campos para marcar que hay modificaciones sin guardar
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    // Si no estamos editando y no hay snapshot, cualquier dato ingresado cuenta como cambio
+    if (!editingTraining && !lastSavedState) {
+      const hasAnyData = title || subtitle || description || image || startDate || endDate || 
+                         assignedTeacher || selectedStudents.length > 0 || levels.length > 0;
+      setHasUnsavedChanges(hasAnyData);
+      return;
+    }
+
+    // Usar el snapshot más reciente (lastSavedState) o editingTraining como referencia
+    const referenceState = lastSavedState || editingTraining;
+    if (!referenceState) {
+      setHasUnsavedChanges(false);
+      return;
+    }
+
+    // Comparar con el estado de referencia
+    const hasChanges = (
+      title !== (referenceState.title || '') ||
+      subtitle !== (referenceState.subtitle || '') ||
+      description !== normalizeRichTextValue(referenceState.description || '') ||
+      image !== (referenceState.image || '') ||
+      (startDate !== (referenceState.startDate ? referenceState.startDate.split('T')[0] : '')) ||
+      (endDate !== (referenceState.endDate ? referenceState.endDate.split('T')[0] : '')) ||
+      assignedTeacher !== (referenceState.assignedTeacher || '') ||
+      JSON.stringify(selectedStudents.sort()) !== JSON.stringify((referenceState.enrolledStudents || []).sort()) ||
+      JSON.stringify(levels) !== JSON.stringify(referenceState.levels || [])
+    );
+
+    setHasUnsavedChanges(hasChanges);
+  }, [title, subtitle, description, image, startDate, endDate, assignedTeacher, selectedStudents, levels, open, editingTraining, lastSavedState]);
 
   // Estados para controlar qué subsección está expandida
   const [expandedSubsection, setExpandedSubsection] = useState(null); // 'training', 'bibliografia', 'test', null
@@ -116,6 +161,10 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
     levels: []
   });
 
+  // Estados para controlar loading durante subida de archivos
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState('');
+
   // Estados para modales de error y éxito
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -131,6 +180,11 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
   // Función de validación central para enviar capacitación a aprobar
   const validateTrainingForApproval = () => {
     const errors = [];
+
+    // Verificar si hay cambios sin guardar
+    if (hasUnsavedChanges) {
+      errors.push('Debe guardar los cambios antes de enviar a aprobar');
+    }
 
     // Validar datos básicos de capacitación
     const imageValue = typeof image === 'string' ? image.trim() : image;
@@ -346,19 +400,37 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
       throw new Error(`El archivo excede el tamaño máximo de ${maxSizeText}`);
     }
     
-    // Guardar el archivo en estado pendiente (tanto para crear como para editar)
-    // Los archivos se subirán cuando se presione "Guardar" o "Actualizar"
-    setPendingLevelFiles(prev => ({ ...prev, [fileKey]: file }));
+    // Mostrar loading para archivos grandes (> 10MB)
+    const fileSizeMB = file.size / (1024 * 1024);
+    if (fileSizeMB > 10) {
+      setIsUploadingFile(true);
+      setUploadProgress(`Procesando archivo (${fileSizeMB.toFixed(1)} MB)...`);
+    }
     
-    // Crear data URL para preview
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        resolve({ filePath: event.target.result, isPending: true });
-      };
-      reader.onerror = () => reject(new Error('Error leyendo archivo'));
-      reader.readAsDataURL(file);
-    });
+    try {
+      // Guardar el archivo en estado pendiente (tanto para crear como para editar)
+      // Los archivos se subirán cuando se presione "Guardar" o "Actualizar"
+      setPendingLevelFiles(prev => ({ ...prev, [fileKey]: file }));
+      
+      // Marcar que hay cambios sin guardar
+      setHasUnsavedChanges(true);
+      
+      // Crear data URL para preview
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          resolve({ filePath: event.target.result, isPending: true });
+        };
+        reader.onerror = () => reject(new Error('Error leyendo archivo'));
+        reader.readAsDataURL(file);
+      });
+    } finally {
+      // Ocultar loading después de procesar
+      setTimeout(() => {
+        setIsUploadingFile(false);
+        setUploadProgress('');
+      }, 500);
+    }
   };
 
   // Función para eliminar archivos locales
@@ -566,10 +638,36 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
   if (!open) return null;
 
   const addLevel = () => {
+    // Validar que el último nivel no esté vacío antes de permitir crear uno nuevo
+    const lastLevel = levels && levels.length > 0 ? levels[levels.length - 1] : null;
+    const isLevelEmpty = (lvl) => {
+      if (!lvl) return true;
+      const training = lvl.training || {};
+      const test = lvl.test || {};
+      const bib = lvl.bibliography || [];
+
+      const hasAnyTraining = (training.title && training.title.trim()) || (training.description && training.description.trim()) || (training.url && training.url.trim()) || (training.duration && training.duration > 0);
+      const hasAnyBibliography = Array.isArray(bib) && bib.length > 0;
+      const hasAnyTest = (test.title && test.title.trim()) || (test.description && test.description.trim()) || (test.imageUrl && test.imageUrl.trim()) || (Array.isArray(test.scenes) && test.scenes.length > 0);
+
+      // Considerar título por defecto "Nivel X" como vacío
+      const hasTitleRaw = lvl.title && lvl.title.trim();
+      const isDefaultTitle = hasTitleRaw && /^nivel\s+\d+$/i.test(lvl.title.trim());
+      const hasTitle = hasTitleRaw && !isDefaultTitle;
+
+      return !(hasAnyTraining || hasAnyBibliography || hasAnyTest || hasTitle);
+    };
+
+    if (lastLevel && isLevelEmpty(lastLevel)) {
+      setWarningMessage('Complete el nivel anterior antes de crear uno nuevo.');
+      setShowWarningModal(true);
+      return;
+    }
+
     const nextLevelNumber = levels.length + 1;
-    const newLevel = { 
-      levelNumber: nextLevelNumber, 
-      title: '', 
+    const newLevel = {
+      levelNumber: nextLevelNumber,
+      title: '',
       bibliography: [],
       training: {
         title: '',
@@ -1022,6 +1120,22 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
         setPendingImageFile(null);
         setPendingLevelFiles({});
 
+        // Crear snapshot del estado actual como "último guardado"
+        setLastSavedState({
+          title,
+          subtitle,
+          description,
+          image,
+          startDate,
+          endDate,
+          assignedTeacher,
+          enrolledStudents: [...selectedStudents],
+          levels: JSON.parse(JSON.stringify(sanitizedLevels))
+        });
+
+        // Resetear cambios no guardados después de guardar exitosamente
+        setHasUnsavedChanges(false);
+
         setShowSuccessModal(true);
       } catch (err) {
         console.warn('CreateTrainingModal: onSave falló:', err);
@@ -1033,6 +1147,13 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
     <>
       {/* Backdrop oscuro */}
       <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
+      
+      {/* Loading overlay durante subida de archivos - Cubre TODO el modal */}
+      {isUploadingFile && (
+        <div className="fixed inset-0 z-[100]">
+          <LoadingOverlay label={uploadProgress || 'Procesando archivo...'} />
+        </div>
+      )}
       
       {/* Modal de edición - full width en mobile, split en desktop */}
       <div className="fixed left-0 top-0 z-50 w-full md:w-[48%] h-screen flex flex-col bg-white shadow-2xl" style={{ zIndex: 51 }}>

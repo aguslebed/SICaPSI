@@ -84,7 +84,7 @@ export default function PresentationForm(props) {
             <td className="px-1.5 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 border border-gray-300">
               <div>
                 <div className="flex items-center gap-1.5 md:gap-1.5 lg:gap-2 xl:gap-2">
-                  <input value={image || ''} onChange={(e) => setImage(e.target.value)} className="flex-1 border border-gray-200 rounded-lg px-2 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 text-xs md:text-xs lg:text-xs xl:text-sm placeholder:text-xs md:placeholder:text-xs lg:placeholder:text-xs xl:placeholder:text-sm font-normal focus:ring-2 focus:ring-green-200 focus:border-transparent placeholder-gray-400" placeholder="URL de imagen o deja vacío para subir archivo" />
+                  <input value={image || ''} onChange={(e) => setImage(e.target.value)} className="flex-1 border border-gray-200 rounded-lg px-2 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 text-xs md:text-xs lg:text-xs xl:text-sm placeholder:text-xs md:placeholder:text-xs lg:placeholder:text-xs xl:placeholder:text-sm font-normal focus:ring-2 focus:ring-green-200 focus:border-transparent placeholder-gray-400" placeholder="URL de imagen" />
 
                   <label className="inline-block">
                     <input type="file" accept=".jpg,.jpeg,.png,.gif,.webp" onChange={(e) => {

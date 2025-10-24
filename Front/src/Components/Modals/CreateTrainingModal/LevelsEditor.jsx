@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import RichTextInput, { getPlainTextFromRichText } from './RichTextInput';
 import LevelTraining from './LevelTraining';
 import LevelBibliography from './LevelBibliography';
 import LevelTestEditor from './LevelTestEditor';
+import ConfirmActionModal from '../ConfirmActionModal';
+import ErrorListModal from '../ErrorListModal';
 
 export default function LevelsEditor(props) {
   const {
@@ -29,6 +31,77 @@ export default function LevelsEditor(props) {
     editingBibliographyIndex,
     setEditingBibliographyIndex
   } = props;
+
+  const [showConfirmDeleteLevel, setShowConfirmDeleteLevel] = useState(false);
+  const [showErrorList, setShowErrorList] = useState(false);
+  const [errorList, setErrorList] = useState([]);
+
+  // Handler local para crear nivel con validación rápida (evita duplicar lógica en CreateTrainingModal)
+  const handleAddLevelClick = () => {
+    if (!levels || levels.length === 0) {
+      addLevel();
+      return;
+    }
+
+    const lastLevel = levels[levels.length - 1];
+
+    // Extract sub-sections
+    const training = lastLevel.training || {};
+    const test = lastLevel.test || {};
+    const bib = lastLevel.bibliography || [];
+
+    // Helper to get plain text from possible rich text HTML
+    const titleText = getPlainTextFromRichText(lastLevel.title || '').trim();
+    const isDefaultTitle = titleText && /^nivel\s*\d+/i.test(titleText);
+    const hasTitle = titleText && !isDefaultTitle;
+
+    // Bibliography: at least one item
+    const hasBibliography = Array.isArray(bib) && bib.length > 0;
+
+    // Training: title, description, url/file, duration
+    const trainingTitle = getPlainTextFromRichText(training.title || '').trim();
+    const trainingDesc = getPlainTextFromRichText(training.description || '').trim();
+    const trainingUrl = training.url && String(training.url).trim();
+    const trainingDuration = Number(training.duration) > 0;
+
+    // Test: title, description, url/file
+    const testTitle = getPlainTextFromRichText(test.title || '').trim();
+    const testDesc = getPlainTextFromRichText(test.description || '').trim();
+    const testUrl = test.imageUrl && String(test.imageUrl).trim();
+
+    // Scenes: at least one with id, description and url/file
+    const scenes = Array.isArray(test.scenes) ? test.scenes : [];
+    const hasCompleteScene = scenes.some(s => {
+      const idOk = s && (Number(s.idScene) > 0 || (typeof s.idScene === 'string' && s.idScene.trim() !== '' && !isNaN(Number(s.idScene))));
+      const descOk = s && getPlainTextFromRichText(s.description || '').trim();
+      const vidOk = s && s.videoUrl && String(s.videoUrl).trim();
+      return idOk && descOk && vidOk;
+    });
+
+    // Collect missing fields
+    const missing = [];
+    if (!hasTitle) missing.push('Título del nivel');
+    if (!hasBibliography) missing.push('Al menos 1 bibliografía');
+
+    if (!trainingTitle) missing.push('Clase magistral: Título');
+    if (!trainingDesc) missing.push('Clase magistral: Descripción');
+    if (!trainingUrl) missing.push('Clase magistral: URL o archivo adjunto');
+    if (!trainingDuration) missing.push('Clase magistral: Duración (min)');
+
+    if (!testTitle) missing.push('Evaluación: Título');
+    if (!testDesc) missing.push('Evaluación: Descripción');
+    if (!testUrl) missing.push('Evaluación: URL o archivo adjunto');
+    if (!hasCompleteScene) missing.push('Evaluación: Al menos 1 escena completa (id, descripción, url/archivo)');
+
+    if (missing.length > 0) {
+      // Preferir ErrorListModal si está disponible en este componente
+      setErrorList(missing);
+      setShowErrorList(true);
+      return;
+    }
+
+    addLevel();
+  };
 
   // (Removed debug logs) - previously logged level data for debugging
 
@@ -64,6 +137,32 @@ export default function LevelsEditor(props) {
           </table>
         )}
       </div>
+      <ConfirmActionModal
+        open={showConfirmDeleteLevel}
+        onClose={() => setShowConfirmDeleteLevel(false)}
+        title="Eliminar nivel"
+        message="¿Confirma que desea eliminar este nivel? Esta acción no se puede deshacer."
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        onConfirm={() => {
+          // Ejecutar la función removeLevel pasada como prop
+          try {
+            removeLevel();
+          } catch (err) {
+            console.error('Error eliminando nivel:', err);
+          } finally {
+            setShowConfirmDeleteLevel(false);
+          }
+        }}
+      />
+
+      <ErrorListModal
+        show={showErrorList}
+        onClose={() => setShowErrorList(false)}
+        errors={errorList}
+        title="No puede crear un nuevo nivel"
+        messageText="Complete los siguientes campos del nivel anterior:"
+      />
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 md:gap-3 mb-2 md:mb-3 p-1.5 md:p-2 bg-gray-100 border border-gray-300">
         <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">
@@ -83,12 +182,12 @@ export default function LevelsEditor(props) {
           </div>
           
           <div className="flex items-center gap-1.5 md:gap-2">
-            <button onClick={addLevel} className="bg-white hover:bg-gray-50 text-gray-700 border border-green-600 px-1.5 md:px-2 py-0.5 md:py-1 rounded-sm text-xs md:text-sm font-medium transition-colors cursor-pointer whitespace-nowrap flex-shrink-0">+ Nuevo</button>
+            <button onClick={handleAddLevelClick} className="bg-white hover:bg-gray-50 text-gray-700 border border-green-600 px-1.5 md:px-2 py-0.5 md:py-1 rounded-sm text-xs md:text-sm font-medium transition-colors cursor-pointer whitespace-nowrap flex-shrink-0">+ Nuevo</button>
             <button
               type="button"
               onClick={() => {
                 if (levels.length > 1) {
-                  removeLevel();
+                  setShowConfirmDeleteLevel(true);
                 }
               }}
               disabled={levels.length <= 1}

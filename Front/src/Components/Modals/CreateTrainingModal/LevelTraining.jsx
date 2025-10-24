@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import RichTextInput, { getPlainTextFromRichText } from './RichTextInput';
+import ConfirmActionModal from '../ConfirmActionModal';
 
 export default function LevelTraining({ level, levelIndex, updateLevelField, uploadingFiles, handleFileUpload, handleFileDelete, showWarningModal }) {
+  const [showConfirmDeleteFile, setShowConfirmDeleteFile] = useState(false);
   return (
-    <div className="border border-gray-300 rounded-sm p-1.5 md:p-1.5 lg:p-2 xl:p-2 bg-white">
+    <>
+      <div className="border border-gray-300 rounded-sm p-1.5 md:p-1.5 lg:p-2 xl:p-2 bg-white">
       <table className="w-full border-collapse text-xs md:text-xs lg:text-xs xl:text-sm">
         <thead>
           <tr>
@@ -66,13 +69,13 @@ export default function LevelTraining({ level, levelIndex, updateLevelField, upl
                       updateLevelField(levelIndex, 'training.url', newValue);
                     }}
                     className="flex-1 border border-gray-200 rounded-lg px-2 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 text-xs md:text-xs lg:text-xs xl:text-sm placeholder:text-xs md:placeholder:text-xs lg:placeholder:text-xs xl:placeholder:text-sm font-normal focus:ring-2 focus:ring-green-200 focus:border-transparent"
-                    placeholder="URL del video de la clase o deja vacío para subir archivo"
+                    placeholder="URL del video"
                   />
 
                   <label className="inline-block">
                     <input
                       type="file"
-                      accept=".mp4,.mov,.avi,.mkv,.webm,.ogg,.pdf,.ppt,.pptx"
+                      accept=".mp4,.webm,.ogv,.pdf,.ppt,.pptx"
                       onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (!file) return;
@@ -95,25 +98,27 @@ export default function LevelTraining({ level, levelIndex, updateLevelField, upl
                       className="hidden"
                       disabled={uploadingFiles && uploadingFiles[`training-${levelIndex}`]}
                     />
-                    <span className="inline-block px-2 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 bg-gray-500 border border-gray-500 rounded-lg text-xs md:text-xs lg:text-xs xl:text-sm text-white cursor-pointer hover:bg-gray-600">Choose File</span>
+                    <span className="inline-block px-2 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 bg-gray-500 border border-gray-500 rounded-lg text-xs md:text-xs lg:text-xs xl:text-sm text-white cursor-pointer hover:bg-gray-600">Seleccionar archivo</span>
                   </label>
 
                   <div className="flex items-center gap-1.5 md:gap-1.5 lg:gap-2 xl:gap-2">
                     {uploadingFiles && uploadingFiles[`level-${levelIndex}-training`] && <div className="animate-spin h-3 w-3 md:h-3 md:w-3 lg:h-3.5 lg:w-3.5 xl:h-4 xl:w-4 border-2 border-gray-200 border-t-green-600 rounded-full" />}
                     {level.training.url && (
-                      <button
-                        type="button"
-                        onClick={() => updateLevelField(levelIndex, 'training.url', '')}
-                        className="text-red-600 hover:text-red-800 text-xs md:text-xs lg:text-xs xl:text-sm px-1.5 py-0.5 md:px-1.5 md:py-0.5 lg:px-2 lg:py-0.5 xl:px-2 xl:py-1 border border-red-200 rounded-md cursor-pointer"
-                        title="Eliminar archivo/URL"
-                      >
-                        ✕
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmDeleteFile(true)}
+                          className="text-red-600 hover:text-red-800 text-xs md:text-xs lg:text-xs xl:text-sm px-1.5 py-0.5 md:px-1.5 md:py-0.5 lg:px-2 lg:py-0.5 xl:px-2 xl:py-1 border border-red-200 rounded-md cursor-pointer"
+                          title="Eliminar archivo/URL"
+                        >
+                          ✕
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
 
-                <div className="mt-0.5 md:mt-0.5 lg:mt-1 xl:mt-1.5 text-[10px] md:text-[10px] lg:text-[11px] xl:text-xs text-indigo-600 text-right">Menor a 100 Mb - Vídeos: MP4, MOV, AVI, MKV, WebM | Otros: PDF, PPT</div>
+                <div className="mt-0.5 md:mt-0.5 lg:mt-1 xl:mt-1.5 text-[10px] md:text-[10px] lg:text-[11px] xl:text-xs text-indigo-600 text-right">Menor a 100 Mb - formatos permitido: MP4, WebM, OGV</div>
               </div>
             </td>
           </tr>
@@ -139,6 +144,33 @@ export default function LevelTraining({ level, levelIndex, updateLevelField, upl
           </tr>
         </tbody>
       </table>
-    </div>
+      </div>
+
+      <ConfirmActionModal
+        open={showConfirmDeleteFile}
+        onClose={() => setShowConfirmDeleteFile(false)}
+        title="Eliminar archivo"
+        message="¿Confirma que desea eliminar este archivo/URL de la clase magistral?"
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        onConfirm={async () => {
+          try {
+            const currentValue = level.training?.url;
+            if (currentValue && typeof currentValue === 'string' && currentValue.startsWith('/uploads/')) {
+              try {
+                await handleFileDelete(currentValue, levelIndex);
+              } catch (err) {
+                console.error('Error eliminando archivo en servidor:', err);
+                if (showWarningModal) showWarningModal(`Error eliminando archivo: ${err.message}`);
+              }
+            }
+          } finally {
+            updateLevelField(levelIndex, 'training.url', '');
+            setShowConfirmDeleteFile(false);
+          }
+        }}
+      />
+    </>
   );
 }
+
