@@ -2,8 +2,9 @@ import React, { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
 import { useUser } from "../../../context/UserContext";
-import { resolveImageUrl } from '../../../API/Request';
+import { resolveImageUrl, checkLevelApproved } from '../../../API/Request';
 import { useEffect } from "react";
+import LevelResultModal from "../../../Components/Modals/LevelResultModal";
 
 const LevelTest = () => {
   // Botón base: mantenemos cursor-pointer y legibilidad, pero adaptativo
@@ -39,7 +40,6 @@ const LevelTest = () => {
   }, [level]);
   const tests = scenes; 
   const testTitle = level?.test?.title;
-
   const testImage = resolveImageUrl(level?.test?.imageUrl);
   // Estado para la simulación
   const [sceneIndex, setSceneIndex] = useState(null);
@@ -56,6 +56,14 @@ const LevelTest = () => {
     return copy;
   };
   const [levelWithResults, setLevelWithResults] = useState(createInitialLevelWithResults);
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [evaluationResult, setEvaluationResult] = useState(null);
+
+  // Iniciar simulación (ir a la primera escena)
+  const handleStart = () =>{ setSceneIndex(0);
+    setPoints(0);
+    setLevelWithResults(createInitialLevelWithResults());
+  }
 
   // Reiniciar video (volver al inicio)
   const handleRestart = () => {
@@ -64,18 +72,32 @@ const LevelTest = () => {
     setLevelWithResults(createInitialLevelWithResults());
   }
 
-  // Iniciar simulación (ir a la primera escena)
-  const handleStart = () => setSceneIndex(0);
+ //Cuando termina el nivel, se verifica el resultado del guardia. Solo cuando ya no hay escena activa (sceneIndex es null) y hay resultados.
+  useEffect(() => {
+  if (sceneIndex === null && levelWithResults?.test?.scenesResults?.length) {
+    (async () => {
+      const result = await verificarResultados();
+      console.log('API result object:', result);
+      console.log('Approved flag:', result?.data?.approved ?? result?.approved);
+      // Mostrar modal con resultado
+      setEvaluationResult(result);
+      setShowResultModal(true);
+    })();
+  }
+}, [sceneIndex, levelWithResults]);
 
+  
   const [points,setPoints] = useState(0);
 
+  async function verificarResultados() {
+    // Return the API response so callers receive the result
+    const uid = userData?.user?._id || userData?._id || null;
+    return await checkLevelApproved(training._id, uid, levelWithResults._id, levelWithResults);
+  }
 
-  useEffect(() => {
-      console.log('levelWithResults actualizado:', levelWithResults);
-    }, [levelWithResults]);
 
   // Ir a la siguiente escena según opción y acumular resultado del usuario
-  const handleOption = (optObj, optIndex) => {
+  const  handleOption = async (optObj, optIndex) => {
     const nextId = optObj?.next;
     const optPoints = Number(optObj?.points || 0);
     const nextIndex = tests.findIndex(test => test.idScene === nextId);
@@ -92,7 +114,10 @@ const LevelTest = () => {
         selectedOptionId: optObj && (optObj._id || optObj.id) ? (optObj._id || optObj.id) : undefined,
         selectedOptionDescription: optObj?.description || undefined,
         selectedOption: { ...optObj, points: optPoints },
-        points: optPoints
+        points: optPoints,
+        // Preservar la propiedad lastOne/isLastOne de la escena original
+        lastOne: currentScene.lastOne,
+        isLastOne: currentScene.isLastOne
       };
 
       setLevelWithResults(prev => {
@@ -102,6 +127,9 @@ const LevelTest = () => {
         next.test.scenesResults.push(resultEntry);
         // Espejar en test.scenes para compatibilidad con isLevelApproved
         next.test.scenes = JSON.parse(JSON.stringify(next.test.scenesResults));
+
+
+        
         return next;
       });
     }
@@ -111,14 +139,20 @@ const LevelTest = () => {
     } else {
       // Si no hay siguiente, termina la simulación
       setSceneIndex(null);
-      // Aquí ya queda armado levelWithResults con todas las elecciones
-      
+
     }
   };
 
   // Render principal
   return (
     <>
+      {/* Modal de resultado */}
+      <LevelResultModal 
+        show={showResultModal} 
+        onClose={() => setShowResultModal(false)} 
+        result={evaluationResult} 
+      />
+
       {/* Modal bloqueante para el examen */}
       {sceneIndex !== null ? (
         <div className="fixed inset-0 z-[9999] bg-white/0 backdrop-blur-sm flex items-center justify-center p-4">

@@ -1,43 +1,31 @@
 import AppError from "../middlewares/AppError.js";
+import ProgressService from "../services/ProgressService.js";
 
 export function makeProgressController() {
+  const progressService = new ProgressService();
+
   return {
-    async completeLevel(req, res, next) {
-      try {
-        const userId = req.user?.userId;
-        const { trainingId, levelId } = req.params;
-        if (!userId) throw new AppError('No autorizado', 401);
-        if (!trainingId || !levelId) throw new AppError('trainingId y levelId requeridos', 400);
-        const { default: ProgressService } = await import('../services/ProgressService.js');
-        const progressService = new ProgressService();
-        await progressService.markLevelCompleted(userId, trainingId, levelId);
-        const progressMap = await progressService.getProgressByTraining(userId, [trainingId]);
-        const key = (typeof trainingId === 'string') ? trainingId : trainingId.toString();
-        const p = progressMap[key] || { totalLevels: 0, levelsCompleted: 0, progressPercent: 0 };
-        res.status(200).json({ 
-          message: 'Nivel marcado como completado', 
-          progress: {
-            trainingId: key,
-            totalLevels: p.totalLevels,
-            levelsCompleted: p.levelsCompleted,
-            progressPercent: p.progressPercent
-          }
-        });
-      } catch (err) { next(err); }
-    },
 
     async checkLevelApproved(req, res, next) {
       try {
-        const userId = req.params.userId;
+        const userId = req.body.userId;
         const training = req.params.trainingId;
-        const level = req.level;
-        if (!userId) throw new AppError('No autorizado', 401);
-        
-      }
-        catch (err) { next(err); 
+        const level = req.body.level;
 
-        }
+        console.log(userId,"<------------------------------------------USERID")
+        if (!userId) throw new AppError('No autorizado', 401);
+        if (!training) throw new AppError('Falta trainingId', 400);
+        if (!level) throw new AppError('Falta el objeto level en la petición', 400);
+
+
+        
+        // Llamar al servicio que calcula aprobación
+        const result = await progressService.isLevelApproved(userId, training, level);
+        return res.status(200).json({ success: true, data: result });
+      } catch (err) {
+        next(err);
       }
+    }
 
   };
 }

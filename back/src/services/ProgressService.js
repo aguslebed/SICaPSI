@@ -5,15 +5,7 @@ import Level from "../models/Level.js";
 const toObjectId = (id) => (typeof id === 'string' ? new mongoose.Types.ObjectId(id) : id);
 
 class ProgressService {
-  async markLevelCompleted(userId, trainingId, levelId) {
-    // Upsert para idempotencia
-    const doc = await UserLevelProgress.findOneAndUpdate(
-      { userId: toObjectId(userId), levelId: toObjectId(levelId) },
-      { userId: toObjectId(userId), trainingId: toObjectId(trainingId), levelId: toObjectId(levelId), status: "completed", completed: true, completedAt: new Date() },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
-    return doc;
-  }
+ 
 
   async getProgressByTraining(userId, trainingIds = []) {
     if (!Array.isArray(trainingIds) || trainingIds.length === 0) return {};
@@ -50,51 +42,180 @@ class ProgressService {
     return result;
   }
 
-  async  isLevelApproved(userId, trainingId, levelId) {
-  const tId = new ObjectId(trainingId);
-  const lId = Number(levelId); // según tu estructura el level es un número, no un ObjectId
+  async  isLevelApproved(userId, trainingId, level) {
+    // Validate inputs
+    if (!userId || !trainingId || !level) {
+      return { approved: false, earnedPoints: 0, totalPoints: 0, percentage: 0 };
+    }
 
-  // 1️⃣ Buscar el nivel correspondiente
-  const level = await Level.findOne({ trainingId: tId, levelNumber: lId });
-  if (!level) {
-    throw new Error("Nivel no encontrado");
+    // Resolve training and user ids
+    const tId = toObjectId(trainingId);
+    const uId = toObjectId(userId);
+
+    // Find the corresponding level in DB. Prefer level._id, otherwise use levelNumber + trainingId
+    let dbLevel = null;
+    try {
+      if (level._id) {
+        dbLevel = await Level.findById(toObjectId(level._id)).lean();
+      }
+      if (!dbLevel && (level.levelNumber || level.levelNumber === 0)) {
+        dbLevel = await Level.findOne({ trainingId: tId, levelNumber: level.levelNumber }).lean();
+      }
+      // As a fallback, try to find by trainingId and title (best-effort)
+      if (!dbLevel && level.title) {
+        dbLevel = await Level.findOne({ trainingId: tId, title: level.title }).lean();
+      }
+    } catch (err) {
+      // DB error -> not approved
+      console.error('ProgressService.isLevelApproved: error fetching level', err);
+      return { approved: false, earnedPoints: 0, totalPoints: 0, percentage: 0 };
+    }
+
+    if (!dbLevel) {
+      // Can't compare without DB definition
+      return { approved: false, earnedPoints: 0, totalPoints: 0, percentage: 0 };
+    }
+
+    const dbScenes = (dbLevel.test && Array.isArray(dbLevel.test.scenes)) ? dbLevel.test.scenes : [];
+
+    // Compute total possible points for the level
+    let totalPossible = 0;
+    for (const scene of dbScenes) {
+      const opts = Array.isArray(scene.options) ? scene.options : [];
+      const maxOpt = opts.length > 0 ? Math.max(...opts.map(o => (o && o.points) ? Number(o.points) : 0)) : 0;
+      const bonus = Number(scene.bonus || 0);
+      totalPossible += maxOpt + bonus;
+    }
+
+    // Extract user's scene results from the provided `level` object.
+    // Accept several shapes: level.test.scenes, level.scenes, level.scenesResults, level.userAnswers
+    const userScenes = level?.test?.scenes || level?.scenes || level?.scenesResults || level?.userAnswers || [];
+
+    let earned = 0;
+
+    if (Array.isArray(userScenes) && userScenes.length > 0) {
+      for (const userScene of userScenes) {
+        // Skip scoring if this scene is marked as the last one (lastOne or isLastOne)
+        if (userScene.lastOne === true || userScene.isLastOne === true) {
+          continue;
+        }
+
+        // Try to match the DB scene
+        const sceneId = userScene.idScene ?? userScene.sceneId ?? userScene.id ?? null;
+        let matchedDbScene = null;
+        if (sceneId !== null && sceneId !== undefined) {
+          matchedDbScene = dbScenes.find(s => s.idScene === Number(sceneId) || String(s.idScene) === String(sceneId));
+        }
+        // fallback: try matching by index or by provided _id
+        if (!matchedDbScene && userScene._id) {
+          matchedDbScene = dbScenes.find(s => String(s._id) === String(userScene._id));
+        }
+        if (!matchedDbScene) continue; // can't score this scene
+
+        // If the user provided explicit points, use them
+        if (typeof userScene.points === 'number') {
+          earned += Number(userScene.points);
+          continue;
+        }
+
+        // If user provided a selected option index
+        if (typeof userScene.selectedOptionIndex === 'number') {
+          const opt = matchedDbScene.options?.[userScene.selectedOptionIndex];
+          if (opt && typeof opt.points === 'number') earned += Number(opt.points);
+          continue;
+        }
+
+        // If user provided selectedOptionId
+        if (userScene.selectedOptionId) {
+          const opt = (matchedDbScene.options || []).find(o => String(o._id) === String(userScene.selectedOptionId));
+          if (opt && typeof opt.points === 'number') earned += Number(opt.points);
+          continue;
+        }
+
+        // If user provided selectedOption description/text
+        if (userScene.selectedOptionDescription) {
+          const opt = (matchedDbScene.options || []).find(o => (o.description || '') === userScene.selectedOptionDescription);
+          if (opt && typeof opt.points === 'number') earned += Number(opt.points);
+          continue;
+        }
+
+        // If user provided the whole selectedOption object
+        if (userScene.selectedOption && typeof userScene.selectedOption.points === 'number') {
+          earned += Number(userScene.selectedOption.points);
+          continue;
+        }
+
+        // If none of the above, as a last resort try to match by 'next' value (rare)
+        if (userScene.next != null && (matchedDbScene.options || []).length > 0) {
+          const opt = (matchedDbScene.options || []).find(o => o.next === userScene.next || String(o.next) === String(userScene.next));
+          if (opt && typeof opt.points === 'number') earned += Number(opt.points);
+        }
+      }
+    }
+
+    // Clamp earned to totalPossible
+    if (earned > totalPossible) earned = totalPossible;
+
+    const percentage = totalPossible > 0 ? (earned / totalPossible) * 100 : 0;
+    //Se considera un nivel aprobado si el porcentaje es mayor o igual a 80% (Cambiar el 80 por el numero que sea)
+    const approved = percentage >= 80;
+
+    // Build a simplified list of selected options to store (avoid duplicating full level)
+        const selectedOptions = [];
+        if (Array.isArray(userScenes) && userScenes.length > 0) {
+          for (const us of userScenes) {
+            const sceneId = us.idScene ?? us.sceneId ?? us.id ?? null;
+            const optionId = us.selectedOptionId ?? us.selectedOption?._id ?? us.selectedOption?.id ?? null;
+            const description = us.selectedOptionDescription ?? us.selectedOption?.description ?? null;
+            const pts = typeof us.points === 'number' ? us.points : (us.selectedOption && typeof us.selectedOption.points === 'number' ? us.selectedOption.points : null);
+            if (sceneId !== null && (optionId !== null || description !== null)) {
+              selectedOptions.push({ idScene: String(sceneId), optionId: optionId ? String(optionId) : undefined, description: description || undefined, points: pts });
+            }
+          }
+        }
+
+
+    const result = { approved, earnedPoints: earned, totalPoints: totalPossible, percentage, selectedOptions };
+
+    // If approved, persist to UserLevelProgress (upsert)
+    if (approved) {
+      try {
+        const levelId = dbLevel._id;
+        
+        console.log('🔍 Intentando guardar en UserLevelProgress:', {
+          userId: uId,
+          trainingId: tId,
+          levelId: levelId,
+          selectedOptionsCount: selectedOptions.length
+        });
+
+        // Upsert: find existing record and update, otherwise create. Include selectedOptions.
+        const updateResult = await UserLevelProgress.updateOne(
+          { userId: uId, levelId: levelId },
+          { 
+            $set: {
+              userId: uId,
+              trainingId: tId,
+              levelId: levelId,
+              status: 'completed',
+              completed: true,
+              completedAt: new Date(),
+              selectedOptions: selectedOptions
+            }
+          },
+          { upsert: true }
+        );
+
+        console.log('✅ UserLevelProgress guardado:', updateResult);
+        
+      } catch (err) {
+        // Log but don't fail the approval response
+        console.error('❌ ProgressService.isLevelApproved: error upserting UserLevelProgress', err);
+      }
+    }
+    console.log(result, "---result desde ProgressService.js---");
+    return result;
   }
-
-  // 2️⃣ Calcular puntos totales posibles
-  let totalPoints = 0;
-  for (const scene of level.test.scenes) {
-    // Sumar los puntos más altos posibles por cada escena
-    const maxOption = Math.max(...scene.options.map(opt => opt.points));
-    totalPoints += maxOption;
-    // Si la escena tiene bonus (y es de cierre), también sumalo
-    totalPoints += scene.bonus || 0;
-  }
-
-  // 🔸 Supongamos que los puntos del usuario se guardan en algún registro
-  // por ejemplo en UserTrainingProgress (ajustá esto según tu modelo real)
-  const userProgress = await UserTrainingProgress.findOne({
-    userId: new ObjectId(userId),
-    trainingId: tId,
-    levelNumber: lId
-  });
-
-  if (!userProgress) {
-    throw new Error("No hay progreso de usuario registrado");
-  }
-
-  const userPoints = userProgress.points || 0;
-
-  // 3️⃣ Calcular el 80 %
-  const approvalThreshold = totalPoints * 0.8;
-
-  // 4️⃣ Retornar resultado
-  return {
-    approved: userPoints >= approvalThreshold,
-    userPoints,
-    totalPoints,
-    requiredPoints: approvalThreshold
-  };
-}
 
 
 }

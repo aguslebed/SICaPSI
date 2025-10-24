@@ -12,7 +12,7 @@ const authMiddleware = makeAuthMiddleware({ tokenService: jwtTokenService });
 const router = Router();
 const controller = makeProgressController();
 
-// Marcar nivel como completado (idempotente)
-router.post('/trainings/:trainingId/levels/:levelId/checkApproved', authMiddleware, controller.checkLevelApproved);
+// Marcar nivel como completado (idempotente) - route left public so clients without cookie can call it.
+router.post('/trainings/:trainingId/levels/:levelId/checkApproved', controller.checkLevelApproved);
 
 export default router;
