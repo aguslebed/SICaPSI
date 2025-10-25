@@ -17,27 +17,36 @@ function PreviewPresentacion({ title, subtitle, description, image }) {
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         {/* Imagen y título */}
         <div
-          className="h-56 bg-black bg-center bg-cover flex flex-col justify-center text-white px-8"
+          className="h-56 bg-black bg-center bg-cover flex flex-col justify-center text-white px-8 gap-2"
           style={{ 
             backgroundImage: image 
               ? `url(${image.startsWith('http') || image.startsWith('data:') ? image : `${import.meta.env.VITE_API_URL}${image}`})` 
               : 'linear-gradient(to bottom right, #3b82f6, #1d4ed8)'
           }}
         >
-          <h1 className="text-3xl font-bold break-words whitespace-normal">
-            {hasTitle ? (
-              <div dir="ltr" dangerouslySetInnerHTML={{ __html: sanitizedTitle }} />
-            ) : (
-              'Título de la capacitación'
-            )}
-          </h1>
-          <p className="text-lg break-words whitespace-normal">
-            {hasSubtitle ? (
-              <div dir="ltr" dangerouslySetInnerHTML={{ __html: sanitizedSubtitle }} />
-            ) : (
-              'Subtítulo de la capacitación'
-            )}
-          </p>
+          {hasTitle ? (
+            <div
+              className="text-3xl font-bold break-words whitespace-normal"
+              dir="ltr"
+              dangerouslySetInnerHTML={{ __html: sanitizedTitle }}
+            />
+          ) : (
+            <div className="text-3xl font-bold break-words whitespace-normal">
+              Título de la capacitación
+            </div>
+          )}
+
+          {hasSubtitle ? (
+            <div
+              className="text-lg break-words whitespace-normal"
+              dir="ltr"
+              dangerouslySetInnerHTML={{ __html: sanitizedSubtitle }}
+            />
+          ) : (
+            <div className="text-lg break-words whitespace-normal">
+              Subtítulo de la capacitación
+            </div>
+          )}
         </div>
         {/* Barra de progreso */}
         <div className="w-full bg-gray-200 h-6">
@@ -91,13 +100,17 @@ function PreviewNiveles({ levels, selectedLevel, onLevelClick, onBibliografiaCli
                 }`}
                 onClick={() => onLevelClick && onLevelClick(index)}
               >
-                <span className="font-semibold text-gray-800 break-words whitespace-normal">
-                  {hasLevelTitle ? (
-                    <div dir="ltr" dangerouslySetInnerHTML={{ __html: sanitizedLevelTitle }} />
-                  ) : (
-                    `Nivel ${level.levelNumber}`
-                  )}
-                </span>
+                {hasLevelTitle ? (
+                  <div
+                    className="font-semibold text-gray-800 break-words whitespace-normal"
+                    dir="ltr"
+                    dangerouslySetInnerHTML={{ __html: sanitizedLevelTitle }}
+                  />
+                ) : (
+                  <div className="font-semibold text-gray-800 break-words whitespace-normal">
+                    {`Nivel ${level.levelNumber}`}
+                  </div>
+                )}
                 <svg 
                   className={`w-5 h-5 transform transition-transform ${
                     index === selectedLevel ? 'rotate-180' : ''
@@ -219,13 +232,17 @@ function PreviewTraining({ level }) {
       <div className="w-full max-w-5xl bg-white rounded-2xl shadow-lg border border-gray-200 p-8 space-y-6">
         {/* Título */}
         <header className="text-center space-y-2">
-          <h1 className="text-3xl font-extrabold text-blue-700">
-            {hasTitle ? (
-              <div dir="ltr" dangerouslySetInnerHTML={{ __html: sanitizedTitle }} />
-            ) : (
-              level.title || 'Título de la clase'
-            )}
-          </h1>
+          {hasTitle ? (
+            <div
+              className="text-3xl font-extrabold text-blue-700"
+              dir="ltr"
+              dangerouslySetInnerHTML={{ __html: sanitizedTitle }}
+            />
+          ) : (
+            <h1 className="text-3xl font-extrabold text-blue-700">
+              {level.title || 'Título de la clase'}
+            </h1>
+          )}
         </header>
 
         {/* Contenido multimedia */}

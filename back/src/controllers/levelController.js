@@ -28,7 +28,8 @@ export function makeLevelController({ levelService }) {
         if (!allSameTraining) {
           throw new AppError('Todos los niveles deben pertenecer a la misma capacitación', 400);
         }
-        const result = await levelService.addLevelsToTraining(trainingId, levels);
+  const submittedBy = req.user?.userId || req.user?._id;
+  const result = await levelService.addLevelsToTraining(trainingId, levels, { submittedBy });
         res.status(201).json(result);
       } catch (err) {
         next(err);
@@ -46,7 +47,8 @@ export function makeLevelController({ levelService }) {
         if (!allSameTraining) {
           throw new AppError('Todos los niveles deben pertenecer a la misma capacitación', 400);
         }
-        const result = await levelService.updateLevelsInTraining(trainingId, levels);
+  const submittedBy = req.user?.userId || req.user?._id;
+  const result = await levelService.updateLevelsInTraining(trainingId, levels, { submittedBy });
         res.status(200).json(result);
       } catch (err) {
         next(err);

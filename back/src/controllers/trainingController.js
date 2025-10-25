@@ -72,8 +72,19 @@ export function makeTrainingController({ trainingService, trainingValidator }) {
         });
         console.log('🔍 Validación:', { isValid, errors, isPartialUpdate });
         if (!isValid) throw new AppError("Datos de capacitación inválidos", 400, "TRAINING_400", errors);
-        const updatedTraining = await trainingService.updateTraining(id, trainingData);
-        res.status(200).json(updatedTraining);
+        const submittedBy = req.user?.userId || req.user?._id;
+        const updateResult = await trainingService.updateTraining(id, trainingData, { submittedBy });
+
+        if (updateResult?.revisionCreated) {
+          return res.status(202).json({
+            message: 'Cambios enviados para aprobación',
+            revisionId: updateResult.revisionId,
+            trainingId: updateResult.trainingId,
+            status: updateResult.status
+          });
+        }
+
+        res.status(200).json(updateResult);
       } catch (err) {
         next(err);
       }
@@ -88,5 +99,46 @@ export function makeTrainingController({ trainingService, trainingValidator }) {
         next(err);
       }
     },
+
+    async listRevisions(req, res, next) {
+      try {
+        const { status } = req.query || {};
+        const revisions = await trainingService.listPendingRevisions({ status });
+        res.status(200).json(revisions);
+      } catch (err) {
+        next(err);
+      }
+    },
+
+    async approveRevision(req, res, next) {
+      try {
+        const { id, revisionId } = req.params;
+        const approvedBy = req.user?.userId || req.user?._id;
+        const result = await trainingService.approveRevision(id, revisionId, { approvedBy });
+        res.status(200).json({
+          message: 'Revisión aprobada correctamente',
+          training: result.training,
+          revision: result.revision
+        });
+      } catch (err) {
+        next(err);
+      }
+    },
+
+    async rejectRevision(req, res, next) {
+      try {
+        const { id, revisionId } = req.params;
+        const { reason } = req.body || {};
+        const rejectedBy = req.user?.userId || req.user?._id;
+        const result = await trainingService.rejectRevision(id, revisionId, { rejectedBy, reason });
+        res.status(200).json({
+          message: 'Revisión rechazada',
+          training: result.training,
+          revision: result.revision
+        });
+      } catch (err) {
+        next(err);
+      }
+    }
   };
 }

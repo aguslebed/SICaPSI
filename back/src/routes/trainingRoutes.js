@@ -10,6 +10,8 @@ import  {makeTrainingController}  from "../controllers/trainingController.js";
 
 //service
 import {TrainingService} from "../services/TrainingService.js"
+import { JwtTokenService } from "../services/JwtTokenService.js";
+import makeAuthMiddleware from "../middlewares/authMiddleware.js";
 
 //Validator
 import { TrainingValidator } from "../validators/trainingValidator.js";
@@ -95,15 +97,30 @@ const trainingService = new TrainingService({
   TrainingModel: TrainingModel
 });
 
+const resolvedSecret = (process.env.JWT_SECRET && process.env.JWT_SECRET.length >= 32)
+    ? process.env.JWT_SECRET
+    : (process.env.NODE_ENV === 'production' ? null : 'dev_secret_please_override_0123456789abcdef');
+const jwtTokenService = new JwtTokenService({ secret: resolvedSecret });
+const authMiddleware = makeAuthMiddleware({ tokenService: jwtTokenService });
+
+const adminMiddleware = (req, res, next) => {
+    if (!req.user || !['Administrador', 'Directivo'].includes(req.user.role)) {
+        return res.status(403).json({
+            message: 'Acceso denegado. Se requieren permisos de administrador.'
+        });
+    }
+    next();
+};
+
 const controller = makeTrainingController({ 
     trainingService,
     trainingValidator: new TrainingValidator()
  });
 
 
-router.post("/createTraining", controller.createTraining)
-router.get("/getAllActiveTrainings", controller.getAllActiveTrainings)
-router.get("/getAllTrainings", controller.getAllTrainings)
+router.post("/createTraining", authMiddleware, adminMiddleware, controller.createTraining)
+router.get("/getAllActiveTrainings", authMiddleware, controller.getAllActiveTrainings)
+router.get("/getAllTrainings", authMiddleware, adminMiddleware, controller.getAllTrainings)
 
 // Delete file endpoint (debe ir antes de las rutas con parámetros)
 router.delete("/delete-file", (req, res) => {
@@ -191,10 +208,13 @@ router.post("/replace-file", upload.single('file'), (req, res) => {
     }
 });
 
-router.get("/:id", controller.getTrainingById)
-router.get("/:id/trainer", controller.getTrainerByTrainingId)
-router.patch("/:id", controller.updateTraining)
-router.delete("/:id", controller.deleteTraining)
+router.get("/revisions/pending", authMiddleware, adminMiddleware, controller.listRevisions);
+router.get("/:id", authMiddleware, controller.getTrainingById);
+router.get("/:id/trainer", authMiddleware, controller.getTrainerByTrainingId);
+router.patch("/:id", authMiddleware, adminMiddleware, controller.updateTraining);
+router.patch("/:id/revision/:revisionId/approve", authMiddleware, adminMiddleware, controller.approveRevision);
+router.patch("/:id/revision/:revisionId/reject", authMiddleware, adminMiddleware, controller.rejectRevision);
+router.delete("/:id", authMiddleware, adminMiddleware, controller.deleteTraining);
 
 // Upload endpoints
 router.post("/upload-image", upload.single('image'), (req, res) => {

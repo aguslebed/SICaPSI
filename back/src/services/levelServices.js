@@ -1,10 +1,130 @@
 import { ILevelService } from "../interfaces/ILevelService.js";
+import TrainingRevision from "../models/TrainingRevision.js";
+
+const BUSINESS_STATE = {
+    DRAFT: 'Borrador',
+    PENDING: 'Pendiente',
+    ACTIVE: 'Activa',
+    REJECTED: 'Rechazada',
+    FINISHED: 'Finalizada'
+};
+
+const STATUS_ALIASES = {
+    pending: ['pending', 'Pendiente'],
+    approved: ['approved', 'Aprobado'],
+    rejected: ['rejected', 'Rechazado']
+};
+
+const STATUS_LOOKUP = Object.entries(STATUS_ALIASES).reduce((acc, [canonical, variants]) => {
+    const allVariants = [...variants, canonical];
+    allVariants.forEach((variant) => {
+        if (!variant) {
+            return;
+        }
+        const key = variant.toString().trim().toLowerCase();
+        if (key) {
+            acc[key] = canonical;
+        }
+    });
+    return acc;
+}, {});
+
+const normalizeRevisionStatus = (value) => {
+    if (!value) {
+        return '';
+    }
+    const key = value.toString().trim().toLowerCase();
+    return STATUS_LOOKUP[key] || '';
+};
+
+const resolveBusinessState = (training) => {
+    if (!training) return BUSINESS_STATE.DRAFT;
+    const isExpired = training.endDate && new Date(training.endDate) < new Date();
+
+    if (training.isActive && !training.pendingApproval && !training.rejectedBy) {
+        return BUSINESS_STATE.ACTIVE;
+    }
+
+    if (!training.isActive && training.pendingApproval && !training.rejectedBy) {
+        return BUSINESS_STATE.PENDING;
+    }
+
+    if (!training.isActive && !training.pendingApproval && training.rejectedBy) {
+        return BUSINESS_STATE.REJECTED;
+    }
+
+    if (!training.isActive && !training.pendingApproval && !training.rejectedBy && isExpired) {
+        return BUSINESS_STATE.FINISHED;
+    }
+
+    return BUSINESS_STATE.DRAFT;
+};
+
+const canUpdateInPlace = (training) => {
+    const state = resolveBusinessState(training);
+    return (state === BUSINESS_STATE.DRAFT || state === BUSINESS_STATE.REJECTED) && !training.hasPendingRevision;
+};
+
+const deepClone = (value) => JSON.parse(JSON.stringify(value));
+
 export class LevelService extends ILevelService {
     constructor({ LevelModel, UserModel, TrainingModel }) {
         super();
         this.user = UserModel;
         this.training = TrainingModel;
         this.levels = LevelModel;
+    }
+
+    async _ensurePendingRevision({ training, submittedBy, notes }) {
+        if (!submittedBy) {
+            throw new Error('Usuario no autorizado para modificar la capacitación');
+        }
+
+        let revision = null;
+
+        if (training.hasPendingRevision && training.currentRevisionId) {
+            revision = await TrainingRevision.findById(training.currentRevisionId);
+        }
+
+        if (revision && normalizeRevisionStatus(revision.status) !== 'pending') {
+            throw new Error('La capacitación tiene una revisión en proceso');
+        }
+
+        if (!revision) {
+            const trainingSnapshot = training.toObject({ depopulate: true });
+            const { _id, __v, createdAt, updatedAt, levels, hasPendingRevision, currentRevisionId, ...rest } = trainingSnapshot;
+
+            revision = new TrainingRevision({
+                trainingId: training._id,
+                submittedBy,
+                submittedAt: new Date(),
+                snapshot: {
+                    training: rest,
+                    levels: []
+                },
+                notes: notes || ''
+            });
+        } else {
+            revision.submittedBy = submittedBy;
+            revision.submittedAt = new Date();
+            revision.status = 'pending';
+            revision.approvedBy = null;
+            revision.approvedAt = null;
+            revision.rejectedBy = null;
+            revision.rejectedAt = null;
+            revision.rejectionReason = '';
+        }
+
+        await revision.save();
+
+        training.hasPendingRevision = true;
+        training.currentRevisionId = revision._id;
+        training.pendingApproval = true;
+        training.rejectedBy = null;
+        training.rejectionReason = '';
+        await training.save();
+
+        return revision;
     }
 
     async getAllLevelsInTraining(trainingId) {
@@ -17,10 +137,34 @@ export class LevelService extends ILevelService {
         return levels;
     }
 
-    async addLevelsToTraining(trainingId, levels) {
+    async addLevelsToTraining(trainingId, levels, options = {}) {
         const training = await this.training.findById(trainingId);
         if (!training) {
             throw new Error("Capacitación no encontrada");
+        }
+
+        if (!canUpdateInPlace(training)) {
+            const revision = await this._ensurePendingRevision({
+                training,
+                submittedBy: options.submittedBy,
+                notes: options.notes
+            });
+
+            const incomingLevels = Array.isArray(levels) ? deepClone(levels) : [];
+            if (incomingLevels.length > 0) {
+                revision.snapshot.levels = incomingLevels;
+            } else {
+                const currentLevels = await this.levels.find({ trainingId }).lean();
+                revision.snapshot.levels = deepClone(currentLevels);
+            }
+
+            await revision.save();
+
+            return {
+                revisionId: revision._id,
+                pending: true,
+                levels: revision.snapshot.levels
+            };
         }
 
         // Validar duplicados en la base de datos
@@ -33,25 +177,47 @@ export class LevelService extends ILevelService {
             throw new Error("Uno o más números de nivel ya existen en esta capacitación");
         }
 
-        // Crear los niveles
         const newLevels = await this.levels.insertMany(levels);
-        
-        // IMPORTANTE: Actualizar el array de levels en el Training con los IDs de los nuevos niveles
+
         const newLevelIds = newLevels.map(level => level._id);
         await this.training.findByIdAndUpdate(
             trainingId,
             { $push: { levels: { $each: newLevelIds } } },
             { new: true }
         );
-        
+
         console.log(`✅ ${newLevels.length} niveles agregados al training ${trainingId}`);
         return newLevels;
     }
 
-    async updateLevelsInTraining(trainingId, levels) {
+    async updateLevelsInTraining(trainingId, levels, options = {}) {
         const training = await this.training.findById(trainingId);
         if (!training) {
             throw new Error("Capacitación no encontrada");
+        }
+
+        if (!canUpdateInPlace(training)) {
+            const revision = await this._ensurePendingRevision({
+                training,
+                submittedBy: options.submittedBy,
+                notes: options.notes
+            });
+
+            const incomingLevels = Array.isArray(levels) ? deepClone(levels) : [];
+            if (incomingLevels.length > 0) {
+                revision.snapshot.levels = incomingLevels;
+            } else {
+                const currentLevels = await this.levels.find({ trainingId }).lean();
+                revision.snapshot.levels = deepClone(currentLevels);
+            }
+
+            await revision.save();
+
+            return {
+                revisionId: revision._id,
+                pending: true,
+                levels: revision.snapshot.levels
+            };
         }
         
         // Para cada nivel, actualizar o crear si no existe

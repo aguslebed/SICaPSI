@@ -26,6 +26,8 @@ const TrainingSchema = new mongoose.Schema({
   startDate: {type: Date, default: null},
   endDate: {type: Date, default: null},
   assignedTeacher: {type: String, default: ''},
+  hasPendingRevision: { type: Boolean, default: false },
+  currentRevisionId: { type: mongoose.Schema.Types.ObjectId, ref: 'TrainingRevision', default: null }
 }, { 
   timestamps: true
 });
@@ -35,5 +37,6 @@ TrainingSchema.index({ createdBy: 1 });
 TrainingSchema.index({ isActive: 1 });
 // Índice único en title - no puede haber dos capacitaciones con el mismo título
 TrainingSchema.index({ title: 1 }, { unique: true });
+TrainingSchema.index({ currentRevisionId: 1 });
 
 export default mongoose.model("Training", TrainingSchema);

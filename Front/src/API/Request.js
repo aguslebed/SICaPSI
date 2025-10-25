@@ -544,7 +544,15 @@ export async function createTraining(trainingData) {
   } catch (error) {
     console.error("❌ Error creando capacitación:", error);
     if (error.response) {
-      throw new Error(error.response.data?.message || 'Error al crear capacitación');
+      const message = error.response.data?.message || 'Error al crear capacitación';
+      const details = error.response.data?.details;
+      const err = new Error(message);
+      if (details) {
+        err.details = details;
+      }
+      err.status = error.response.status;
+      err.code = error.response.data?.code;
+      throw err;
     } else if (error.request) {
       throw new Error('Error de conexión con el servidor');
     } else {
@@ -868,14 +876,69 @@ export async function checkLevelApproved(trainingId, userId,levelId, levelWithRe
 // (Implementación ubicada arriba en el archivo; evitar duplicados)
 
 // --- Helpers faltantes reintroducidos ---
-// Obtener contenidos pendientes para validación (used by DirectivoPanel)
-export async function getPendingContent() {
+// Revisión de capacitaciones pendiente de aprobación (Directivo)
+export async function listPendingTrainingRevisions(status = 'pending') {
   try {
-    // Intentar ruta esperada en backend; si no existe, devolver array vacío para evitar romper la UI
-    const { data } = await api.get('/training/pending-content');
+    const params = {};
+    if (status) params.status = status;
+    const { data } = await api.get('/training/revisions/pending', { params });
     return Array.isArray(data) ? data : (data?.items || data || []);
   } catch (error) {
-    console.warn('getPendingContent: endpoint no disponible o error', error?.response?.data || error.message);
-    return [];
+    console.error('❌ Error listando revisiones pendientes:', error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al obtener revisiones');
+    }
+    if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    }
+    throw new Error('Error en la configuración de la petición');
   }
 }
+
+export async function approveTrainingRevision(trainingId, revisionId) {
+  try {
+    const { data } = await api.patch(`/training/${trainingId}/revision/${revisionId}/approve`);
+    return data;
+  } catch (error) {
+    console.error('❌ Error aprobando revisión:', error);
+    if (error.response) {
+      const message = error.response.data?.message || 'No se pudo aprobar la revisión';
+      const details = error.response.data?.details;
+      const err = new Error(message);
+      if (details) err.details = details;
+      err.status = error.response.status;
+      err.code = error.response.data?.code;
+      throw err;
+    }
+    if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    }
+    throw new Error('Error en la configuración de la petición');
+  }
+}
+
+export async function rejectTrainingRevision(trainingId, revisionId, reason) {
+  try {
+    const payload = reason ? { reason } : {};
+    const { data } = await api.patch(`/training/${trainingId}/revision/${revisionId}/reject`, payload);
+    return data;
+  } catch (error) {
+    console.error('❌ Error rechazando revisión:', error);
+    if (error.response) {
+      const message = error.response.data?.message || 'No se pudo rechazar la revisión';
+      const details = error.response.data?.details;
+      const err = new Error(message);
+      if (details) err.details = details;
+      err.status = error.response.status;
+      err.code = error.response.data?.code;
+      throw err;
+    }
+    if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    }
+    throw new Error('Error en la configuración de la petición');
+  }
+}
+
+// Compatibilidad: preservar nombre anterior para componentes existentes
+export const getPendingContent = listPendingTrainingRevisions;

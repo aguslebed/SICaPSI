@@ -12,6 +12,57 @@ import { getAllActiveTrainings, getAllTrainings, createTraining, updateTraining,
 import LoadingOverlay from '../../Components/Shared/LoadingOverlay';
 import './AdminPanel.css';
 
+const BUSINESS_STATE = {
+  BORRADOR: 'Borrador',
+  PENDIENTE: 'Pendiente',
+  ACTIVA: 'Activa',
+  RECHAZADA: 'Rechazada',
+  FINALIZADA: 'Finalizada'
+};
+
+const resolveBusinessState = (training) => {
+  if (!training) return BUSINESS_STATE.BORRADOR;
+
+  const pendingApproval = Boolean(training.pendingApproval);
+  const rejected = Boolean(training.rejectedBy);
+  const isActive = Boolean(training.isActive);
+  const isExpired = training.endDate && new Date(training.endDate) < new Date();
+
+  if (pendingApproval && !rejected) {
+    return BUSINESS_STATE.PENDIENTE;
+  }
+
+  if (rejected) {
+    return BUSINESS_STATE.RECHAZADA;
+  }
+
+  if (isActive) {
+    return BUSINESS_STATE.ACTIVA;
+  }
+
+  if (!pendingApproval && !rejected && !isActive && isExpired) {
+    return BUSINESS_STATE.FINALIZADA;
+  }
+
+  return BUSINESS_STATE.BORRADOR;
+};
+
+const BUSINESS_STATE_COLORS = {
+  [BUSINESS_STATE.BORRADOR]: '#6b7280',
+  [BUSINESS_STATE.PENDIENTE]: '#f59e0b',
+  [BUSINESS_STATE.ACTIVA]: '#10b981',
+  [BUSINESS_STATE.RECHAZADA]: '#ef4444',
+  [BUSINESS_STATE.FINALIZADA]: '#8b5cf6'
+};
+
+const EDIT_STATE_TOOLTIPS = {
+  [BUSINESS_STATE.ACTIVA]: 'Editás una capacitación activa. "Actualizar" guarda tus cambios y quedarán pendientes hasta la aprobación directiva.',
+  [BUSINESS_STATE.PENDIENTE]: 'Esta capacitación ya está pendiente. "Actualizar" reemplaza la revisión enviada.',
+  [BUSINESS_STATE.RECHAZADA]: 'Corregí la capacitación rechazada y volvé a enviarla a aprobación.',
+  [BUSINESS_STATE.FINALIZADA]: 'Estás editando una capacitación finalizada. Los cambios generarán una nueva revisión a aprobar.',
+  [BUSINESS_STATE.BORRADOR]: 'Editá el borrador y enviá a aprobar cuando esté listo.'
+};
+
 export default function GestionCapacitacion() {
   const [trainings, setTrainings] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -200,6 +251,11 @@ export default function GestionCapacitacion() {
     } = additionalData;
     // Ya no necesitamos filesToDeleteFromLevels ni oldImageToDelete
 
+    let submissionSummary = {
+      pendingApproval: Boolean(trainingData?.pendingApproval),
+      businessState: resolveBusinessState(trainingData)
+    };
+
     setLoading(true);
     try {
 
@@ -208,13 +264,28 @@ export default function GestionCapacitacion() {
 
       if (isEditing) {
         const updatedTraining = await updateTraining(trainingId, trainingData);
-        finalTrainingId = updatedTraining._id;
+        const revisionCreated = Boolean(updatedTraining?.revisionCreated);
+        finalTrainingId = revisionCreated ? (updatedTraining?.trainingId || trainingId) : (updatedTraining?._id || trainingId);
 
         const levelsWithTrainingId = sanitizedLevels.map(level => ({
           ...level,
           trainingId: finalTrainingId
         }));
         await updateLevelsInTraining(finalTrainingId, levelsWithTrainingId);
+
+        const resultingState = revisionCreated
+          ? BUSINESS_STATE.PENDIENTE
+          : resolveBusinessState(updatedTraining);
+        const resultingPending = revisionCreated
+          ? true
+          : Boolean(updatedTraining?.pendingApproval);
+
+        submissionSummary = {
+          pendingApproval: resultingPending,
+          businessState: resultingState
+        };
+
+        trainingData.pendingApproval = submissionSummary.pendingApproval;
 
         // Ya no necesitamos eliminar archivos manualmente porque replaceTrainingFile lo hace automáticamente
       } else {
@@ -238,6 +309,13 @@ export default function GestionCapacitacion() {
         // Crear training en MongoDB (obtiene ID)
         const createdTraining = await createTraining(trainingData);
         finalTrainingId = createdTraining._id;
+
+        submissionSummary = {
+          pendingApproval: Boolean(createdTraining?.pendingApproval),
+          businessState: resolveBusinessState(createdTraining)
+        };
+
+        trainingData.pendingApproval = submissionSummary.pendingApproval;
 
         // Subir archivos de niveles a temporal
         if (pendingUploads?.levelFiles) {
@@ -344,11 +422,24 @@ export default function GestionCapacitacion() {
 
       if (!isEditing && finalTrainingId) {
         const createdTraining = await getTrainingById(finalTrainingId);
-        setEditingTraining(createdTraining);
+        const decoratedTraining = { ...createdTraining, businessState: resolveBusinessState(createdTraining) };
+        submissionSummary = {
+          pendingApproval: Boolean(decoratedTraining.pendingApproval),
+          businessState: decoratedTraining.businessState
+        };
+        setEditingTraining(decoratedTraining);
       }
     } catch (error) {
       console.error('Error procesando capacitación:', error);
-      setErrorMessages([`Error al ${isEditing ? 'actualizar' : 'crear'} capacitación: ${error.message}`]);
+      const messages = [`Error al ${isEditing ? 'actualizar' : 'crear'} capacitación: ${error.message}`];
+      if (Array.isArray(error.details) && error.details.length > 0) {
+        error.details.forEach((detail) => {
+          if (detail?.message) {
+            messages.push(detail.message);
+          }
+        });
+      }
+      setErrorMessages(messages);
       setErrorModalTitle(isEditing ? 'No se puede actualizar la capacitación' : 'No se puede crear la capacitación');
       setErrorModalMessageText('Revise los siguientes detalles e intente nuevamente:');
       setShowErrorModal(true);
@@ -356,6 +447,8 @@ export default function GestionCapacitacion() {
     } finally {
       setLoading(false);
     }
+
+    return submissionSummary;
   };
 
   // Estado para el modal de confirmación de eliminación
@@ -459,33 +552,10 @@ export default function GestionCapacitacion() {
       // Obtener datos frescos del backend
       const trainingData = await getTrainingById(trainingId);
       
-      // Validar que solo se pueda editar en estados Borrador o Rechazada
-      const isExpired = trainingData.endDate && new Date(trainingData.endDate) < new Date();
-      let estadoActual = 'Borrador';
-      
-      if (trainingData.isActive && !trainingData.pendingApproval && !trainingData.rejectedBy) {
-        estadoActual = 'Activa';
-      } else if (!trainingData.isActive && trainingData.pendingApproval && !trainingData.rejectedBy) {
-        estadoActual = 'Pendiente';
-      } else if (!trainingData.isActive && !trainingData.pendingApproval && trainingData.rejectedBy) {
-        estadoActual = 'Rechazada';
-      } else if (!trainingData.isActive && !trainingData.pendingApproval && !trainingData.rejectedBy && isExpired) {
-        estadoActual = 'Finalizada';
-      }
-      
-      // Solo permitir edición en Borrador o Rechazada
-      if (estadoActual !== 'Borrador' && estadoActual !== 'Rechazada') {
-        setErrorMessages([
-          `No se puede editar una capacitación en estado "${estadoActual}".`,
-          'Solo se pueden editar capacitaciones en estado "Borrador" o "Rechazada".'
-        ]);
-        setErrorModalTitle('Edición no permitida');
-        setErrorModalMessageText('La capacitación no se puede editar en su estado actual:');
-        setShowErrorModal(true);
-        return;
-      }
-      
-      setEditingTraining(trainingData);
+      const estadoActual = resolveBusinessState(trainingData);
+      const trainingForModal = { ...trainingData, businessState: estadoActual };
+
+      setEditingTraining(trainingForModal);
       setOpenCreateTraining(true);
     } catch (error) {
       console.error('Error obteniendo capacitación:', error);
@@ -553,23 +623,6 @@ export default function GestionCapacitacion() {
     
     let filtered = trainings;
 
-    // Helper: una capacitación se considera actualmente activa si está habilitada
-    // y la fecha actual está entre startDate y endDate (ambas deben existir)
-    const isTrainingActiveNow = (training) => {
-      try {
-        if (!training || !training.isActive) return false;
-        const s = training.startDate;
-        const e = training.endDate;
-        if (!s || !e) return false;
-        const now = new Date();
-        const start = new Date(s);
-        const end = new Date(e);
-        return now >= start && now <= end;
-      } catch (err) {
-        return false;
-      }
-    };
-    
     // Filtro por término de búsqueda aplicado
     if (appliedSearch.trim()) {
       const term = appliedSearch.toLowerCase().trim();
@@ -583,24 +636,23 @@ export default function GestionCapacitacion() {
     // Filtro por estados aplicados
     if (appliedEstados.length > 0) {
       filtered = filtered.filter(training => {
-        // Helper: verificar si la capacitación ha finalizado (endDate pasó)
-        const isExpired = training.endDate && new Date(training.endDate) < new Date();
-        
-        const isBorrador = appliedEstados.includes('borrador') && !training.isActive && !training.pendingApproval && !training.rejectedBy && !isExpired;
-        const isPendiente = appliedEstados.includes('pendiente') && !training.isActive && training.pendingApproval && !training.rejectedBy;
-        const isActiva = appliedEstados.includes('activa') && training.isActive && !training.pendingApproval && !training.rejectedBy;
-        const isRechazada = appliedEstados.includes('rechazada') && !training.isActive && !training.pendingApproval && training.rejectedBy;
-        const isFinalizada = appliedEstados.includes('finalizada') && !training.isActive && !training.pendingApproval && !training.rejectedBy && isExpired;
+        const businessState = resolveBusinessState(training);
+
+        const matchesBorrador = appliedEstados.includes('borrador') && businessState === BUSINESS_STATE.BORRADOR;
+        const matchesPendiente = appliedEstados.includes('pendiente') && businessState === BUSINESS_STATE.PENDIENTE;
+        const matchesActiva = appliedEstados.includes('activa') && businessState === BUSINESS_STATE.ACTIVA;
+        const matchesRechazada = appliedEstados.includes('rechazada') && businessState === BUSINESS_STATE.RECHAZADA;
+        const matchesFinalizada = appliedEstados.includes('finalizada') && businessState === BUSINESS_STATE.FINALIZADA;
         const hasAsignado = appliedEstados.includes('asignado') && training.createdBy;
         const hasSinAsignar = appliedEstados.includes('sin_asignar') && !training.createdBy;
-        return isBorrador || isPendiente || isActiva || isRechazada || isFinalizada || hasAsignado || hasSinAsignar;
+        return matchesBorrador || matchesPendiente || matchesActiva || matchesRechazada || matchesFinalizada || hasAsignado || hasSinAsignar;
       });
     }
     
     // Filtro por mostrar inactivas aplicado (ahora filtra borradores, pendientes y finalizadas)
     if (!appliedMostrarInactivas) {
       // Si no mostrar inactivas, solo mostrar activas
-      filtered = filtered.filter(training => training.isActive && !training.pendingApproval);
+      filtered = filtered.filter(training => resolveBusinessState(training) === BUSINESS_STATE.ACTIVA);
     }
     
     return filtered;
@@ -787,24 +839,8 @@ export default function GestionCapacitacion() {
                       : "No hay profesor asignado";
                     const estado = trainerFromMap || t.createdBy ? 'Asignado' : 'Sin asignar';
                     
-                    // Determinar estado de aprobación
-                    const isExpired = t.endDate && new Date(t.endDate) < new Date();
-                    let estadoAprobacion = 'Borrador';
-                    let estadoColor = '#6b7280'; // gris para borrador
-                    
-                    if (t.isActive && !t.pendingApproval && !t.rejectedBy) {
-                      estadoAprobacion = 'Activa';
-                      estadoColor = '#10b981'; // verde
-                    } else if (!t.isActive && t.pendingApproval && !t.rejectedBy) {
-                      estadoAprobacion = 'Pendiente';
-                      estadoColor = '#f59e0b'; // amarillo/naranja
-                    } else if (!t.isActive && !t.pendingApproval && t.rejectedBy) {
-                      estadoAprobacion = 'Rechazada';
-                      estadoColor = '#ef4444'; // rojo
-                    } else if (!t.isActive && !t.pendingApproval && !t.rejectedBy && isExpired) {
-                      estadoAprobacion = 'Finalizada';
-                      estadoColor = '#8b5cf6'; // violeta/morado
-                    }
+                    const estadoAprobacion = resolveBusinessState(t);
+                    const estadoColor = BUSINESS_STATE_COLORS[estadoAprobacion] || '#6b7280';
                     
                     return (
                       <tr key={t._id}>
@@ -836,22 +872,14 @@ export default function GestionCapacitacion() {
                         <td data-label="Acciones">
                           <div className="admin-actions">
                             {(() => {
-                              // Solo permitir edición en estados Borrador o Rechazada
-                              const canEdit = estadoAprobacion === 'Borrador' || estadoAprobacion === 'Rechazada';
-                              const editTitle = canEdit 
-                                ? 'Editar capacitación' 
-                                : `No se puede editar una capacitación en estado "${estadoAprobacion}"`;
-                              
+                              const editTitle = EDIT_STATE_TOOLTIPS[estadoAprobacion] || 'Editar capacitación';
+
                               return (
                                 <button 
                                   className="admin-action-btn" 
                                   title={editTitle}
-                                  onClick={() => canEdit && handleEditTraining(t._id)}
-                                  disabled={loading || !canEdit}
-                                  style={{
-                                    opacity: canEdit ? 1 : 0.5,
-                                    cursor: canEdit ? 'pointer' : 'not-allowed'
-                                  }}
+                                  onClick={() => handleEditTraining(t._id)}
+                                  disabled={loading}
                                 >
                                   📝
                                 </button>

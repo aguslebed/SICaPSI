@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect, useCallback } from 'react';
+import React, { useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import { UserContext } from '../../context/UserContext';
 import { getStudents, getEnrolledStudents, uploadTrainingFile, deleteTrainingFile, getAllUsers, replaceTrainingFile } from '../../API/Request';
 import TrainingPreview from './CreateTrainingModal/TrainingPreview';
@@ -12,6 +12,49 @@ import SuccessModal from './SuccessModal';
 import WarningModal from './WarningModal';
 import LoadingOverlay from '../Shared/LoadingOverlay';
 
+const BUSINESS_STATE = {
+  BORRADOR: 'Borrador',
+  PENDIENTE: 'Pendiente',
+  ACTIVA: 'Activa',
+  RECHAZADA: 'Rechazada',
+  FINALIZADA: 'Finalizada'
+};
+
+const getBusinessState = (training) => {
+  if (!training) return BUSINESS_STATE.BORRADOR;
+
+  const pendingApproval = Boolean(training.pendingApproval);
+  const rejected = Boolean(training.rejectedBy);
+  const isActive = Boolean(training.isActive);
+  const isExpired = training.endDate && new Date(training.endDate) < new Date();
+
+  if (pendingApproval && !rejected) {
+    return BUSINESS_STATE.PENDIENTE;
+  }
+
+  if (rejected) {
+    return BUSINESS_STATE.RECHAZADA;
+  }
+
+  if (isActive) {
+    return BUSINESS_STATE.ACTIVA;
+  }
+
+  if (!pendingApproval && !rejected && !isActive && isExpired) {
+    return BUSINESS_STATE.FINALIZADA;
+  }
+
+  return BUSINESS_STATE.BORRADOR;
+};
+
+const BUSINESS_STATE_HINTS = {
+  [BUSINESS_STATE.BORRADOR]: 'Guardar/Actualizar mantiene el borrador. Cuando esté lista para publicar, usá "Enviar a aprobar".',
+  [BUSINESS_STATE.PENDIENTE]: 'La capacitación ya está enviada. Podés ajustar los contenidos y presionar "Actualizar" para reemplazar la revisión pendiente.',
+  [BUSINESS_STATE.ACTIVA]: 'Los cambios se guardan con "Actualizar" y quedarán pendientes hasta que un directivo los apruebe. Utilizá "Enviar a aprobar" si querés validar requisitos antes de enviarlos.',
+  [BUSINESS_STATE.RECHAZADA]: 'Ajustá los contenidos y reenviá la capacitación con "Enviar a aprobar". "Actualizar" guarda los avances mientras trabajás.',
+  [BUSINESS_STATE.FINALIZADA]: 'Al presionar "Actualizar" se generará una nueva revisión que deberá aprobarse para volver a publicar la capacitación.'
+};
+
 export default function CreateTrainingModal({ open, onClose, onSave, editingTraining }) {
   const { user } = useContext(UserContext);
   const isEditing = Boolean(editingTraining);
@@ -23,6 +66,8 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
   const [image, setImage] = useState('');
   const [isActive, setIsActive] = useState(false);
   const [pendingApproval, setPendingApproval] = useState(false);
+  const [lastSubmissionPending, setLastSubmissionPending] = useState(false);
+  const [overrideBusinessState, setOverrideBusinessState] = useState(null);
   const [assignedTeacher, setAssignedTeacher] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -78,6 +123,16 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   // Snapshot de datos después del último guardado exitoso
   const [lastSavedState, setLastSavedState] = useState(null);
+
+  const businessState = useMemo(() => {
+    if (overrideBusinessState) return overrideBusinessState;
+    if (editingTraining?.businessState) return editingTraining.businessState;
+    return getBusinessState(editingTraining);
+  }, [editingTraining, overrideBusinessState]);
+
+  const actionHint = useMemo(() => {
+    return BUSINESS_STATE_HINTS[businessState] || 'Guardá tus cambios con "Actualizar" o pedí la aprobación directa con "Enviar a aprobar".';
+  }, [businessState]);
 
   // Cuando se abre el modal (crear o editar), asegurar que el punto de inicio sea "Capacitación"
   // y limpiar subsecciones/selecciones para evitar abrir en la última modificación.
@@ -465,9 +520,13 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
     setDescription(normalizeRichTextValue(editingTraining.description || ''));
       setImage(editingTraining.image || '');
       setIsActive(editingTraining.isActive === true); // Solo true si está explícitamente en true, sino false
+      const currentPending = Boolean(editingTraining.pendingApproval);
       setAssignedTeacher(editingTraining.assignedTeacher || '');
       setStartDate(editingTraining.startDate ? editingTraining.startDate.split('T')[0] : '');
       setEndDate(editingTraining.endDate ? editingTraining.endDate.split('T')[0] : '');
+      setPendingApproval(currentPending);
+      setLastSubmissionPending(currentPending);
+      setOverrideBusinessState(editingTraining.businessState || getBusinessState(editingTraining));
       setPendingImageFile(null); // Limpiar archivo pendiente al cargar para edición
       setPendingLevelFiles({}); // Limpiar archivos pendientes de niveles
       
@@ -538,6 +597,8 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
       setImage('');
       setIsActive(false);
       setPendingApproval(false);
+      setLastSubmissionPending(false);
+      setOverrideBusinessState(null);
       setAssignedTeacher('');
       setStartDate('');
       setEndDate('');
@@ -574,6 +635,13 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
     if (open) {
       loadStudents();
       loadTeachers();
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      setOverrideBusinessState(null);
+      setLastSubmissionPending(false);
     }
   }, [open]);
 
@@ -1114,11 +1182,27 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
 
     if (onSave) {
       try {
-        await onSave(payload, sanitizedLevels, additionalData);
+        const saveResult = await onSave(payload, sanitizedLevels, additionalData);
+
+        let nextPendingApproval = pendingApproval;
+        let nextBusinessState = businessState;
+
+        if (saveResult && typeof saveResult === 'object') {
+          if (typeof saveResult.pendingApproval === 'boolean') {
+            nextPendingApproval = saveResult.pendingApproval;
+          }
+          if (typeof saveResult.businessState === 'string' && saveResult.businessState.trim()) {
+            nextBusinessState = saveResult.businessState;
+          }
+        }
 
         if (isEditing) {
           setLevels(sanitizedLevels);
         }
+
+  setPendingApproval(Boolean(nextPendingApproval));
+  setLastSubmissionPending(Boolean(nextPendingApproval));
+        setOverrideBusinessState(nextBusinessState);
 
         setPendingImageFile(null);
         setPendingLevelFiles({});
@@ -1142,6 +1226,10 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
         setShowSuccessModal(true);
       } catch (err) {
         console.warn('CreateTrainingModal: onSave falló:', err);
+        const fallbackPending = Boolean(editingTraining?.pendingApproval);
+        setPendingApproval(fallbackPending);
+        setLastSubmissionPending(fallbackPending);
+        setOverrideBusinessState(editingTraining?.businessState || getBusinessState(editingTraining));
       }
     }
   };
@@ -1387,11 +1475,9 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
         
           {/* Fixed footer with buttons */}
           <div className="bg-white px-6 py-3 flex justify-between items-center border-t-2 border-gray-200 shadow-2xl flex-shrink-0">
-            <div className="text-xs text-gray-500 flex items-center gap-2">
-              <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span><span className="font-semibold text-gray-700">Última modificación:</span> Ahora</span>
+            <div className="text-xs text-gray-600 flex flex-col gap-1 max-w-[60%]">
+              <span className="font-semibold text-gray-700">Estado actual: {businessState}</span>
+              <span className="leading-snug text-gray-600">{actionHint}</span>
             </div>
             <div className="flex gap-3">
               <button 
@@ -1533,7 +1619,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
             // NO cerrar el modal de edición - permitir que el usuario siga trabajando
           }}
           isEditing={isEditing}
-          pendingApproval={pendingApproval}
+          pendingApproval={lastSubmissionPending}
         />
       )}
 
