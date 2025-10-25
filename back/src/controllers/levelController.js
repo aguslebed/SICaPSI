@@ -10,7 +10,8 @@ export function makeLevelController({ levelService }) {
           throw new AppError('Falta el ID de la capacitación', 400);
         }
         const levels = await levelService.getAllLevelsInTraining(trainingId);
-        res.status(200).json(levels);
+        // Devolver en formato consistente con el resto de la API
+        res.status(200).json({ success: true, levels });
       } catch (err) {
         next(err);
       }

@@ -58,6 +58,16 @@ export default function Students() {
     setSelectedStudent(null);
   };
 
+  const handleSendMessage = (student) => {
+    // Navegar a mensajería con state que incluye el alumno seleccionado
+    navigate(`/trainer/${idTraining}/messages`, {
+      state: {
+        composeOpen: true,
+        recipientStudent: student
+      }
+    });
+  };
+
   // Formatear fecha de último acceso
   const formatLastLogin = (lastLogin) => {
     if (!lastLogin) return '-';
@@ -143,7 +153,7 @@ export default function Students() {
                                   <span>Seguimiento</span>
                                 </button>
                                 <button
-                                  onClick={() => navigate(`/trainer/${idTraining}/messages`)}
+                                  onClick={() => handleSendMessage(s)}
                                   className="inline-flex items-center gap-2 px-3 py-1 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 transition"
                                 >
                                   <FaComments className="text-sm" />

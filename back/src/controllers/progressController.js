@@ -66,6 +66,21 @@ export function makeProgressController() {
       }
     },
 
+    async getLevelStatistics(req, res, next) {
+      try {
+        const trainingId = req.params.trainingId;
+        const levelId = req.params.levelId;
+
+        if (!trainingId) throw new AppError('Falta trainingId', 400);
+        if (!levelId) throw new AppError('Falta levelId', 400);
+
+        const statistics = await progressService.getLevelStatistics(trainingId, levelId);
+        return res.status(200).json({ success: true, data: statistics });
+      } catch (err) {
+        next(err);
+      }
+    },
+
 
 
 
