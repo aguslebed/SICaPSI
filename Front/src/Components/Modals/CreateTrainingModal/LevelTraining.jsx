@@ -6,52 +6,52 @@ export default function LevelTraining({ level, levelIndex, updateLevelField, upl
   const [showConfirmDeleteFile, setShowConfirmDeleteFile] = useState(false);
   return (
     <>
-      <div className="border border-gray-300 rounded-sm p-1.5 md:p-1.5 lg:p-2 xl:p-2 bg-white">
-      <table className="w-full border-collapse text-xs md:text-xs lg:text-xs xl:text-sm">
+      <div className="border border-gray-300 rounded-sm p-1.5 bg-white">
+      <table className="w-full border-collapse text-xs">
         <thead>
           <tr>
-            <th className="bg-gray-500 text-white text-left px-1.5 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 text-xs md:text-xs lg:text-xs xl:text-sm font-semibold border border-gray-400" style={{ width: '20%' }}>
+            <th className="bg-gray-500 text-white text-left px-1.5 py-1 text-xs font-semibold border border-gray-400" style={{ width: '25%' }}>
               Campo
             </th>
-            <th className="bg-gray-500 text-white text-left px-1.5 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 text-xs md:text-xs lg:text-xs xl:text-sm font-semibold border border-gray-400">
+            <th className="bg-gray-500 text-white text-left px-1.5 py-1 text-xs font-semibold border border-gray-400">
               Datos
             </th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td className="bg-gray-100 px-1.5 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 text-xs md:text-xs lg:text-xs xl:text-sm font-medium text-gray-700 border border-gray-300">
+            <td className="bg-gray-100 px-1.5 py-1 text-xs font-medium text-gray-700 border border-gray-300" style={{ width: '25%' }}>
               Título
             </td>
-            <td className="px-1.5 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 border border-gray-300">
+            <td className="px-1.5 py-1 border border-gray-300">
               <RichTextInput
                 value={level.training.title}
                 onChange={(html) => updateLevelField(levelIndex, 'training.title', html)}
                 maxLength={100}
                 placeholder="Ingrese el título de la Clase Magistral (Max caracteres: 100)"
               />
-              <p className="text-[10px] md:text-[10px] lg:text-[11px] xl:text-xs text-gray-500 mt-0.5 md:mt-0.5 lg:mt-0.5 xl:mt-1 text-right">{getPlainTextFromRichText(level.training.title).length}/100 caracteres</p>
+              <p className="text-[10px] text-gray-500 mt-0.5 text-right">{getPlainTextFromRichText(level.training.title).length}/100 caracteres</p>
             </td>
           </tr>
           <tr>
-            <td className="bg-gray-100 px-1.5 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 text-xs md:text-xs lg:text-xs xl:text-sm font-medium text-gray-700 border border-gray-300">
+            <td className="bg-gray-100 px-1.5 py-1 text-xs font-medium text-gray-700 border border-gray-300">
               Descripción
             </td>
-            <td className="px-1.5 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 border border-gray-300">
+            <td className="px-1.5 py-1 border border-gray-300">
               <RichTextInput
                 value={level.training.description}
                 onChange={(html) => updateLevelField(levelIndex, 'training.description', html)}
                 maxLength={1000}
                 placeholder="Ingrese la descripción de la Clase Magistral (Max caracteres: 1000)"
               />
-              <p className="text-[10px] md:text-[10px] lg:text-[11px] xl:text-xs text-gray-500 mt-0.5 md:mt-0.5 lg:mt-0.5 xl:mt-1 text-right">{getPlainTextFromRichText(level.training.description).length}/1000 caracteres</p>
+              <p className="text-[10px] text-gray-500 mt-0.5 text-right">{getPlainTextFromRichText(level.training.description).length}/1000 caracteres</p>
             </td>
           </tr>
           <tr>
-            <td className="bg-gray-100 px-1.5 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 text-xs md:text-xs lg:text-xs xl:text-sm font-medium text-gray-700 border border-gray-300">Url o Archivo</td>
-            <td className="px-1.5 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 border border-gray-300">
+            <td className="bg-gray-100 px-1.5 py-1 text-xs font-medium text-gray-700 border border-gray-300">Url o Archivo</td>
+            <td className="px-1.5 py-1 border border-gray-300">
               <div>
-                <div className="flex items-center gap-1.5 md:gap-1.5 lg:gap-2 xl:gap-2">
+                <div className="flex items-center">
                   <input
                     value={level.training.url}
                     onChange={async (e) => {
@@ -68,15 +68,16 @@ export default function LevelTraining({ level, levelIndex, updateLevelField, upl
 
                       updateLevelField(levelIndex, 'training.url', newValue);
                     }}
-                    className="flex-1 border border-gray-200 rounded-lg px-2 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 text-xs md:text-xs lg:text-xs xl:text-sm placeholder:text-xs md:placeholder:text-xs lg:placeholder:text-xs xl:placeholder:text-sm font-normal focus:ring-2 focus:ring-green-200 focus:border-transparent"
+                    className="flex-1 border border-gray-200 rounded-sm px-2 py-1.5 text-xs placeholder:text-xs font-normal focus:ring-2 focus:ring-green-50 focus:border-green-300 bg-white"
                     placeholder="URL del video"
                   />
 
-                  <label className="inline-block">
-                    <input
-                      type="file"
-                      accept=".mp4,.webm,.ogv,.pdf,.ppt,.pptx"
-                      onChange={async (e) => {
+                  <div className="flex items-center gap-2 ml-2">
+                    <label className="inline-block">
+                      <input
+                        type="file"
+                        accept=".mp4,.webm,.ogv,.pdf,.ppt,.pptx"
+                        onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (!file) return;
                         try {
@@ -96,37 +97,34 @@ export default function LevelTraining({ level, levelIndex, updateLevelField, upl
                         }
                       }}
                       className="hidden"
-                      disabled={uploadingFiles && uploadingFiles[`training-${levelIndex}`]}
-                    />
-                    <span className="inline-block px-2 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 bg-gray-500 border border-gray-500 rounded-lg text-xs md:text-xs lg:text-xs xl:text-sm text-white cursor-pointer hover:bg-gray-600">Seleccionar archivo</span>
-                  </label>
+                        disabled={uploadingFiles && uploadingFiles[`training-${levelIndex}`]}
+                      />
+                      <span className="inline-block bg-gray-500 border border-gray-500 text-white px-3 py-1.5 rounded-lg text-xs cursor-pointer hover:bg-gray-600">Choose File</span>
+                    </label>
 
-                  <div className="flex items-center gap-1.5 md:gap-1.5 lg:gap-2 xl:gap-2">
-                    {uploadingFiles && uploadingFiles[`level-${levelIndex}-training`] && <div className="animate-spin h-3 w-3 md:h-3 md:w-3 lg:h-3.5 lg:w-3.5 xl:h-4 xl:w-4 border-2 border-gray-200 border-t-green-600 rounded-full" />}
+                    {uploadingFiles && uploadingFiles[`level-${levelIndex}-training`] && <div className="animate-spin h-3 w-3 border-2 border-gray-200 border-t-green-600 rounded-full" />}
                     {level.training.url && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmDeleteFile(true)}
-                          className="text-red-600 hover:text-red-800 text-xs md:text-xs lg:text-xs xl:text-sm px-1.5 py-0.5 md:px-1.5 md:py-0.5 lg:px-2 lg:py-0.5 xl:px-2 xl:py-1 border border-red-200 rounded-md cursor-pointer"
-                          title="Eliminar archivo/URL"
-                        >
-                          ✕
-                        </button>
-                      </>
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmDeleteFile(true)}
+                        className="text-red-600 hover:text-red-800 text-xs px-1.5 py-0.5 border border-red-200 rounded-md cursor-pointer"
+                        title="Eliminar archivo/URL"
+                      >
+                        ✕
+                      </button>
                     )}
                   </div>
                 </div>
 
-                <div className="mt-0.5 md:mt-0.5 lg:mt-1 xl:mt-1.5 text-[10px] md:text-[10px] lg:text-[11px] xl:text-xs text-indigo-600 text-right">Menor a 100 Mb - formatos permitido: MP4, WebM, OGV</div>
+                <p className="text-[10px] text-indigo-600 mt-0.5 text-right">Menor a 100 Mb - formatos permitido: MP4, WebM, OGV</p>
               </div>
             </td>
           </tr>
           <tr>
-            <td className="bg-gray-100 px-1.5 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 text-xs md:text-xs lg:text-xs xl:text-sm font-medium text-gray-700 border border-gray-300">
+            <td className="bg-gray-100 px-1.5 py-1 text-xs font-medium text-gray-700 border border-gray-300">
               Duración (min)
             </td>
-            <td className="px-1.5 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 border border-gray-300">
+            <td className="px-1.5 py-1 border border-gray-300">
               <input
                 type="text"
                 value={level.training.duration}
@@ -137,7 +135,7 @@ export default function LevelTraining({ level, levelIndex, updateLevelField, upl
                     updateLevelField(levelIndex, 'training.duration', value === '' ? 0 : parseInt(value));
                   }
                 }}
-                className="w-full border-0 px-0 py-0.5 md:py-0.5 lg:py-0.5 xl:py-1 text-xs md:text-xs lg:text-xs xl:text-sm placeholder:text-xs md:placeholder:text-xs lg:placeholder:text-xs xl:placeholder:text-sm font-normal focus:ring-0 focus:outline-none bg-transparent"
+                className="w-full border border-gray-200 rounded-sm px-2 py-1.5 text-xs placeholder:text-xs font-normal focus:ring-2 focus:ring-green-50 focus:border-green-300 bg-white"
                 placeholder="45"
               />
             </td>

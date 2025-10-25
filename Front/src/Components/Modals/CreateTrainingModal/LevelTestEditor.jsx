@@ -24,25 +24,25 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
     }
   };
   return (
-    <div className="border border-gray-300 rounded-sm p-1.5 md:p-1.5 lg:p-2 xl:p-2 bg-white space-y-2">
+    <div className="border border-gray-300 rounded-sm p-1.5 bg-white space-y-2">
       {/* Información general del test */}
-      <table className="w-full border-collapse text-xs md:text-xs lg:text-xs xl:text-sm">
+      <table className="w-full border-collapse text-xs">
         <thead>
           <tr>
-            <th className="bg-gray-500 text-white text-left px-1.5 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 text-xs md:text-xs lg:text-xs xl:text-sm font-semibold border border-gray-400" style={{ width: '20%' }}>
+            <th className="bg-gray-500 text-white text-left px-1.5 py-1 text-xs font-semibold border border-gray-400" style={{ width: '25%' }}>
               Campo
             </th>
-            <th className="bg-gray-500 text-white text-left px-1.5 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 text-xs md:text-xs lg:text-xs xl:text-sm font-semibold border border-gray-400">
+            <th className="bg-gray-500 text-white text-left px-1.5 py-1 text-xs font-semibold border border-gray-400">
               Datos
             </th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td className="bg-gray-100 px-1.5 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 text-xs md:text-xs lg:text-xs xl:text-sm font-medium text-gray-700 border border-gray-300" style={{ width: '20%' }}>
+            <td className="bg-gray-100 px-1.5 py-1 text-xs font-medium text-gray-700 border border-gray-300" style={{ width: '25%' }}>
               Título
             </td>
-            <td className="px-1.5 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 border border-gray-300">
+            <td className="px-1.5 py-1 border border-gray-300">
               <RichTextInput
                 value={level.test.title}
                 onChange={(html) => updateLevelField(levelIndex, 'test.title', html)}
@@ -50,14 +50,14 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                 maxLength={100}
                 placeholder="Ingrese el título del test (Max caracteres: 100)"
               />
-              <p className="text-[10px] md:text-[10px] lg:text-[11px] xl:text-xs text-gray-500 mt-0.5 md:mt-0.5 lg:mt-0.5 xl:mt-1 text-right">{getPlainTextFromRichText(level.test.title).length}/100 caracteres</p>
+              <p className="text-[10px] text-gray-500 mt-0.5 text-right">{getPlainTextFromRichText(level.test.title).length}/100 caracteres</p>
             </td>
           </tr>
           <tr>
-            <td className="bg-gray-100 px-1.5 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 text-xs md:text-xs lg:text-xs xl:text-sm font-medium text-gray-700 border border-gray-300">
+            <td className="bg-gray-100 px-1.5 py-1 text-xs font-medium text-gray-700 border border-gray-300">
               Descripción
             </td>
-            <td className="px-1.5 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 border border-gray-300">
+            <td className="px-1.5 py-1 border border-gray-300">
               <RichTextInput
                 value={level.test.description}
                 onChange={(html) => updateLevelField(levelIndex, 'test.description', html)}
@@ -65,7 +65,7 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                 maxLength={250}
                 placeholder="Ingrese la descripción de la evaluación (Max caracteres: 250)"
               />
-              <p className="text-[10px] md:text-[10px] lg:text-[11px] xl:text-xs text-gray-500 mt-0.5 md:mt-0.5 lg:mt-0.5 xl:mt-1 text-right">{getPlainTextFromRichText(level.test.description).length}/250 caracteres</p>
+              <p className="text-[10px] text-gray-500 mt-0.5 text-right">{getPlainTextFromRichText(level.test.description).length}/250 caracteres</p>
             </td>
           </tr>
           <tr>
@@ -74,16 +74,17 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
             </td>
             <td className="px-1.5 py-1 border border-gray-300">
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center">
                   <input
                     value={level.test.imageUrl || ''}
                     onChange={(e) => updateLevelField(levelIndex, 'test.imageUrl', e.target.value)}
                     onFocus={handleFocusTest}
-                    className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-xs placeholder:text-xs font-normal focus:ring-2 focus:ring-green-200 focus:border-transparent"
-                    placeholder="URL de imagen"
+                    className="flex-1 border border-gray-200 rounded-sm px-2 py-1.5 text-xs placeholder:text-xs font-normal focus:ring-2 focus:ring-green-50 focus:border-green-300 bg-white"
+                    placeholder="https://ejemplo.com/imagen.jpg"
                   />
 
-                  <label className="inline-block">
+                  <div className="flex items-center gap-2 ml-2">
+                    <label className="inline-block">
                     <input
                       type="file"
                       accept="image/jpeg,image/png,image/gif,image/webp"
@@ -130,10 +131,9 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                       }}
                       className="hidden"
                     />
-                    <span className="inline-block px-3 py-1.5 bg-gray-500 border border-gray-500 rounded-lg text-xs text-white cursor-pointer hover:bg-gray-600">Seleccionar archivo</span>
-                  </label>
+                      <span className="inline-block bg-gray-500 border border-gray-500 text-white px-3 py-1.5 rounded-lg text-xs cursor-pointer hover:bg-gray-600">Choose File</span>
+                    </label>
 
-                  <div className="flex items-center gap-1.5">
                     {level.test.imageUrl && (
                       <button
                         type="button"
@@ -147,7 +147,7 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                     )}
                   </div>
                 </div>
-                <div className="mt-0.5 text-[10px] text-indigo-600 text-right">Menor a 5 Mb - Formatos: JPG, PNG, GIF, WebP</div>
+                <p className="text-[10px] text-indigo-600 mt-0.5 text-right">Menor a 5 Mb - Formatos: JPG, PNG, GIF, WebP</p>
               </div>
             </td>
           </tr>
@@ -256,13 +256,13 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
               </button>
             </div>
 
-            <table className="w-full border-collapse text-xs md:text-xs lg:text-xs xl:text-sm mb-1.5">
+            <table className="w-full border-collapse text-xs mb-1.5">
               <thead>
                 <tr>
-                  <th className="bg-gray-500 text-white text-left px-1.5 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 text-xs md:text-xs lg:text-xs xl:text-sm font-semibold border border-gray-400" style={{ width: '20%' }}>
+                  <th className="bg-gray-500 text-white text-left px-1.5 py-1 text-xs font-semibold border border-gray-400" style={{ width: '25%' }}>
                     Campo
                   </th>
-                  <th className="bg-gray-500 text-white text-left px-1.5 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 text-xs md:text-xs lg:text-xs xl:text-sm font-semibold border border-gray-400">
+                  <th className="bg-gray-500 text-white text-left px-1.5 py-1 text-xs font-semibold border border-gray-400">
                     Datos
                   </th>
                 </tr>
@@ -282,7 +282,7 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                         updateLevelField(levelIndex, 'test.scenes', newScenes);
                       }}
                       onFocus={() => handleFocusScene(selectedScene)}
-                      className="w-full border-0 px-0 py-0.5 text-xs placeholder:text-xs font-normal focus:ring-0 focus:outline-none bg-transparent"
+                      className="w-full border border-gray-200 rounded-sm px-2 py-1.5 text-xs placeholder:text-xs font-normal focus:ring-2 focus:ring-green-50 focus:border-green-300 bg-white"
                       placeholder="ID numérico único de la escena"
                       min="1"
                     />
@@ -312,30 +312,30 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                     Video
                   </td>
                   <td className="px-1.5 py-1 border border-gray-300">
-                    <div className="flex items-center gap-1.5">
-                          <input
-                            type="url"
-                            value={level.test.scenes[selectedScene].videoUrl || ''}
-                            onChange={(e) => {
-                              const newScenes = [...(level.test.scenes || [])];
-                              newScenes[selectedScene] = { ...newScenes[selectedScene], videoUrl: e.target.value };
-                              updateLevelField(levelIndex, 'test.scenes', newScenes);
-                            }}
-                            onFocus={() => handleFocusScene(selectedScene)}
-                            className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-xs placeholder:text-xs font-normal focus:ring-2 focus:ring-green-200 focus:border-transparent"
-                            placeholder="URL del video"
-                          />
-                      {level.test.scenes[selectedScene].videoUrl && (
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmDeleteSceneVideo(true)}
-                          className="text-red-600 hover:text-red-800 text-xs px-1.5 py-0.5 border border-red-200 rounded-md cursor-pointer"
-                        >
-                          ✕
-                        </button>
-                      )}
-                      <label className="bg-gray-500 border border-gray-500 text-white px-3 py-1.5 rounded-lg text-xs cursor-pointer hover:bg-gray-600">
-                        Seleccionar archivo
+                    <div className="flex items-center">
+                      <input
+                        type="url"
+                        value={level.test.scenes[selectedScene].videoUrl || ''}
+                        onChange={(e) => {
+                          const newScenes = [...(level.test.scenes || [])];
+                          newScenes[selectedScene] = { ...newScenes[selectedScene], videoUrl: e.target.value };
+                          updateLevelField(levelIndex, 'test.scenes', newScenes);
+                        }}
+                        onFocus={() => handleFocusScene(selectedScene)}
+                        className="flex-1 border border-gray-200 rounded-sm px-2 py-1.5 text-xs placeholder:text-xs font-normal focus:ring-2 focus:ring-green-50 focus:border-green-300 bg-white"
+                        placeholder="https://ejemplo.com/video.mp4"
+                      />
+                      <div className="flex items-center gap-2 ml-2">
+                        {level.test.scenes[selectedScene].videoUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmDeleteSceneVideo(true)}
+                            className="text-red-600 hover:text-red-800 text-xs px-1.5 py-0.5 border border-red-200 rounded-md cursor-pointer"
+                          >
+                            ✕
+                          </button>
+                        )}
+                        <label className="inline-block">
                         <input
                           type="file"
                           className="hidden"
@@ -380,9 +380,11 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                             }
                           }}
                         />
-                      </label>
+                          <span className="inline-block bg-gray-500 border border-gray-500 text-white px-3 py-1.5 rounded-lg text-xs cursor-pointer hover:bg-gray-600">Choose File</span>
+                        </label>
+                      </div>
                     </div>
-                    <div className="text-[10px] text-indigo-600 mt-0.5 text-right">Menor a 100 Mb - Menor a 100 Mb - formatos permitido: MP4, WebM, OGV</div>
+                    <p className="text-[10px] text-indigo-600 mt-0.5 text-right">Menor a 100 Mb - formatos permitido: MP4, WebM, OGV</p>
                   </td>
                 </tr>
                 <tr>
@@ -506,20 +508,20 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                     </button>
                   </div>
 
-                  <table className="w-full border-collapse text-xs md:text-xs lg:text-xs xl:text-sm">
+                  <table className="w-full border-collapse text-xs">
                     <thead>
                       <tr>
-                        <th className="bg-gray-500 text-white text-left px-1.5 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 text-xs md:text-xs lg:text-xs xl:text-sm font-semibold border border-gray-400" style={{ width: '20%' }}>
+                        <th className="bg-gray-500 text-white text-left px-1.5 py-1 text-xs font-semibold border border-gray-400" style={{ width: '25%' }}>
                           Campo
                         </th>
-                        <th className="bg-gray-500 text-white text-left px-1.5 py-1 md:px-2 md:py-1 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 text-xs md:text-xs lg:text-xs xl:text-sm font-semibold border border-gray-400">
+                        <th className="bg-gray-500 text-white text-left px-1.5 py-1 text-xs font-semibold border border-gray-400">
                           Datos
                         </th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr>
-                        <td className="bg-gray-100 px-1.5 py-1 text-xs font-medium text-gray-700 border border-gray-300" style={{ width: '35%' }}>
+                        <td className="bg-gray-100 px-1.5 py-1 text-xs font-medium text-gray-700 border border-gray-300" style={{ width: '25%' }}>
                           Texto del botón
                         </td>
                         <td className="px-1.5 py-1 border border-gray-300">
@@ -535,7 +537,7 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                             }}
                             onFocus={() => handleFocusScene(selectedScene)}
                             maxLength={100}
-                            className="w-full border-0 px-0 py-0.5 text-xs placeholder:text-xs font-normal focus:ring-0 focus:outline-none bg-transparent"
+                            className="w-full border border-gray-200 rounded-sm px-2 py-1.5 text-xs placeholder:text-xs font-normal focus:ring-2 focus:ring-green-50 focus:border-green-300 bg-white"
                             placeholder="Texto del botón (ej: Acercarse y abrir la puerta)"
                           />
                           <p className="text-[10px] text-gray-500 mt-0.5 text-right">{(level.test.scenes[selectedScene].options[selectedOption].description || '').length}/100 caracteres</p>
@@ -557,7 +559,7 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                               updateLevelField(levelIndex, 'test.scenes', newScenes);
                             }}
                             onFocus={() => handleFocusScene(selectedScene)}
-                            className="w-full border-0 px-0 py-0.5 text-xs placeholder:text-xs font-normal focus:ring-0 focus:outline-none bg-transparent"
+                            className="w-full border border-gray-200 rounded-sm px-2 py-1.5 text-xs placeholder:text-xs font-normal focus:ring-2 focus:ring-green-50 focus:border-green-300 bg-white"
                             min="0"
                             placeholder="Puntos que otorga esta opción"
                           />
@@ -579,7 +581,7 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                               updateLevelField(levelIndex, 'test.scenes', newScenes);
                             }}
                             onFocus={() => handleFocusScene(selectedScene)}
-                            className="w-full border-0 px-0 py-0.5 text-xs placeholder:text-xs font-normal focus:ring-0 focus:outline-none bg-transparent"
+                            className="w-full border border-gray-200 rounded-sm px-2 py-1.5 text-xs placeholder:text-xs font-normal focus:ring-2 focus:ring-green-50 focus:border-green-300 bg-white"
                             placeholder="ID de la siguiente escena (vacío = fin del test)"
                             min="1"
                           />

@@ -155,30 +155,30 @@ export default function LevelBibliography({
               Url o Archivo
             </td>
             <td className="px-1.5 py-1 border border-gray-300">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center">
                 <input
                   type="url"
                   value={tempBibUrl}
                   onChange={(e) => setTempBibUrl(e.target.value)}
                   placeholder="https://ejemplo.com/documento.pdf"
-                  className="flex-1 border-0 px-0 py-0.5 text-xs placeholder:text-xs font-normal focus:ring-0 focus:outline-none bg-transparent"
+                  className="flex-1 border border-gray-200 rounded-sm px-2 py-1.5 text-xs placeholder:text-xs font-normal focus:ring-2 focus:ring-green-50 focus:border-green-300 bg-white"
                 />
-                {tempBibUrl && tempBibUrl.startsWith('/uploads/') && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTempBibUrl('');
-                    }}
-                    className="text-red-600 hover:text-red-800 text-xs px-1.5 py-0.5 border border-red-200 rounded-md cursor-pointer"
-                  >
-                    ✕
-                  </button>
-                )}
-                <label className="bg-gray-500 border border-gray-500 text-white px-3 py-1.5 rounded-lg text-xs cursor-pointer hover:bg-gray-600">
-                  Choose File
-                  <input
-                    type="file"
-                    className="hidden"
+                <div className="flex items-center gap-2 ml-2">
+                  {tempBibUrl && tempBibUrl.startsWith('/uploads/') && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTempBibUrl('');
+                      }}
+                      className="text-red-600 hover:text-red-800 text-xs px-1.5 py-0.5 border border-red-200 rounded-md cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  )}
+                  <label className="inline-block">
+                    <input
+                      type="file"
+                      className="hidden"
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
@@ -210,11 +210,13 @@ export default function LevelBibliography({
                         e.target.value = '';
                       }
                     }}
-                  />
-                </label>
-                {uploadingFiles && uploadingFiles[`level-${levelIndex}-training`] && (
-                  <div className="animate-spin h-3 w-3 border-2 border-gray-200 border-t-green-600 rounded-full" />
-                )}
+                    />
+                    <span className="inline-block bg-gray-500 border border-gray-500 text-white px-3 py-1.5 rounded-lg text-xs cursor-pointer hover:bg-gray-600">Choose File</span>
+                  </label>
+                  {uploadingFiles && uploadingFiles[`level-${levelIndex}-training`] && (
+                    <div className="animate-spin h-3 w-3 border-2 border-gray-200 border-t-green-600 rounded-full" />
+                  )}
+                </div>
               </div>
               <p className="text-[10px] text-indigo-600 mt-0.5 text-right">Menor a 50 Mb - Música, Video o Documento</p>
             </td>

@@ -8,7 +8,7 @@ import ErrorListModal from '../../Components/Modals/ErrorListModal';
 import WarningModal from '../../Components/Modals/WarningModal';
 import ConfirmActionModal from '../../Components/Modals/ConfirmActionModal';
 import { useState, useEffect, useRef } from 'react';
-import { getAllActiveTrainings, getAllTrainings, createTraining, updateTraining, addLevelsToTraining, updateLevelsInTraining, deleteTraining, getTrainingById, enrollStudentsToTraining, deleteTrainingFile, uploadTrainingFile, moveTempFiles, replaceTrainingFile, getTrainerByTrainingId } from '../../API/Request';
+import { getAllActiveTrainings, getAllTrainings, createTraining, updateTraining, addLevelsToTraining, updateLevelsInTraining, deleteTraining, getTrainingById, enrollStudentsToTraining, enrollTrainerToTraining, deleteTrainingFile, uploadTrainingFile, moveTempFiles, replaceTrainingFile, getTrainerByTrainingId } from '../../API/Request';
 import LoadingOverlay from '../../Components/Shared/LoadingOverlay';
 import './AdminPanel.css';
 
@@ -325,6 +325,17 @@ export default function GestionCapacitacion() {
         } catch (enrollError) {
           console.warn('Error inscribiendo guardias:', enrollError);
           setWarningMessage(`Capacitación guardada, pero hubo un problema inscribiendo guardias: ${enrollError.message}`);
+          setShowWarningModal(true);
+        }
+      }
+
+      // Inscribir profesor si está asignado
+      if (trainingData.assignedTeacher && trainingData.assignedTeacher.trim()) {
+        try {
+          await enrollTrainerToTraining(finalTrainingId, trainingData.assignedTeacher);
+        } catch (enrollError) {
+          console.warn('Error inscribiendo profesor:', enrollError);
+          setWarningMessage(`Capacitación guardada, pero hubo un problema inscribiendo al profesor: ${enrollError.message}`);
           setShowWarningModal(true);
         }
       }

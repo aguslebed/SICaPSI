@@ -795,6 +795,26 @@ export async function enrollStudentsToTraining(trainingId, studentIds) {
   }
 }
 
+// Inscribir profesor a una capacitación
+export async function enrollTrainerToTraining(trainingId, teacherId) {
+  try {
+    const { data } = await api.post('/enrollment/enrollTrainer', {
+      trainingId,
+      userIds: [teacherId] // El backend espera 'userIds' como array
+    });
+    return data;
+  } catch (error) {
+    console.error("❌ Error inscribiendo profesor:", error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al inscribir profesor');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
 // --- PROGRESS / LEVEL APPROVAL ---
 // Checks whether a level is approved given the user's level object (with results)
 export async function checkLevelApproved(trainingId, userId,levelId, levelWithResults) {
