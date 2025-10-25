@@ -68,7 +68,8 @@ export default function AdmisionUsuario() {
       try {
         setLoading(true);
         setError(null);
-        const response = await listUsers();
+        // Filtrar solo usuarios con estado pendiente
+        const response = await listUsers({ status: 'pendiente' });
         
         // La respuesta tiene la estructura { total, page, limit, items }
         console.log('Respuesta de la API:', response);
@@ -87,16 +88,19 @@ export default function AdmisionUsuario() {
         }
         
         // Transformar los datos para que coincidan con la estructura esperada
-        const usuariosTransformados = usuarios.map(usuario => ({
-          nombre: usuario.firstName,
-          apellido: usuario.lastName,
-          email: usuario.email,
-          dni: usuario.documentNumber,
-          fecha: new Date(usuario.createdAt).toLocaleDateString(),
-          tipo: usuario.role,
-          estado: usuario.status,
-          id: usuario._id
-        }));
+        // Solo incluir usuarios con estado pendiente
+        const usuariosTransformados = usuarios
+          .filter(usuario => usuario.status === 'pendiente')
+          .map(usuario => ({
+            nombre: usuario.firstName,
+            apellido: usuario.lastName,
+            email: usuario.email,
+            dni: usuario.documentNumber,
+            fecha: new Date(usuario.createdAt).toLocaleDateString(),
+            tipo: usuario.role,
+            estado: usuario.status,
+            id: usuario._id
+          }));
         
         setData(usuariosTransformados);
       } catch (error) {
@@ -115,11 +119,9 @@ export default function AdmisionUsuario() {
       }
     };
 
-    // Solo cargar si no hay datos desde el estado de navegación
-    if (!location.state?.data || location.state.data.length === 0) {
-      cargarUsuarios();
-    }
-  }, [location.state?.data]);
+    // Siempre cargar usuarios pendientes al montar
+    cargarUsuarios();
+  }, []); // Removido location.state?.data de dependencias
 
   // Efecto para filtrar datos cuando cambian los filtros o los datos
   useEffect(() => {
