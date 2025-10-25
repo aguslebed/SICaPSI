@@ -697,6 +697,8 @@ export async function moveTempFiles(trainingId, tempFiles) {
   }
 }
 
+
+
 // Obtener una capacitación por ID
 export async function getTrainingById(trainingId) {
   try {
@@ -709,6 +711,26 @@ export async function getTrainingById(trainingId) {
     console.error("❌ Error obteniendo capacitación:", error);
     if (error.response) {
       throw new Error(error.response.data?.message || 'Error al obtener capacitación');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+// Obtener el profesor (trainer) de una capacitación por ID
+export async function getTrainerByTrainingId(trainingId) {
+  try {
+    console.log('🔍 getTrainerByTrainingId llamado con trainingId:', trainingId);
+    const response = await api.get(`/training/${encodeURIComponent(trainingId)}/trainer`);
+    console.log('📦 Response completo:', response);
+    console.log('📦 Response.data:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('❌ Error obteniendo profesor del training:', error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al obtener profesor');
     } else if (error.request) {
       throw new Error('Error de conexión con el servidor');
     } else {

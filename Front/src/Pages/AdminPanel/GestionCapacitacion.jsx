@@ -8,7 +8,7 @@ import ErrorListModal from '../../Components/Modals/ErrorListModal';
 import WarningModal from '../../Components/Modals/WarningModal';
 import ConfirmActionModal from '../../Components/Modals/ConfirmActionModal';
 import { useState, useEffect, useRef } from 'react';
-import { getAllActiveTrainings, getAllTrainings, createTraining, updateTraining, addLevelsToTraining, updateLevelsInTraining, deleteTraining, getTrainingById, enrollStudentsToTraining, deleteTrainingFile, uploadTrainingFile, moveTempFiles, replaceTrainingFile } from '../../API/Request';
+import { getAllActiveTrainings, getAllTrainings, createTraining, updateTraining, addLevelsToTraining, updateLevelsInTraining, deleteTraining, getTrainingById, enrollStudentsToTraining, deleteTrainingFile, uploadTrainingFile, moveTempFiles, replaceTrainingFile, getTrainerByTrainingId } from '../../API/Request';
 import LoadingOverlay from '../../Components/Shared/LoadingOverlay';
 import './AdminPanel.css';
 
@@ -16,6 +16,9 @@ export default function GestionCapacitacion() {
   const [trainings, setTrainings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Estado para cachear profesores por trainingId
+  const [trainersMap, setTrainersMap] = useState({});
   
   // Estados para modales
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -53,6 +56,34 @@ export default function GestionCapacitacion() {
   // Referencias para los dropdowns
   const nivelMenuRef = useRef(null);
   const estadoMenuRef = useRef(null);
+
+  // Helper: obtiene el profesor para cada capacitación que no tenga `trainer` poblado
+  const fetchAndAttachTrainers = async (trainingsList) => {
+    if (!Array.isArray(trainingsList) || trainingsList.length === 0) return trainingsList;
+
+    const mapUpdates = {};
+
+    const jobs = trainingsList.map(async (t) => {
+      try {
+        // Skip si ya está cacheado
+        if (trainersMap[t._id]) return;
+
+        const trainer = await getTrainerByTrainingId(t._id);
+        console.log(trainer)
+        if (trainer) mapUpdates[t._id] = trainer;
+      } catch (err) {
+        console.warn('fetchAndAttachTrainers: no se pudo cargar trainer para', t._id, err?.message || err);
+      }
+    });
+
+    await Promise.all(jobs);
+
+    if (Object.keys(mapUpdates).length > 0) {
+      setTrainersMap(prev => ({ ...prev, ...mapUpdates }));
+    }
+
+    return trainingsList;
+  };
 
   // Cerrar dropdowns al hacer click fuera
   useEffect(() => {
@@ -123,7 +154,10 @@ export default function GestionCapacitacion() {
         const data = await getAllTrainings(); // Cambiar a getAllTrainings para obtener todas
         // backend may return an array or { items: [] }
         const items = Array.isArray(data) ? data : (data?.items || []);
-        if (mounted) setTrainings(items);
+        if (mounted) {
+          const enriched = await fetchAndAttachTrainers(items);
+          setTrainings(enriched);
+        }
       } catch (err) {
         console.error('Error fetching trainings', err);
         if (mounted) setError(err);
@@ -145,7 +179,8 @@ export default function GestionCapacitacion() {
     try {
       const data = await getAllTrainings(); // Cambiar a getAllTrainings para obtener todas
       const items = Array.isArray(data) ? data : (data?.items || []);
-      setTrainings(items);
+  const enriched = await fetchAndAttachTrainers(items);
+  setTrainings(enriched);
     } catch (err) {
       console.error('Error fetching trainings', err);
       setError(err);
@@ -732,10 +767,16 @@ export default function GestionCapacitacion() {
                     // Niveles info
                     const nivelesCount = t.levels?.length || t.totalLevels || 0;
                     const nivelesLabel = nivelesCount > 0 ? `${nivelesCount} nivel${nivelesCount > 1 ? 'es' : ''}` : 'Sin niveles';
-                    
-                    // Profesor info
-                    const profesor = t.createdBy ? `${t.createdBy.firstName || ''} ${t.createdBy.lastName || ''}`.trim() : '-';
-                    const estado = t.createdBy ? 'Asignado' : 'Sin asignar';
+
+                    // Profesor info - usar trainersMap primero, luego fallback a createdBy
+                    const trainerFromMap = trainersMap[t._id];
+                    console.log(trainerFromMap)
+                    const profesor = trainerFromMap 
+                      ? `${trainerFromMap.firstName || ''} ${trainerFromMap.lastName || ''}`.trim()
+                      : (t.createdBy 
+                          ? `${t.createdBy.firstName || ''} ${t.createdBy.lastName || ''}`.trim() 
+                          : '-');
+                    const estado = trainerFromMap || t.createdBy ? 'Asignado' : 'Sin asignar';
                     
                     // Determinar estado de aprobación
                     const isExpired = t.endDate && new Date(t.endDate) < new Date();

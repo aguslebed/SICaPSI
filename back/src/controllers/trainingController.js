@@ -45,6 +45,17 @@ export function makeTrainingController({ trainingService, trainingValidator }) {
       }
     },
 
+    async getTrainerByTrainingId(req, res, next) {
+      try {
+        const { id } = req.params;
+        const trainer = await trainingService.getTrainerByTrainingId(id);
+        if (!trainer) throw new AppError("Profesor de la capacitación no encontrado", 404, "TRAINER_404");
+        res.status(200).json(trainer);
+      } catch (err) {
+        next(err);
+      }
+    },
+
     async updateTraining(req, res, next) {
       try {
         const { id } = req.params;

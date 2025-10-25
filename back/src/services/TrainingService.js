@@ -1,6 +1,6 @@
 // Servicio concreto para cursos
 import { ITrainingService } from '../interfaces/ITrainingService.js';
-
+import mongoose from 'mongoose';
 
 export class TrainingService extends ITrainingService {
   constructor({ UserModel, LevelModel, TrainingModel }) {
@@ -74,6 +74,53 @@ export class TrainingService extends ITrainingService {
    
    return training;
  }
+
+/**
+ * Devuelve el usuario que actúa como profesor de la capacitación (assignedTeacher) dado un trainingId.
+ * Compatible con assignedTeacher guardado como ObjectId o como string (por ejemplo, email).
+ * @param {String} trainingId
+ * @returns {Object|null} Usuario (campos públicos) o null si no existe
+ */
+async getTrainerByTrainingId(trainingId) {
+  try {
+    // Buscar el campo assignedTeacher en la colección Training
+    const training = await this.Training.findById(trainingId)
+      .select('assignedTeacher')
+      .exec();
+
+    if (!training || !training.assignedTeacher) return null;
+
+    const assignedValue = training.assignedTeacher;
+
+    // Buscar el usuario por ObjectId o, si no es válido, por email o string exacto
+    let trainer = null;
+
+    if (mongoose.Types.ObjectId.isValid(assignedValue)) {
+      // Buscar por ObjectId
+      trainer = await this.User.findById(assignedValue)
+        .select('firstName lastName email phone profileImage role')
+        .exec();
+    }
+
+    // Si no lo encontró por ID o no era un ObjectId válido, buscar por email
+    if (!trainer) {
+      trainer = await this.User.findOne({
+        $or: [
+          { email: assignedValue },
+          { _id: assignedValue } // si fue guardado como string del ObjectId
+        ]
+      })
+        .select('firstName lastName email phone profileImage role')
+        .exec();
+    }
+
+    return trainer || null;
+  } catch (error) {
+    console.error('❌ Error en getTrainerByTrainingId:', error);
+    throw new Error('Error al obtener el capacitador de la capacitación');
+  }
+}
+
 
  // Actualizar una capacitación
  async updateTraining(trainingId, trainingData) {

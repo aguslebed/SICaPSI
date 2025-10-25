@@ -192,6 +192,7 @@ router.post("/replace-file", upload.single('file'), (req, res) => {
 });
 
 router.get("/:id", controller.getTrainingById)
+router.get("/:id/trainer", controller.getTrainerByTrainingId)
 router.patch("/:id", controller.updateTraining)
 router.delete("/:id", controller.deleteTraining)
 
