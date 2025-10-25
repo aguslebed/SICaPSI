@@ -15,7 +15,7 @@ const controller = makeProgressController();
 // Obtener progreso de un usuario en un curso específico
 router.post('/trainings/:trainingId/progress', controller.getTrainingProgress);
 
-// Marcar nivel como completado (idempotente) - route left public so clients without cookie can call it.
+
 router.post('/trainings/:trainingId/levels/:levelId/checkApproved', controller.checkLevelApproved);
 router.post('/trainings/:trainingId/totalProgress', controller.totalTrainingProgress);
 // Obtener resumen de progreso para todas las capacitaciones

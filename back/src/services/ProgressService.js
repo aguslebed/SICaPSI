@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import UserLevelProgress from "../models/UserLevelProgress.js";
 import Level from "../models/Level.js";
+import User from "../models/User.js";
 
 const toObjectId = (id) => (typeof id === 'string' ? new mongoose.Types.ObjectId(id) : id);
 
@@ -52,13 +53,16 @@ class ProgressService {
       // Contar niveles totales del curso
       const totalLevels = await Level.countDocuments({ trainingId: tId });
 
+      // Contar usuarios anotados en la capacitación (no sólo los que tienen progreso)
+      // Se consideran alumnos (role: "Alumno") cuya lista assignedTraining incluye el trainingId
+      const totalUsers = await User.countDocuments({ role: "Alumno", assignedTraining: tId });
+
       // Agregación: contar niveles completados por cada usuario para este curso
       const perUserAgg = await UserLevelProgress.aggregate([
         { $match: { trainingId: tId, completed: true } },
         { $group: { _id: "$userId", levelsCompleted: { $sum: 1 } } }
       ]);
 
-      const totalUsers = perUserAgg.length;
       const totalLevelsCompleted = perUserAgg.reduce((sum, r) => sum + (r.levelsCompleted || 0), 0);
 
       // Promedio en porcentaje: promedio de (levelsCompleted / totalLevels) por usuario
