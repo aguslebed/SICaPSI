@@ -16,8 +16,11 @@ const StudentProgressModal = ({ isOpen, onClose, student, trainingId }) => {
       setError(null);
       try {
         const data = await getTrainingProgress(trainingId, student._id || student.id);
+        console.log(data," --desde StudentProgressModal.jsx--")
         if (mounted) {
-          setProgressData(data);
+          // El backend devuelve { success: true, data: { ... } }
+          // Extraer los datos correctamente
+          setProgressData(data.data || data);
         }
       } catch (err) {
         if (mounted) {
@@ -42,6 +45,20 @@ const StudentProgressModal = ({ isOpen, onClose, student, trainingId }) => {
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) {
       onClose();
+    }
+  };
+
+  // Formatear fechas de forma consistente
+  const formatDateTime = (value) => {
+    if (!value) return '-';
+    try {
+      const d = new Date(value);
+      return d.toLocaleString('es-AR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    } catch (e) {
+      return '-';
     }
   };
 
@@ -92,7 +109,7 @@ const StudentProgressModal = ({ isOpen, onClose, student, trainingId }) => {
               </div>
               <div>
                 <span className="font-medium text-gray-600">Último acceso:</span>
-                <span className="ml-2 text-gray-800">{student?.lastLogin || student?.last_login || '-'}</span>
+                <span className="ml-2 text-gray-800">{formatDateTime(student?.lastLogin || student?.last_login)}</span>
               </div>
             </div>
           </div>
@@ -118,19 +135,22 @@ const StudentProgressModal = ({ isOpen, onClose, student, trainingId }) => {
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Progreso por Nivel</h3>
               
               {/* Progreso general si existe */}
-              {progressData.totalProgress !== undefined && (
+              {progressData.progressPercent !== undefined && (
                 <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-medium text-gray-700">Progreso Total</span>
                     <span className="text-lg font-bold text-[#0077b6]">
-                      {Math.round(progressData.totalProgress)}%
+                      {Math.round(progressData.progressPercent)}%
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-3">
                     <div
                       className="bg-[#0077b6] h-3 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min(100, progressData.totalProgress || 0)}%` }}
+                      style={{ width: `${Math.min(100, progressData.progressPercent || 0)}%` }}
                     />
+                  </div>
+                  <div className="mt-2 text-sm text-gray-600">
+                    {progressData.levelsCompleted || 0} de {progressData.totalLevels || 0} niveles completados
                   </div>
                 </div>
               )}
@@ -188,7 +208,7 @@ const StudentProgressModal = ({ isOpen, onClose, student, trainingId }) => {
                       {/* Información adicional */}
                       {level.lastAttempt && (
                         <div className="text-xs text-gray-500 mt-2">
-                          Último intento: {new Date(level.lastAttempt).toLocaleString('es-AR')}
+                          Último intento: {formatDateTime(level.lastAttempt)}
                         </div>
                       )}
                     </div>
@@ -196,7 +216,10 @@ const StudentProgressModal = ({ isOpen, onClose, student, trainingId }) => {
                 </div>
               ) : (
                 <div className="py-8 text-center text-gray-500">
-                  No hay datos de progreso disponibles para este alumno.
+                 
+                  {progressData.progressPercent !== undefined && (
+                    <p className="text-sm">Progreso general: {Math.round(progressData.progressPercent)}%</p>
+                  )}
                 </div>
               )}
             </div>

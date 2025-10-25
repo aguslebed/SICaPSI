@@ -46,7 +46,7 @@ const TrainingCard = ({ titulo, subtitulo, porcentaje, estado, link, imagen }) =
       </div>
 
       {/* Barra de progreso (siempre que esté activo) */}
-      {estado === "activo" && userData.role == "estudiante" && (
+      {estado === "activo" && userData.user.role == "Alumno" && (
         <div className="absolute bottom-0 left-0 w-full h-6 bg-black/40 flex items-center">
           {/* Parte verde proporcional */}
           <div

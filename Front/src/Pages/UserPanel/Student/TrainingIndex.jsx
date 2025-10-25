@@ -32,7 +32,7 @@ const TrainingIndex = () => {
               <p className="text-lg break-words" dangerouslySetInnerHTML={{ __html: normalizeRichTextValue(training.subtitle) || 'Sin subtítulo' }} />
             </div>
             {/* Barra de progress */}
-            {userData.role === "estudiante" && (
+            {userData.user.role === "Alumno" && (
               <div className="w-full bg-gray-200 h-6">
               <div
                 className="bg-green-500 h-6 text-center text-sm font-semibold text-white"
