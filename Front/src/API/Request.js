@@ -26,6 +26,16 @@ export async function login(email, password) {
     // 2. Obtener datos completos del usuario autenticado
     const { data } = await api.get("/users/connect/me"); 
 
+    // 3. Actualizar último login
+    if (data.user?._id) {
+      try {
+        await updateUserLastLogin(data.user._id);
+      } catch (loginUpdateError) {
+        // No romper el login si falla la actualización del lastLogin
+        console.warn("⚠️ No se pudo actualizar último login:", loginUpdateError);
+      }
+    }
+
     // Devolver directamente la data (sin envolver en {data})
     return data;
   } catch (error) {
@@ -115,6 +125,22 @@ export async function updateUser(userId, patch) {
   } catch (error) {
     if (error.response) {
       throw new Error(error.response.data?.message || 'Error al actualizar usuario');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+// Actualiza el último login del usuario con la fecha/hora actual
+export async function updateUserLastLogin(userId) {
+  try {
+    const { data } = await api.patch(`/users/${encodeURIComponent(userId)}/last-login`);
+    return data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al actualizar último login');
     } else if (error.request) {
       throw new Error('Error de conexión con el servidor');
     } else {

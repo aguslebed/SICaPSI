@@ -76,6 +76,8 @@ router.get("/:id", authMiddleware, userController.getById);
 router.patch("/:id", authMiddleware, userController.update); 
 router.post("/:id/profile-image", authMiddleware, upload.single('image'), userController.uploadProfileImage); 
 router.post("/change-password", authMiddleware, userController.changePassword);
+// Actualizar último login
+router.patch("/:id/last-login", authMiddleware, userController.updateLastLogin);
 
 // CAMBIO: Rutas agregadas para funcionalidad administrativa de profesores
 // Respeta RESTful API design y mantiene consistencia con rutas existentes

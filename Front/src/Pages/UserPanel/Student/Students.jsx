@@ -58,6 +58,23 @@ export default function Students() {
     setSelectedStudent(null);
   };
 
+  // Formatear fecha de último acceso
+  const formatLastLogin = (lastLogin) => {
+    if (!lastLogin) return '-';
+    try {
+      const date = new Date(lastLogin);
+      return date.toLocaleString('es-AR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return '-';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="max-w-screen-xl w-full mx-auto  flex px-4 sm:px-6 md:px-8">
@@ -115,7 +132,7 @@ export default function Students() {
                             <td className="py-2 px-2 text-left">{s.firstName || s.first_name || ''}</td>
                             <td className="py-2 px-2 text-left">{s.documentNumber || s.dni || s.document_number || ''}</td>
                             <td className="py-2 px-2 text-left">{s.email || ''}</td>
-                            <td className="py-2 px-2 text-left">{s.lastLogin || s.last_login || ''}</td>
+                            <td className="py-2 px-2 text-left">{formatLastLogin(s.lastLogin || s.last_login)}</td>
                             <td className="py-2 px-2 text-left">
                               <div className="flex items-center gap-2">
                                 <button

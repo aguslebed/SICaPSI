@@ -255,6 +255,23 @@ export function makeUserController({ userService, trainingService, messageServic
         next(err);
       }
     },
+
+    /**
+     * Actualizar el último login del usuario con la fecha/hora actual
+     */
+    async updateLastLogin(req, res, next) {
+      try {
+        const userId = req.params.id;
+        if (!userId) throw new AppError('ID de usuario requerido', 400);
+
+        const updated = await userService.updateLastLogin(userId);
+        if (!updated) throw new AppError('Usuario no encontrado', 404);
+
+        res.json(userFormatter.toPublic(updated));
+      } catch (err) {
+        next(err);
+      }
+    },
 }
 }
 
