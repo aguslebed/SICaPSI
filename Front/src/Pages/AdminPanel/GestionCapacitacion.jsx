@@ -69,7 +69,7 @@ export default function GestionCapacitacion() {
         if (trainersMap[t._id]) return;
 
         const trainer = await getTrainerByTrainingId(t._id);
-        console.log(trainer)
+        
         if (trainer) mapUpdates[t._id] = trainer;
       } catch (err) {
         console.warn('fetchAndAttachTrainers: no se pudo cargar trainer para', t._id, err?.message || err);
@@ -781,12 +781,10 @@ export default function GestionCapacitacion() {
 
                     // Profesor info - usar trainersMap primero, luego fallback a createdBy
                     const trainerFromMap = trainersMap[t._id];
-                    console.log(trainerFromMap)
+                   
                     const profesor = trainerFromMap 
                       ? `${trainerFromMap.firstName || ''} ${trainerFromMap.lastName || ''}`.trim()
-                      : (t.createdBy 
-                          ? `${t.createdBy.firstName || ''} ${t.createdBy.lastName || ''}`.trim() 
-                          : '-');
+                      : "No hay profesor asignado";
                     const estado = trainerFromMap || t.createdBy ? 'Asignado' : 'Sin asignar';
                     
                     // Determinar estado de aprobación

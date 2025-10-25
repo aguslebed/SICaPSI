@@ -1,13 +1,13 @@
-import React from "react";
+import React, {useEffect, useState} from "react";
 import { useParams } from "react-router-dom";
 import { useUser } from "../../../context/UserContext";
 import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
-import { resolveImageUrl } from "../../../API/Request";
+import { resolveImageUrl, getMe } from "../../../API/Request";
 import { normalizeRichTextValue, getPlainTextFromRichText } from "../../../Components/Modals/CreateTrainingModal/RichTextInput";
 
 const TrainingIndex = () => {
   const { idTraining } = useParams();
-  const { userData } = useUser();
+  const { userData, setUserData } = useUser();
   if (!userData || !Array.isArray(userData.training)) {
     return <LoadingOverlay label="Cargando datos de capacitación..." />;
   }
@@ -32,7 +32,8 @@ const TrainingIndex = () => {
               <p className="text-lg break-words" dangerouslySetInnerHTML={{ __html: normalizeRichTextValue(training.subtitle) || 'Sin subtítulo' }} />
             </div>
             {/* Barra de progress */}
-            <div className="w-full bg-gray-200 h-6">
+            {userData.role === "estudiante" && (
+              <div className="w-full bg-gray-200 h-6">
               <div
                 className="bg-green-500 h-6 text-center text-sm font-semibold text-white"
                 style={{ width: `${training.progressPercentage}%` }}
@@ -40,6 +41,8 @@ const TrainingIndex = () => {
                 {training.progressPercentage}%
               </div>
             </div>
+            )}
+            
             {/* Descripción */}
             <div className="p-6">
               <h2 className="font-semibold mb-2">Descripción de la capacitación</h2>
