@@ -1,7 +1,9 @@
-import React from "react";
+import React, {useState, useEffect} from "react";
 import { useNavigate } from 'react-router-dom';
-import { resolveImageUrl } from '../../API/Request';
+import { resolveImageUrl, getMe } from '../../API/Request';
 import { normalizeRichTextValue, getPlainTextFromRichText } from '../Modals/CreateTrainingModal/RichTextInput';
+import { useUser } from "../../context/UserContext";
+
 
 const TrainingCard = ({ titulo, subtitulo, porcentaje, estado, link, imagen }) => {
   const navigate = useNavigate();
@@ -10,6 +12,9 @@ const TrainingCard = ({ titulo, subtitulo, porcentaje, estado, link, imagen }) =
       navigate(link);
     }
   };
+
+  const { userData, setUserData } = useUser();
+ 
 
   return (
     <button
@@ -41,7 +46,7 @@ const TrainingCard = ({ titulo, subtitulo, porcentaje, estado, link, imagen }) =
       </div>
 
       {/* Barra de progreso (siempre que esté activo) */}
-      {estado === "activo" && (
+      {estado === "activo" && userData.role == "estudiante" && (
         <div className="absolute bottom-0 left-0 w-full h-6 bg-black/40 flex items-center">
           {/* Parte verde proporcional */}
           <div
