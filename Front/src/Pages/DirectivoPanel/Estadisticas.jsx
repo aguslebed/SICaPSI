@@ -1,31 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import './DirectivoPanel.css';
 import NavBar from '../../Components/Student/NavBar';
-import { getAllActiveTrainings, getStudents, getTrainingProgress } from '../../API/Request';
+import { getAllActiveTrainings, getAllTrainingsProgress, getStudents, getTrainingProgress } from '../../API/Request';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import LoadingOverlay from '../../Components/Shared/LoadingOverlay';
 
 export default function Estadisticas() {
   const [loading, setLoading] = useState(false);
-
-  // Filtros generales
   const [generalSearch, setGeneralSearch] = useState('');
   const [generalCap, setGeneralCap] = useState('all');
-
-  // Filtros individuales
   const [studentSearch, setStudentSearch] = useState('');
   const [studentCap, setStudentCap] = useState('all');
-
-  // Datos
   const [individualRows, setRowsRaw] = useState([]);
+  const [generalRows, setGeneralRows] = useState([]);
 
-  const generalRows = [
-    { cap: 1, nivel: 'Nivel 1', vistos: '100%', completados: '100%', inicio: '31/07/2025' },
-    { cap: 2, nivel: 'Nivel 2', vistos: '80%', completados: '75%', inicio: '25/08/2025' },
-    { cap: 3, nivel: 'Nivel 3', vistos: '40%', completados: '20%', inicio: '23/08/2025' },
-  ];
-
-  // --- FILTROS ---
   const filteredGeneral = generalRows.filter(r =>
-    (generalCap === 'all' || r.cap === Number(generalCap)) &&
+    (generalCap === 'all' || r.cap === generalCap) &&
     (r.nivel.toLowerCase().includes(generalSearch.toLowerCase()) ||
       String(r.cap).includes(generalSearch))
   );
@@ -36,24 +27,59 @@ export default function Estadisticas() {
       r.cap.toLowerCase().includes(studentSearch.toLowerCase()))
   );
 
+  const generateGeneralPDF = () => {
+    const doc = new jsPDF();
+    doc.text('Progreso General de Capacitaciones', 20, 10);
+    autoTable(doc, {
+      head: [['Capacitación', 'Total Niveles', 'Usuarios', '%Completados', 'Total Niveles Completados']],
+      body: filteredGeneral.map(row => [row.cap, row.nivel, row.usuarios, row.vistos, row.completados]),
+    });
+    doc.save('progreso_general.pdf');
+  };
+
+  const generateIndividualPDF = () => {
+    const doc = new jsPDF();
+    doc.text('Progreso Individual de Estudiantes', 20, 10);
+    autoTable(doc, {
+      head: [['Nombre', 'Capacitación', 'Nivel', 'Avance', 'Fecha de inicio']],
+      body: filteredIndividuals.map(row => [row.nombre, row.cap, row.nivel, row.avance, row.inicio ? new Date(row.inicio).toLocaleDateString() : '-']),
+    });
+    doc.save('progreso_individual.pdf');
+  };
+
+  const handleExportPending = () => {
+    alert('Funcionalidad pendiente');
+  };
+
   useEffect(() => {
     let alive = true;
     setLoading(true);
 
     (async () => {
       try {
+        const trainingsProgress = await getAllTrainingsProgress();
+        const activeTrainings = await getAllActiveTrainings();
+
+        const activeTrainingIds = new Set(activeTrainings.map(t => t._id));
+        const filteredProgress = trainingsProgress.data.filter(tp => activeTrainingIds.has(tp.trainingId));
+        const activeTrainingMap = new Map(activeTrainings.map(t => [t._id, t.title]));
+
+        const generalData = filteredProgress.map(tp => ({
+          cap: activeTrainingMap.get(tp.trainingId) || tp.trainingId,
+          nivel: `${tp.totalLevels}`,
+          vistos: `${tp.averagePercent}%`,
+          usuarios: `${tp.totalUsers}`,
+          completados: `${tp.totalLevelsCompleted}/${tp.totalUsers * tp.totalLevels}`,
+        })).sort((a, b) => a.cap.localeCompare(b.cap));
+
+        if (alive) setGeneralRows(generalData);
 
         const data = await getStudents();
         const students = Array.isArray(data) ? data : (data?.items || []);
-        const activeTrainings = await getAllActiveTrainings();
-
-        // Crear un mapa para lookup rápido de títulos por ID
-        const activeTrainingMap = new Map(activeTrainings.map(t => [t._id, t.title]));
         const promises = [];
 
         for (const student of students) {
           for (const trainingId of student.assignedTraining || []) {
-            // Filtrar solo trainings activos
             if (activeTrainingMap.has(trainingId)) {
               promises.push(
                 getTrainingProgress(trainingId, student._id).then(response => ({
@@ -66,27 +92,25 @@ export default function Estadisticas() {
           }
         }
 
-        // 3️⃣ Ejecutar todas las llamadas en paralelo
         const results = await Promise.all(promises);
-
-        // 4️⃣ Mapear resultados en formato de tabla
         const progressData = results
           .filter(r => r.response?.success)
           .map(({ student, trainingId, response }) => ({
             nombre: `${student.firstName} ${student.lastName}`,
-            cap: activeTrainingMap.get(trainingId) || trainingId, // Mostrar título si activo, sino ID
+            cap: activeTrainingMap.get(trainingId) || trainingId,
             nivel: `${response.data.levelsCompleted}/${response.data.totalLevels}`,
-            intentos: Math.floor(Math.random() * 5) + 1, // simulado
             avance: `${response.data.progressPercent}%`,
-            duracion: `${Math.floor(Math.random() * 120) + 60} min.`,
-            inicio: student.createdAt, // placeholder
-          }));
+            inicio: student.createdAt,
+          }))
+          .sort((a, b) => a.nombre.localeCompare(b.nombre));
 
-        // 5️⃣ Actualizar estado
         if (alive) setRowsRaw(progressData);
       } catch (error) {
         console.error('Error obteniendo estadísticas:', error);
-        if (alive) setRowsRaw([]);
+        if (alive) {
+          setRowsRaw([]);
+          setGeneralRows([]);
+        }
       } finally {
         if (alive) setLoading(false);
       }
@@ -97,14 +121,14 @@ export default function Estadisticas() {
     };
   }, []);
 
-  // --- RENDER ---
   return (
     <>
-      {loading && <div className="loading-overlay">Cargando estadísticas...</div>}
+      {loading && <LoadingOverlay label="Cargando estadísticas..." />}
       <NavBar />
 
       <main className="admin-container">
         <div className="admin-content-wrapper" style={{ maxWidth: 1100, margin: '1.25rem auto' }}>
+          
           {/* --- PROGRESO GENERAL --- */}
           <h1 className="admin-title">Progreso General</h1>
           <hr className="admin-divider" />
@@ -127,24 +151,22 @@ export default function Estadisticas() {
                   style={{ minWidth: '180px' }}
                 >
                   <option value="all">Todas</option>
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
+                  <option value="Capacitación 1">1</option>
+                  <option value="Capacitación 2">2</option>
+                  <option value="Capacitación 3">3</option>
                 </select>
               </div>
-
-              <button className="admin-btn admin-btn-secondary">Exportar Datos</button>
+            <button className="admin-btn admin-btn-secondary" onClick={handleExportPending}>Exportar Datos</button>
             </div>
-
             <div className="admin-table-wrapper" style={{ marginTop: '1.25rem' }}>
               <table className="admin-table">
                 <thead>
                   <tr>
                     <th>Capacitación</th>
-                    <th>Nivel</th>
-                    <th>%Vistos</th>
-                    <th>Completados</th>
-                    <th>Fecha de inicio</th>
+                    <th>Total Niveles</th>
+                    <th>Usuarios</th>
+                    <th>%Completados</th>
+                    <th>Total Niveles Completados</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -153,9 +175,9 @@ export default function Estadisticas() {
                       <tr key={i}>
                         <td>{r.cap}</td>
                         <td>{r.nivel}</td>
+                        <td>{r.usuarios}</td>
                         <td>{r.vistos}</td>
                         <td>{r.completados}</td>
-                        <td>{r.inicio}</td>
                       </tr>
                     ))
                   ) : (
@@ -163,6 +185,12 @@ export default function Estadisticas() {
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Botones debajo de la tabla */}
+            <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+              <button className="admin-btn admin-btn-primary" onClick={generateGeneralPDF}>Generar PDF</button>
+              {/* <button className="admin-btn admin-btn-primary" onClick={handleExportPending}>Exportar Datos</button> */}
             </div>
           </section>
 
@@ -194,8 +222,7 @@ export default function Estadisticas() {
                     <option value="3">3</option>
                   </select>
                 </div>
-
-                <button className="admin-btn admin-btn-secondary">Exportar Datos</button>
+                <button className="admin-btn admin-btn-secondary" onClick={handleExportPending}>Exportar Datos</button>
               </div>
 
               <div className="admin-table-wrapper" style={{ marginTop: '1rem' }}>
@@ -205,9 +232,7 @@ export default function Estadisticas() {
                       <th>Nombre</th>
                       <th>Capacitación</th>
                       <th>Nivel</th>
-                      {/* <th>Nro.Intentos</th> */}
                       <th>Avance</th>
-                      {/* <th>Duración</th> */}
                       <th>Fecha de inicio</th>
                     </tr>
                   </thead>
@@ -218,9 +243,7 @@ export default function Estadisticas() {
                           <td>{r.nombre}</td>
                           <td>{r.cap}</td>
                           <td>{r.nivel}</td>
-                          {/* <td>{r.intentos}</td> */}
                           <td>{r.avance}</td>
-                          {/* <td>{r.duracion}</td> */}
                           <td>{r.inicio ? new Date(r.inicio).toLocaleDateString() : '-'}</td>
                         </tr>
                       ))
@@ -229,6 +252,12 @@ export default function Estadisticas() {
                     )}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Botones debajo de la tabla */}
+              <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+                <button className="admin-btn admin-btn-primary" onClick={generateIndividualPDF}>Generar PDF</button>
+                {/* <button className="admin-btn admin-btn-primary" onClick={handleExportPending}>Exportar Datos</button> */}
               </div>
             </div>
           </section>
