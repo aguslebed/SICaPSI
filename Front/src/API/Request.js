@@ -821,6 +821,26 @@ export async function enrollStudentsToTraining(trainingId, studentIds) {
   }
 }
 
+// Desinscribir estudiantes de una capacitación
+export async function unenrollStudentsFromTraining(trainingId, studentIds) {
+  try {
+    const { data } = await api.patch('/enrollment/unenrollStudent', {
+      trainingId,
+      userIds: studentIds
+    });
+    return data;
+  } catch (error) {
+    console.error("❌ Error desinscribiendo estudiantes:", error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al desinscribir estudiantes');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
 // Inscribir profesor a una capacitación
 export async function enrollTrainerToTraining(trainingId, teacherId) {
   try {
@@ -871,11 +891,16 @@ export async function checkLevelApproved(trainingId, userId,levelId, levelWithRe
 // Obtener contenidos pendientes para validación (used by DirectivoPanel)
 export async function getPendingContent() {
   try {
-    // Intentar ruta esperada en backend; si no existe, devolver array vacío para evitar romper la UI
     const { data } = await api.get('/training/pending-content');
     return Array.isArray(data) ? data : (data?.items || data || []);
   } catch (error) {
-    console.warn('getPendingContent: endpoint no disponible o error', error?.response?.data || error.message);
-    return [];
+    console.error('❌ Error obteniendo contenidos pendientes:', error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al obtener contenidos pendientes');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
   }
 }

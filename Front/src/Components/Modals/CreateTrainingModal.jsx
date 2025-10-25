@@ -168,6 +168,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
   // Estados para modales de error y éxito
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successClosesEditor, setSuccessClosesEditor] = useState(false);
   const [errorMessages, setErrorMessages] = useState([]);
   // Estados para personalizar título y texto del modal de errores
   const [errorModalTitle, setErrorModalTitle] = useState('No se ha podido guardar la capacitación');
@@ -181,10 +182,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
   const validateTrainingForApproval = () => {
     const errors = [];
 
-    // Verificar si hay cambios sin guardar
-    if (hasUnsavedChanges) {
-      errors.push('Debe guardar los cambios antes de enviar a aprobar');
-    }
+    // Ya no validamos cambios sin guardar porque se guardarán automáticamente
 
     // Validar datos básicos de capacitación
     const imageValue = typeof image === 'string' ? image.trim() : image;
@@ -325,8 +323,8 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
   };
 
   // Handler para enviar a aprobar
-  const handleSendForApproval = () => {
-    // Validar antes de enviar a aprobar
+  const handleSendForApproval = async () => {
+    // Primero validar antes de enviar a aprobar
     const validation = validateTrainingForApproval();
 
     if (!validation.isValid) {
@@ -338,9 +336,22 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
       return false;
     }
     
-    // Si la validación pasa, marcar como pendiente de aprobación
-    setPendingApproval(true);
+  // Si la validación pasa, guardar los cambios primero.
+  // Forzamos el guardado con pendingApproval=true pasando la opción forcePendingApproval
+  // además actualizamos el estado local para reflejar la intención en la UI.
+  setPendingApproval(true);
+  const saved = await handleSave({ forcePendingApproval: true });
+
+  if (saved) {
+    // Mostrar el modal de éxito específico para aprobación y cerrar el modal de edición al aceptarlo.
+    setShowSuccessModal(true);
+    setSuccessClosesEditor(true);
     return true;
+  }
+
+  // Si no se pudo guardar, revertir la intención de enviar a aprobar para la UI
+  setPendingApproval(false);
+  return false;
   };
 
   // Función auxiliar para verificar si un nivel está completo
@@ -417,16 +428,10 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
       
       // Marcar que hay cambios sin guardar
       setHasUnsavedChanges(true);
-      
-      // Crear data URL para preview
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          resolve({ filePath: event.target.result, isPending: true });
-        };
-        reader.onerror = () => reject(new Error('Error leyendo archivo'));
-        reader.readAsDataURL(file);
-      });
+
+      // Usar Object URL para preview rápida (evita transformar a base64)
+      const objectUrl = URL.createObjectURL(file);
+      return { filePath: objectUrl, isPending: true };
     } finally {
       // Ocultar loading después de procesar
       setTimeout(() => {
@@ -764,7 +769,9 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
     setAppliedFilter('');
   };
 
-  const handleSave = async () => {
+  // handleSave accepts an optional options object. If options.forcePendingApproval === true,
+  // the save will persist the training with pendingApproval=true regardless of current state.
+  const handleSave = async (options = {}) => {
     const pendingUploads = {
       presentationFile: null,
       levelFiles: {}
@@ -772,6 +779,36 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
     // Ya no necesitamos rastrear archivos a eliminar, replaceTrainingFile lo hace automáticamente
     let finalImagePath = typeof image === 'string' ? image.trim() : image;
     const workingLevels = JSON.parse(JSON.stringify(levels));
+
+    // Antes de continuar, agregar automáticamente la bibliografía que esté cargada en el formulario (si corresponde)
+    try {
+      const hasLevels = Array.isArray(workingLevels) && workingLevels[selectedLevel];
+      if (hasLevels && expandedSubsection === 'bibliografia') {
+        const tmp = bibliographyTempData || {};
+        const titleOk = getPlainTextFromRichText(tmp.title || '').trim();
+        const descOk = getPlainTextFromRichText(tmp.description || '').trim();
+        const urlOk = (tmp.url || '').trim();
+        if (titleOk || descOk || urlOk) {
+          const bibArr = Array.isArray(workingLevels[selectedLevel].bibliography)
+            ? [...workingLevels[selectedLevel].bibliography]
+            : [];
+          const newItem = {
+            title: tmp.title || '',
+            description: tmp.description || '',
+            url: tmp.url || ''
+          };
+          if (typeof editingBibliographyIndex === 'number' && editingBibliographyIndex >= 0 && editingBibliographyIndex < bibArr.length) {
+            bibArr[editingBibliographyIndex] = newItem;
+          } else {
+            bibArr.push(newItem);
+          }
+          workingLevels[selectedLevel].bibliography = bibArr;
+        }
+      }
+    } catch (e) {
+      // No bloquear guardado si algo falla en el auto-agregado de bibliografía
+      console.warn('Auto-agregar bibliografía falló (no bloqueante):', e);
+    }
 
     if (isEditing) {
       if (pendingImageFile) {
@@ -793,7 +830,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
           setErrorModalTitle('Error al subir archivo');
           setErrorModalMessageText('No se pudo subir la imagen:');
           setShowErrorModal(true);
-          return;
+          return false;
         } finally {
           setUploadingFiles(prev => ({ ...prev, 'presentation-image': false }));
         }
@@ -863,7 +900,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
           setErrorModalTitle('Error al subir archivo');
           setErrorModalMessageText('No se pudo subir uno de los archivos:');
           setShowErrorModal(true);
-          return;
+          return false;
         } finally {
           setUploadingFiles(prev => ({ ...prev, [fileKey]: false }));
         }
@@ -922,8 +959,8 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
       setErrorMessages(basicErrors);
       setErrorModalTitle('No se puede guardar la capacitación');
       setErrorModalMessageText('Complete los siguientes requisitos antes de Guardar:');
-      setShowErrorModal(true);
-      return;
+  setShowErrorModal(true);
+  return false;
     }
 
     const start = new Date(startDate);
@@ -932,8 +969,8 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
       setErrorMessages(['La fecha de fin debe ser posterior a la fecha de inicio']);
       setErrorModalTitle('No se puede guardar la capacitación');
       setErrorModalMessageText('Complete los siguientes requisitos antes de Guardar:');
-      setShowErrorModal(true);
-      return;
+  setShowErrorModal(true);
+  return false;
     }
 
     // Simplemente enviar los niveles tal como están, sin validaciones complejas
@@ -1075,13 +1112,15 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
       }
     }
 
+    const effectivePendingApproval = options && options.forcePendingApproval === true ? true : pendingApproval;
+
     const payload = {
       title: title.trim(),
       subtitle: subtitle.trim(),
       description: description.trim(),
       image: finalImagePath,
       isActive,
-      pendingApproval,
+      pendingApproval: effectivePendingApproval,
       report,
       totalLevels: sanitizedLevels.length,
       progressPercentage: 0,
@@ -1139,11 +1178,17 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
         // Resetear cambios no guardados después de guardar exitosamente
         setHasUnsavedChanges(false);
 
-        setShowSuccessModal(true);
+        // Mostrar modal de éxito SOLO si NO estamos en flujo de "enviar a aprobar".
+        // Usamos effectivePendingApproval aquí para respetar el flag forzado desde el llamador.
+        if (!effectivePendingApproval) {
+          setShowSuccessModal(true);
+        }
       } catch (err) {
         console.warn('CreateTrainingModal: onSave falló:', err);
       }
     }
+    // Indicar éxito al llamador
+    return true;
   };
 
   return (
@@ -1404,12 +1449,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
                 <span>Cancelar</span>
               </button>
               <button 
-                onClick={() => {
-                  const canApprove = handleSendForApproval();
-                  if (canApprove) {
-                    handleSave();
-                  }
-                }}
+                onClick={handleSendForApproval}
                 disabled={pendingApproval || (isEditing && editingTraining?.pendingApproval)}
                 className={`px-5 py-2 rounded-lg text-xs font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2 ${
                   pendingApproval || (isEditing && editingTraining?.pendingApproval)
@@ -1530,7 +1570,12 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
           show={showSuccessModal}
           onClose={() => {
             setShowSuccessModal(false);
-            // NO cerrar el modal de edición - permitir que el usuario siga trabajando
+            if (successClosesEditor) {
+              // Restablecer el flag y cerrar el modal de edición principal
+              setSuccessClosesEditor(false);
+              if (typeof onClose === 'function') onClose();
+            }
+            // Si successClosesEditor es false, no cerramos el modal de edición (comportamiento previo)
           }}
           isEditing={isEditing}
           pendingApproval={pendingApproval}

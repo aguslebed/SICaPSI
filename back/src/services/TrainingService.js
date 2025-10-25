@@ -15,10 +15,11 @@ export class TrainingService extends ITrainingService {
    
       .populate({
         path: 'assignedTraining',
-        select: 'title subtitle description image isActive totalLevels levels createdBy report progressPercentage',
+        select: 'title subtitle description image isActive totalLevels levels createdBy rejectedBy rejectionReason pendingApproval report progressPercentage startDate endDate',
         populate: [
           { path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level },
-          { path: 'createdBy', select: 'firstName lastName email', model: this.User }
+          { path: 'createdBy', select: 'firstName lastName email', model: this.User },
+          { path: 'rejectedBy', select: 'firstName lastName email', model: this.User }
         ],
         model: this.Training
       })
@@ -46,6 +47,7 @@ export class TrainingService extends ITrainingService {
  async getAllActiveTrainings() {
    const trainings = await this.Training.find({ isActive: true })
      .populate({ path: 'createdBy', select: 'firstName lastName email', model: this.User })
+     .populate({ path: 'rejectedBy', select: 'firstName lastName email', model: this.User })
      .populate({ path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level })
      .exec();
    return trainings;
@@ -55,6 +57,18 @@ export class TrainingService extends ITrainingService {
  async getAllTrainings() {
    const trainings = await this.Training.find({})
      .populate({ path: 'createdBy', select: 'firstName lastName email', model: this.User })
+     .populate({ path: 'rejectedBy', select: 'firstName lastName email', model: this.User })
+     .populate({ path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level })
+     .sort({ createdAt: -1 }) // Más recientes primero
+     .exec();
+   return trainings;
+ }
+
+ // Devuelve capacitaciones pendientes de aprobación
+ async getPendingContent() {
+   const trainings = await this.Training.find({ pendingApproval: true })
+     .populate({ path: 'createdBy', select: 'firstName lastName email', model: this.User })
+     .populate({ path: 'rejectedBy', select: 'firstName lastName email', model: this.User })
      .populate({ path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level })
      .sort({ createdAt: -1 }) // Más recientes primero
      .exec();
@@ -65,6 +79,7 @@ export class TrainingService extends ITrainingService {
  async getTrainingById(trainingId) {
    const training = await this.Training.findById(trainingId)
      .populate({ path: 'createdBy', select: 'firstName lastName email', model: this.User })
+     .populate({ path: 'rejectedBy', select: 'firstName lastName email', model: this.User })
      .populate({ 
        path: 'levels', 
        select: 'levelNumber title description bibliography training test isActive', 
@@ -161,6 +176,7 @@ async getTrainerByTrainingId(trainingId) {
    // Populate y retornar
    const updatedTraining = await this.Training.findById(trainingId)
      .populate({ path: 'createdBy', select: 'firstName lastName email', model: this.User })
+    .populate({ path: 'rejectedBy', select: 'firstName lastName email', model: this.User })
      .populate({ path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level })
      .exec();
 

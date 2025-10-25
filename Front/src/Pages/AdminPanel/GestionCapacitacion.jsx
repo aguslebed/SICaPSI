@@ -8,7 +8,7 @@ import ErrorListModal from '../../Components/Modals/ErrorListModal';
 import WarningModal from '../../Components/Modals/WarningModal';
 import ConfirmActionModal from '../../Components/Modals/ConfirmActionModal';
 import { useState, useEffect, useRef } from 'react';
-import { getAllActiveTrainings, getAllTrainings, createTraining, updateTraining, addLevelsToTraining, updateLevelsInTraining, deleteTraining, getTrainingById, enrollStudentsToTraining, enrollTrainerToTraining, deleteTrainingFile, uploadTrainingFile, moveTempFiles, replaceTrainingFile, getTrainerByTrainingId } from '../../API/Request';
+import { getAllActiveTrainings, getAllTrainings, createTraining, updateTraining, addLevelsToTraining, updateLevelsInTraining, deleteTraining, getTrainingById, enrollStudentsToTraining, enrollTrainerToTraining, deleteTrainingFile, uploadTrainingFile, moveTempFiles, replaceTrainingFile, getTrainerByTrainingId, getUsersEnrolledInTraining, unenrollStudentsFromTraining } from '../../API/Request';
 import LoadingOverlay from '../../Components/Shared/LoadingOverlay';
 import './AdminPanel.css';
 
@@ -327,6 +327,20 @@ export default function GestionCapacitacion() {
           setWarningMessage(`Capacitación guardada, pero hubo un problema inscribiendo guardias: ${enrollError.message}`);
           setShowWarningModal(true);
         }
+      } else if (isEditing && Array.isArray(selectedStudents) && selectedStudents.length === 0) {
+        // Si estamos editando y el array de estudiantes quedó vacío, debemos desinscribir
+        // a todos los estudiantes actualmente inscritos en esta capacitación.
+        try {
+          const currentlyEnrolled = await getUsersEnrolledInTraining(finalTrainingId);
+          const idsToUnenroll = Array.isArray(currentlyEnrolled) ? currentlyEnrolled.map(u => u._id || u.id || u.userId).filter(Boolean) : [];
+          if (idsToUnenroll.length > 0) {
+            await unenrollStudentsFromTraining(finalTrainingId, idsToUnenroll);
+          }
+        } catch (unenrollError) {
+          console.warn('Error desinscribiendo guardias:', unenrollError);
+          setWarningMessage(`Capacitación guardada, pero hubo un problema desinscribiendo guardias: ${unenrollError.message}`);
+          setShowWarningModal(true);
+        }
       }
 
       // Inscribir profesor si está asignado
@@ -487,6 +501,18 @@ export default function GestionCapacitacion() {
       
       setEditingTraining(trainingData);
       setOpenCreateTraining(true);
+      // Si fue rechazada, mostrar motivo de rechazo al abrir el editor
+      if (estadoActual === 'Rechazada' && (trainingData.rejectionReason || trainingData.rejectedBy)) {
+        const reviewer = trainingData.rejectedBy
+          ? (typeof trainingData.rejectedBy === 'object'
+              ? `${trainingData.rejectedBy.firstName || ''} ${trainingData.rejectedBy.lastName || ''}`.trim()
+              : `${trainingData.rejectedBy}`)
+          : '';
+        const reason = trainingData.rejectionReason || 'Sin motivo especificado';
+        const byText = reviewer ? ` por ${reviewer}` : '';
+        setWarningMessage(`Capacitación rechazada${byText}. Motivo: ${reason}`);
+        setShowWarningModal(true);
+      }
     } catch (error) {
       console.error('Error obteniendo capacitación:', error);
       setErrorMessages([`Error al cargar capacitación: ${error.message}`]);
