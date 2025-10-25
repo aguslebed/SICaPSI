@@ -48,23 +48,35 @@ const NavBar = () => {
   );
   const unreadCount = unreadItems.length;
   
-  // Rutas donde se debe mostrar el botón "Volver"
-  const allowedRoutes = [
-  '/adminPanel/gestionUsuario/crearUsuario',
-  '/adminPanel/gestionUsuario/modificarUsuario',
-  '/adminPanel/admisionUsuario',
-  '/adminPanel/gestionUsuario',
-  '/adminPanel/gestionCursos',
-  '/adminPanel/gestionProfesores',
-  '/adminPanel/gestionCapacitacion',
-  '/directivoPanel/validarContenido',
-  '/directivoPanel/registros',
-  '/directivoPanel/estadisticas',
-  '/directivoPanel/gestionDirectivo', // Agregado para mostrar el botón Volver en GestionDirectivo
-  // La gestión directivo ahora vive en /directivoPanel
-  ];
+  // Mapeo de rutas con sus respectivas rutas de retorno
+  const routeBackMap = {
+    '/adminPanel/gestionUsuario/crearUsuario': '/adminPanel/gestionUsuario',
+    '/adminPanel/gestionUsuario/modificarUsuario': '/adminPanel/gestionUsuario',
+    '/adminPanel/gestionUsuario': '/adminPanel',
+    '/adminPanel/admisionUsuario': '/adminPanel',
+    '/adminPanel/gestionCursos': '/adminPanel',
+    '/adminPanel/gestionProfesores': '/adminPanel',
+    '/adminPanel/gestionCapacitacion': '/adminPanel',
+    '/directivoPanel/validarContenido': '/directivoPanel',
+    '/directivoPanel/registros': '/directivoPanel',
+    '/directivoPanel/estadisticas': '/directivoPanel',
+    '/directivoPanel/gestionDirectivo': '/directivoPanel',
+  };
   
-  const shouldShowBackButton = allowedRoutes.some(route => location.pathname.includes(route));
+  // Encontrar la ruta de retorno correspondiente
+  const getBackRoute = () => {
+    const currentPath = location.pathname;
+    // Buscar coincidencia exacta o por inclusión
+    for (const [route, backRoute] of Object.entries(routeBackMap)) {
+      if (currentPath.includes(route)) {
+        return backRoute;
+      }
+    }
+    return null;
+  };
+  
+  const backRoute = getBackRoute();
+  const shouldShowBackButton = backRoute !== null;
   
   const handleLogout = async () => {
     try {
@@ -95,10 +107,7 @@ const NavBar = () => {
           {/* Botón Volver para rutas específicas del admin panel */}
           {shouldShowBackButton && (
             <button
-              onClick={() => {
-                // Navegar hacia atrás en el historial del navegador
-                window.history.back();
-              }}
+              onClick={() => navigate(backRoute)}
               className="flex items-center justify-center gap-2 text-white bg-[#4dc3ff] hover:bg-[#3bb3ef] px-5 py-2.5 rounded-full transition-all cursor-pointer shadow-md hover:shadow-lg font-semibold text-base"
               style={{ minWidth: '120px' }}
             >
