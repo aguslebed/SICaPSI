@@ -20,7 +20,7 @@ export default function TrainerLayout() {
         <div className={`max-w-screen-xl w-full mx-auto flex flex-col lg:flex-row gap-6 lg:gap-8 px-4 sm:px-6 md:px-8 py-6 md:py-8 ${isUserPanelIndex ? 'justify-center' : ''}`}>
           {/* Render SideBar for all userPanel child routes except the index (`/userPanel`) */}
           {!isUserPanelIndex && (
-            <div className={(isMessagesRoute ? 'hidden lg:block ' : '') + 'lg:mt-10'}>
+            <div className={(isMessagesRoute ? 'hidden lg:block ' : '') + 'lg:mt-10 lg:sticky lg:top-24 lg:self-start'}>
               <SideBarComponent />
             </div>
           )}
