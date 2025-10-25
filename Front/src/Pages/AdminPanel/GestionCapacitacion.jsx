@@ -773,9 +773,7 @@ export default function GestionCapacitacion() {
                     console.log(trainerFromMap)
                     const profesor = trainerFromMap 
                       ? `${trainerFromMap.firstName || ''} ${trainerFromMap.lastName || ''}`.trim()
-                      : (t.createdBy 
-                          ? `${t.createdBy.firstName || ''} ${t.createdBy.lastName || ''}`.trim() 
-                          : '-');
+                      : "No hay profesor asignado";
                     const estado = trainerFromMap || t.createdBy ? 'Asignado' : 'Sin asignar';
                     
                     // Determinar estado de aprobación
