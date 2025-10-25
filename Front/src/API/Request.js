@@ -428,6 +428,24 @@ export async function getTotalTrainingProgress(trainingId, userId) {
 }
 
 /**
+ * Obtener estadísticas detalladas de un nivel específico
+ * GET /progress/trainings/:trainingId/levels/:levelId/statistics
+ */
+export async function getLevelStatistics(trainingId, levelId) {
+  try {
+    const { data } = await api.get(
+      `progress/trainings/${encodeURIComponent(trainingId)}/levels/${encodeURIComponent(levelId)}/statistics`
+    );
+    return data;
+  } catch (error) {
+    console.error('Error obteniendo estadísticas del nivel:', error);
+    if (error.response) throw new Error(error.response.data?.message || 'Error al obtener estadísticas del nivel');
+    if (error.request) throw new Error('Error de conexión con el servidor');
+    throw new Error('Error en la configuración de la petición');
+  }
+}
+
+/**
  * Obtener resumen de progreso para todas las capacitaciones
  * GET /progress/trainings/all
  */
@@ -564,8 +582,10 @@ export async function getAllLevelsInTraining(trainingId) {
     return data;
   } catch (error) {
     console.error("❌ Error obteniendo niveles:", error);
+    console.error("❌ Error response:", error.response?.data);
     if (error.response) {
-      throw new Error(error.response.data?.message || 'Error al obtener niveles');
+      const errorMsg = error.response.data?.error || error.response.data?.message || 'Error al obtener niveles';
+      throw new Error(errorMsg);
     } else if (error.request) {
       throw new Error('Error de conexión con el servidor');
     } else {

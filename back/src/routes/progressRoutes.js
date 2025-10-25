@@ -18,6 +18,10 @@ router.post('/trainings/:trainingId/progress', controller.getTrainingProgress);
 
 router.post('/trainings/:trainingId/levels/:levelId/checkApproved', controller.checkLevelApproved);
 router.post('/trainings/:trainingId/totalProgress', controller.totalTrainingProgress);
+
+// Obtener estadísticas detalladas de un nivel específico
+router.get('/trainings/:trainingId/levels/:levelId/statistics', controller.getLevelStatistics);
+
 // Obtener resumen de progreso para todas las capacitaciones
 router.get('/trainings/all', controller.allTrainingsProgress);
 
