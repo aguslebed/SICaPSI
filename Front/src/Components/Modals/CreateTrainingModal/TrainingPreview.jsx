@@ -188,7 +188,31 @@ function PreviewTraining({ level }) {
 
   const isLocalFile = url && url.startsWith('/uploads/');
   const isDataUrl = url && url.startsWith('data:');
-  const isVideoFile = url && (url.match(/\.(mp4|mov|avi|mkv|webm|ogg)$/i) || (isDataUrl && url.startsWith('data:video')));
+  // Mejorar detección de archivos de video para incluir todos los tipos MIME
+  const isVideoFile = url && (
+    url.match(/\.(mp4|mov|avi|mkv|webm|ogg)$/i) || 
+    (isDataUrl && (
+      url.startsWith('data:video/') || 
+      url.includes('video/quicktime') ||
+      url.includes('video/mp4') ||
+      url.includes('video/webm') ||
+      url.includes('video/ogg') ||
+      url.includes('video/x-msvideo') ||
+      url.includes('video/x-matroska')
+    ))
+  );
+
+  // Función para obtener el tipo MIME del video
+  const getVideoMimeType = (videoUrl) => {
+    if (!videoUrl) return 'video/mp4';
+    const url = videoUrl.toLowerCase();
+    if (url.includes('.mov') || url.includes('quicktime')) return 'video/quicktime';
+    if (url.includes('.webm')) return 'video/webm';
+    if (url.includes('.ogg')) return 'video/ogg';
+    if (url.includes('.avi')) return 'video/x-msvideo';
+    if (url.includes('.mkv')) return 'video/x-matroska';
+    return 'video/mp4'; // default
+  };
 
   return (
     <div className="flex items-center justify-center p-8 bg-gray-50 min-h-full">
@@ -258,8 +282,11 @@ function PreviewTraining({ level }) {
               <video 
                 controls 
                 className="w-full h-auto"
-                src={url.startsWith('http') || url.startsWith('data:') ? url : `${import.meta.env.VITE_API_URL}${url}`}
               >
+                <source 
+                  src={url.startsWith('http') || url.startsWith('data:') ? url : `${import.meta.env.VITE_API_URL}${url}`}
+                  type={getVideoMimeType(url)}
+                />
                 Tu navegador no soporta el elemento de video.
               </video>
             ) : url ? (
@@ -631,6 +658,18 @@ function PreviewTest({ level, selectedScene }) {
   const isEditingMode = selectedScene !== null && selectedScene !== undefined;
   const sceneToShow = isEditingMode ? selectedScene : previewSceneIndex;
 
+  // Función para obtener el tipo MIME del video
+  const getVideoMimeType = (videoUrl) => {
+    if (!videoUrl) return 'video/mp4';
+    const url = videoUrl.toLowerCase();
+    if (url.includes('.mov') || url.includes('quicktime')) return 'video/quicktime';
+    if (url.includes('.webm')) return 'video/webm';
+    if (url.includes('.ogg')) return 'video/ogg';
+    if (url.includes('.avi')) return 'video/x-msvideo';
+    if (url.includes('.mkv')) return 'video/x-matroska';
+    return 'video/mp4'; // default
+  };
+
   // Si hay una escena para mostrar (ya sea editando o previsualizando)
   if (sceneToShow !== null && scenes && scenes[sceneToShow]) {
     const scene = scenes[sceneToShow];
@@ -652,14 +691,19 @@ function PreviewTest({ level, selectedScene }) {
           <div className="w-full mb-6 rounded-2xl overflow-hidden shadow-lg bg-black">
             {scene.videoUrl ? (
               <video
-                src={scene.videoUrl.startsWith('http') || scene.videoUrl.startsWith('data:') ? scene.videoUrl : `${import.meta.env.VITE_API_URL}${scene.videoUrl}`}
                 controls={false}
                 autoPlay
                 disablePictureInPicture
                 controlsList="nodownload nofullscreen noremoteplayback"
                 className="w-full h-auto object-contain"
                 style={{ maxHeight: '50vh' }}
-              />
+              >
+                <source
+                  src={scene.videoUrl.startsWith('http') || scene.videoUrl.startsWith('data:') ? scene.videoUrl : `${import.meta.env.VITE_API_URL}${scene.videoUrl}`}
+                  type={getVideoMimeType(scene.videoUrl)}
+                />
+                Tu navegador no soporta el elemento de video.
+              </video>
             ) : (
               <div className="w-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900" style={{ minHeight: '40vh' }}>
                 <div className="text-center px-8 py-12">

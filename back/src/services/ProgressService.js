@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import UserLevelProgress from "../models/UserLevelProgress.js";
 import Level from "../models/Level.js";
+import User from "../models/User.js";
 
 const toObjectId = (id) => (typeof id === 'string' ? new mongoose.Types.ObjectId(id) : id);
 
@@ -23,8 +24,9 @@ class ProgressService {
     for (const row of levelsAgg) totalsMap[row._id.toString()] = row.totalLevels;
 
     // Niveles completados por usuario por training (filtrado al set dado)
+    // Ahora contamos solo los niveles APROBADOS
     const completedAgg = await UserLevelProgress.aggregate([
-      { $match: { userId: uId, completed: true, trainingId: { $in: tIds } } },
+      { $match: { userId: uId, completed: true, approved: true, trainingId: { $in: tIds } } },
       { $group: { _id: "$trainingId", levelsCompleted: { $sum: 1 } } }
     ]);
 
@@ -52,13 +54,16 @@ class ProgressService {
       // Contar niveles totales del curso
       const totalLevels = await Level.countDocuments({ trainingId: tId });
 
-      // Agregación: contar niveles completados por cada usuario para este curso
+      // Contar usuarios anotados en la capacitación (no sólo los que tienen progreso)
+      // Se consideran alumnos (role: "Alumno") cuya lista assignedTraining incluye el trainingId
+      const totalUsers = await User.countDocuments({ role: "Alumno", assignedTraining: tId });
+
+      // Agregación: contar niveles APROBADOS por cada usuario para este curso
       const perUserAgg = await UserLevelProgress.aggregate([
-        { $match: { trainingId: tId, completed: true } },
+        { $match: { trainingId: tId, completed: true, approved: true } },
         { $group: { _id: "$userId", levelsCompleted: { $sum: 1 } } }
       ]);
 
-      const totalUsers = perUserAgg.length;
       const totalLevelsCompleted = perUserAgg.reduce((sum, r) => sum + (r.levelsCompleted || 0), 0);
 
       // Promedio en porcentaje: promedio de (levelsCompleted / totalLevels) por usuario
@@ -92,10 +97,10 @@ class ProgressService {
       const totalsMap = {};
       for (const row of levelsAgg) totalsMap[String(row._id)] = row.totalLevels;
 
-      // Agregación sobre UserLevelProgress: primero agrupar por training+user para contar niveles completados por usuario,
+      // Agregación sobre UserLevelProgress: primero agrupar por training+user para contar niveles APROBADOS por usuario,
       // luego agrupar por training para obtener totalUsers y totalLevelsCompleted
       const perTrainingAgg = await UserLevelProgress.aggregate([
-        { $match: { completed: true } },
+        { $match: { completed: true, approved: true } },
         { $group: { _id: { trainingId: "$trainingId", userId: "$userId" }, levelsCompleted: { $sum: 1 } } },
         { $group: { _id: "$_id.trainingId", totalUsers: { $sum: 1 }, totalLevelsCompleted: { $sum: "$levelsCompleted" } } }
       ]);
@@ -145,11 +150,12 @@ class ProgressService {
       // Contar niveles totales del curso
       const totalLevels = await Level.countDocuments({ trainingId: tId });
 
-      // Contar niveles completados por el usuario en este curso
+      // Contar niveles APROBADOS por el usuario en este curso
       const levelsCompleted = await UserLevelProgress.countDocuments({
         userId: uId,
         trainingId: tId,
-        completed: true
+        completed: true,
+        approved: true
       });
 
       // Calcular porcentaje
@@ -319,45 +325,282 @@ class ProgressService {
 
     const result = { approved, earnedPoints: earned, totalPoints: totalPossible, percentage, selectedOptions };
 
-    // If approved, persist to UserLevelProgress (upsert)
-    if (approved) {
-      try {
-        const levelId = dbLevel._id;
+    // SIEMPRE guardar el intento (aprobado o desaprobado)
+    try {
+      const levelId = dbLevel._id;
+      
+      console.log('🔍 Guardando intento en UserLevelProgress:', {
+        userId: uId,
+        trainingId: tId,
+        levelId: levelId,
+        approved,
+        earnedPoints: earned,
+        percentage: Math.round(percentage * 100) / 100
+      });
+
+      // Buscar intentos previos del usuario para este nivel
+      const existingAttempts = await UserLevelProgress.find({
+        userId: uId,
+        levelId: levelId
+      }).sort({ percentage: -1, earnedPoints: -1 }).lean();
+
+      // Determinar si este intento es mejor que los anteriores
+      let shouldSave = true;
+      
+      if (existingAttempts.length > 0) {
+        const bestAttempt = existingAttempts[0];
         
-        console.log('🔍 Intentando guardar en UserLevelProgress:', {
+        // Comparar: 1) aprobación, 2) porcentaje, 3) puntos
+        const currentIsBetter = 
+          (approved && !bestAttempt.approved) || // Ahora aprobó y antes no
+          (approved === bestAttempt.approved && percentage > bestAttempt.percentage) || // Mismo estado pero mejor %
+          (approved === bestAttempt.approved && percentage === bestAttempt.percentage && earned > bestAttempt.earnedPoints); // Mismo % pero más puntos
+
+        if (currentIsBetter) {
+          console.log('✅ Nuevo intento ES MEJOR. Eliminando intentos anteriores...');
+          
+          // Eliminar TODOS los intentos previos
+          await UserLevelProgress.deleteMany({
+            userId: uId,
+            levelId: levelId
+          });
+        } else {
+          console.log('ℹ️ Nuevo intento NO es mejor. No se guardará.');
+          shouldSave = false;
+        }
+      } else {
+        console.log('✅ Primer intento del usuario en este nivel.');
+      }
+
+      // Guardar el intento si corresponde
+      if (shouldSave) {
+        await UserLevelProgress.create({
           userId: uId,
           trainingId: tId,
           levelId: levelId,
-          selectedOptionsCount: selectedOptions.length
+          status: approved ? 'completed' : 'failed',
+          completed: true,
+          approved: approved,
+          completedAt: new Date(),
+          earnedPoints: earned,
+          totalPoints: totalPossible,
+          percentage: Math.round(percentage * 100) / 100,
+          selectedOptions: selectedOptions
         });
 
-        // Upsert: find existing record and update, otherwise create. Include selectedOptions.
-        const updateResult = await UserLevelProgress.updateOne(
-          { userId: uId, levelId: levelId },
-          { 
-            $set: {
-              userId: uId,
-              trainingId: tId,
-              levelId: levelId,
-              status: 'completed',
-              completed: true,
-              completedAt: new Date(),
-              selectedOptions: selectedOptions
-            }
-          },
-          { upsert: true }
-        );
-
-        console.log('✅ UserLevelProgress guardado:', updateResult);
-        
-      } catch (err) {
-        // Log but don't fail the approval response
-        console.error('❌ ProgressService.isLevelApproved: error upserting UserLevelProgress', err);
+        console.log('✅ Intento guardado exitosamente.');
       }
+      
+    } catch (err) {
+      console.error('❌ ProgressService.isLevelApproved: error guardando intento', err);
     }
+
     return result;
   }
 
+  /**
+   * Obtiene estadísticas detalladas de un nivel específico en una capacitación.
+   * @param {string|ObjectId} trainingId - ID de la capacitación
+   * @param {string|ObjectId} levelId - ID del nivel
+   * @returns {Object} Estadísticas del nivel (aprobados, promedio puntos, opciones más seleccionadas, etc.)
+   */
+  async getLevelStatistics(trainingId, levelId) {
+    if (!trainingId || !levelId) {
+      return {
+        levelId: null,
+        totalStudents: 0,
+        studentsCompleted: 0,
+        studentsApproved: 0,
+        approvalRate: 0,
+        averageScore: 0,
+        averagePercentage: 0,
+        maxScore: 0,
+        minScore: 0,
+        scenesStatistics: [],
+        lastAttempts: []
+      };
+    }
+
+    const tId = toObjectId(trainingId);
+    const lId = toObjectId(levelId);
+
+    try {
+      // 1. Obtener el nivel desde DB para conocer estructura del test
+      const level = await Level.findById(lId).lean();
+      if (!level || level.trainingId.toString() !== tId.toString()) {
+        throw new Error('Level not found or does not belong to this training');
+      }
+
+      const scenes = level?.test?.scenes || [];
+      
+      // Calcular puntaje máximo posible del nivel
+      let maxPossibleScore = 0;
+      for (const scene of scenes) {
+        if (scene.lastOne === true) continue; // Saltar escenas finales
+        const opts = Array.isArray(scene.options) ? scene.options : [];
+        const maxOpt = opts.length > 0 ? Math.max(...opts.map(o => Number(o?.points ?? 0))) : 0;
+        const bonus = Number(scene.bonus || 0);
+        maxPossibleScore += Math.max(0, maxOpt + bonus);
+      }
+
+      // 2. Contar estudiantes inscritos en la capacitación
+      const totalStudents = await User.countDocuments({ 
+        role: "Alumno", 
+        assignedTraining: tId 
+      });
+
+      // 3. Obtener registros de UserLevelProgress para este nivel
+      const progressRecords = await UserLevelProgress.find({
+        trainingId: tId,
+        levelId: lId,
+        completed: true
+      }).lean();
+
+      const studentsCompleted = progressRecords.length;
+
+      // 4. Calcular estadísticas de puntos (usando selectedOptions)
+      const scores = [];
+      const sceneSelections = {}; // { idScene: { optionId: count } }
+
+      for (const record of progressRecords) {
+        let totalPoints = 0;
+        const selectedOptions = record.selectedOptions || [];
+
+        // Sumar puntos de las opciones seleccionadas
+        for (const selected of selectedOptions) {
+          const points = Number(selected.points || 0);
+          totalPoints += points;
+
+          // Contar selecciones por escena y opción
+          const sceneId = String(selected.idScene);
+          if (!sceneSelections[sceneId]) {
+            sceneSelections[sceneId] = {};
+          }
+          const optKey = selected.optionId || selected.description || 'unknown';
+          sceneSelections[sceneId][optKey] = (sceneSelections[sceneId][optKey] || 0) + 1;
+        }
+
+        scores.push(totalPoints);
+      }
+
+      // Calcular métricas de puntajes
+      const averageScore = scores.length > 0 
+        ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10
+        : 0;
+      
+      const maxScore = scores.length > 0 ? Math.max(...scores) : 0;
+      const minScore = scores.length > 0 ? Math.min(...scores) : 0;
+      
+      const averagePercentage = maxPossibleScore > 0 
+        ? Math.round((averageScore / maxPossibleScore) * 100)
+        : 0;
+
+      // Calcular aprobados usando el campo 'approved' del modelo
+      const studentsApproved = progressRecords.filter(r => r.approved === true).length;
+      const approvalRate = studentsCompleted > 0 
+        ? Math.round((studentsApproved / studentsCompleted) * 100)
+        : 0;
+
+      // 5. Construir estadísticas por escena
+      const scenesStatistics = scenes
+        .filter(scene => scene.lastOne !== true) // Excluir escenas finales
+        .map(scene => {
+          const sceneId = String(scene.idScene);
+          const selections = sceneSelections[sceneId] || {};
+          
+          // Ordenar opciones por cantidad de selecciones
+          const optionStats = Object.entries(selections)
+            .map(([key, count]) => {
+              // Intentar encontrar la descripción de la opción
+              const option = scene.options?.find(o => 
+                String(o._id) === key || o.description === key
+              );
+              return {
+                optionKey: key,
+                description: option?.description || key,
+                points: option?.points || 0,
+                timesSelected: count,
+                percentage: studentsCompleted > 0 
+                  ? Math.round((count / studentsCompleted) * 100)
+                  : 0
+              };
+            })
+            .sort((a, b) => b.timesSelected - a.timesSelected);
+
+          return {
+            idScene: scene.idScene,
+            description: scene.description,
+            totalResponses: studentsCompleted,
+            optionsStatistics: optionStats
+          };
+        });
+
+      // 6. Obtener últimos intentos (últimos 10 registros ordenados por fecha)
+      const recentAttempts = await UserLevelProgress.find({
+        trainingId: tId,
+        levelId: lId,
+        completed: true
+      })
+        .sort({ completedAt: -1 })
+        .limit(10)
+        .populate('userId', 'firstName lastName email')
+        .lean();
+
+      const lastAttempts = recentAttempts.map(record => {
+        // Usar los campos ya calculados del modelo
+        const totalPoints = record.earnedPoints || 0;
+        const percentage = record.percentage || 0;
+        const approved = record.approved || false;
+
+        return {
+          userId: record.userId?._id,
+          userName: `${record.userId?.firstName || ''} ${record.userId?.lastName || ''}`.trim() || 'Usuario desconocido',
+          email: record.userId?.email,
+          completedAt: record.completedAt,
+          score: totalPoints,
+          percentage,
+          approved
+        };
+      });
+
+      return {
+        levelId: lId,
+        levelNumber: level.levelNumber,
+        levelTitle: level.title,
+        totalStudents,
+        studentsCompleted,
+        studentsApproved,
+        completionRate: totalStudents > 0 ? Math.round((studentsCompleted / totalStudents) * 100) : 0,
+        approvalRate,
+        averageScore,
+        averagePercentage,
+        maxPossibleScore,
+        maxScore,
+        minScore,
+        scenesStatistics,
+        lastAttempts
+      };
+
+    } catch (err) {
+      console.error('ProgressService.getLevelStatistics: error', err);
+      return {
+        levelId: null,
+        error: err.message,
+        totalStudents: 0,
+        studentsCompleted: 0,
+        studentsApproved: 0,
+        approvalRate: 0,
+        averageScore: 0,
+        averagePercentage: 0,
+        maxScore: 0,
+        minScore: 0,
+        scenesStatistics: [],
+        lastAttempts: []
+      };
+    }
+  }
+
+    
 
 }
   

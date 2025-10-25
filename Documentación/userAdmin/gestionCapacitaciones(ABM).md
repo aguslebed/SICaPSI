@@ -802,6 +802,8 @@ const [editingIndex, setEditingIndex] = useState(null);
 - Vista previa del video en TrainingPreview
 - Botón para limpiar/eliminar video seleccionado
 
+**Nota (frontend Oct 2025):** Aunque el backend admite muchos formatos de video, los inputs de subida en el frontend se han restringido a formatos reproducibles por los navegadores (MP4, WebM, OGV/OGG) para evitar problemas de preview. El componente de preview utiliza detección de MIME y etiquetas <source> para mejorar compatibilidad con archivos como `.mov`.
+
 ---
 
 ### 📄 **LevelTestEditor.jsx** (Editor de Examen)
@@ -842,7 +844,8 @@ const [editingIndex, setEditingIndex] = useState(null);
 Cada escena contiene:
 - **ID de escena**: Número único identificador
 - **Video de la escena**: URL o archivo local (MP4, MOV, AVI, MKV, WebM, OGG - max 100MB)
-- **Descripción**: RichTextInput que describe la situación (max 2500 caracteres)
+ - **Video de la escena**: URL o archivo local (max 100MB). Nota: el frontend valida y limita los formatos de subida a los compatibles con navegadores (MP4, WebM, OGG/OGV). El backend puede aceptar más formatos, pero la restricción evita subir tipos no reproducibles en preview.
+ - **Descripción**: RichTextInput que describe la situación (max 2500 caracteres)
 - **Es escena final**: Checkbox que marca si es la última escena
 - **Puntos bonus**: Puntos adicionales por llegar a esta escena
 
@@ -1229,6 +1232,75 @@ El sistema valida exhaustivamente antes de permitir el envío a aprobación:
 - Se deshabilita si falta alguna validación
 - Muestra modal con lista detallada de errores si no pasa validaciones
 - Solo permite enviar cuando todos los requisitos están cumplidos
+
+#### **Restricciones de edición por estado:**
+
+**Solo se puede editar en estados:** "Borrador" y "Rechazada"
+
+**Validación implementada:**
+- **En la interfaz**: El botón de editar (📝) se deshabilita visualmente cuando la capacitación no está en estado editable
+- **En el handler**: Validación adicional que previene la edición incluso si se intenta programáticamente
+
+**Lógica de restricción:**
+```javascript
+// En GestionCapacitacion.jsx - Botón de editar
+const canEdit = estadoAprobacion === 'Borrador' || estadoAprobacion === 'Rechazada';
+const editTitle = canEdit 
+  ? 'Editar capacitación' 
+  : `No se puede editar una capacitación en estado "${estadoAprobacion}"`;
+
+// Botón deshabilitado con estilo visual
+<button 
+  disabled={loading || !canEdit}
+  style={{
+    opacity: canEdit ? 1 : 0.5,
+    cursor: canEdit ? 'pointer' : 'not-allowed'
+  }}
+>
+  📝
+</button>
+```
+
+**Validación en handleEditTraining:**
+```javascript
+// Determinar estado actual de la capacitación
+const isExpired = trainingData.endDate && new Date(trainingData.endDate) < new Date();
+let estadoActual = 'Borrador';
+
+if (trainingData.isActive && !trainingData.pendingApproval && !trainingData.rejectedBy) {
+  estadoActual = 'Activa';
+} else if (!trainingData.isActive && trainingData.pendingApproval && !trainingData.rejectedBy) {
+  estadoActual = 'Pendiente';
+} else if (!trainingData.isActive && !trainingData.pendingApproval && trainingData.rejectedBy) {
+  estadoActual = 'Rechazada';
+} else if (!trainingData.isActive && !trainingData.pendingApproval && !trainingData.rejectedBy && isExpired) {
+  estadoActual = 'Finalizada';
+}
+
+// Validar que solo se pueda editar en Borrador o Rechazada
+if (estadoActual !== 'Borrador' && estadoActual !== 'Rechazada') {
+  // Mostrar modal de error
+  setErrorMessages([
+    `No se puede editar una capacitación en estado "${estadoActual}".`,
+    'Solo se pueden editar capacitaciones en estado "Borrador" o "Rechazada".'
+  ]);
+  return; // Cancelar apertura del modal
+}
+```
+
+**Estados y permisos de edición:**
+- ✅ **Borrador**: Se puede editar (en construcción)
+- ✅ **Rechazada**: Se puede editar (requiere correcciones)
+- ❌ **Pendiente**: NO se puede editar (esperando aprobación del Directivo)
+- ❌ **Activa**: NO se puede editar (aprobada y en curso)
+- ❌ **Finalizada**: NO se puede editar (completada y archivada)
+
+**Justificación:**
+- **Borrador**: Es el estado natural de construcción, permite múltiples ediciones
+- **Rechazada**: Necesita correcciones según feedback del Directivo antes de reenviar
+- **Pendiente**: Bloqueada para mantener integridad mientras el Directivo revisa
+- **Activa**: Bloqueada para evitar cambios en capacitaciones en curso que afecten a estudiantes
+- **Finalizada**: Bloqueada como registro histórico inmutable
 
 ---
 
@@ -2224,6 +2296,318 @@ export function resolveImageUrl(url)
 
 ---
 
+## 🎨 MEJORAS DE UX IMPLEMENTADAS
+
+### **MEJORA 1: Validación de cambios sin guardar antes de enviar a aprobar**
+
+**Problema identificado:**
+- Los usuarios podían modificar campos (seleccionar profesor, estudiantes, editar textos) sin guardar los cambios
+- Al hacer clic en "Enviar a aprobar", la validación pasaba pero los cambios no estaban guardados en la base de datos
+- Esto generaba inconsistencia entre lo que el usuario veía y lo que realmente se iba a aprobar
+
+**Solución implementada:**
+
+**Estados agregados:**
+```javascript
+const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+const [lastSavedState, setLastSavedState] = useState(null);
+```
+
+**Sistema de detección de cambios:**
+```javascript
+// useEffect que detecta cualquier cambio en campos editables
+useEffect(() => {
+  if (!open) {
+    return;
+  }
+  
+  // Si no estamos editando y no hay snapshot, cualquier dato ingresado cuenta como cambio
+  if (!editingTraining && !lastSavedState) {
+    const hasAnyData = title || subtitle || description || image || startDate || endDate || 
+                       assignedTeacher || selectedStudents.length > 0 || levels.length > 0;
+    setHasUnsavedChanges(hasAnyData);
+    return;
+  }
+  
+  // Usar el snapshot más reciente (lastSavedState) o editingTraining como referencia
+  const referenceState = lastSavedState || editingTraining;
+  if (!referenceState) {
+    setHasUnsavedChanges(false);
+    return;
+  }
+  
+  // Comparar con el estado de referencia
+  const hasChanges = (
+    title !== (referenceState.title || '') ||
+    subtitle !== (referenceState.subtitle || '') ||
+    description !== normalizeRichTextValue(referenceState.description || '') ||
+    image !== (referenceState.image || '') ||
+    (startDate !== (referenceState.startDate ? referenceState.startDate.split('T')[0] : '')) ||
+    (endDate !== (referenceState.endDate ? referenceState.endDate.split('T')[0] : '')) ||
+    assignedTeacher !== (referenceState.assignedTeacher || '') ||
+    JSON.stringify(selectedStudents.sort()) !== JSON.stringify((referenceState.enrolledStudents || []).sort()) ||
+    JSON.stringify(levels) !== JSON.stringify(referenceState.levels || [])
+  );
+  
+  setHasUnsavedChanges(hasChanges);
+}, [title, subtitle, description, image, startDate, endDate, assignedTeacher, 
+    selectedStudents, levels, editingTraining, isOpen, lastSavedState]);
+```
+
+**Validación actualizada:**
+```javascript
+const validateTrainingForApproval = () => {
+  const errors = [];
+  
+  // PRIMERA VALIDACIÓN: Verificar cambios sin guardar
+  if (hasUnsavedChanges) {
+    errors.push('Debe guardar los cambios antes de enviar a aprobar');
+  }
+  
+  // ... resto de validaciones existentes
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+```
+
+**Reset después de guardar:**
+```javascript
+const handleSave = async () => {
+  // ... lógica de guardado ...
+  
+  // Crear snapshot del estado actual como "último guardado"
+  setLastSavedState({
+    title,
+    subtitle,
+    description,
+    image,
+    startDate,
+    endDate,
+    assignedTeacher,
+    enrolledStudents: [...selectedStudents],
+    levels: JSON.parse(JSON.stringify(sanitizedLevels))
+  });
+  
+  // Resetear estado de cambios sin guardar
+  setHasUnsavedChanges(false);
+  
+  setShowSuccessModal(true);
+};
+```
+
+**Flujo de detección de cambios:**
+1. **Al abrir el modal**: `lastSavedState` se inicializa en `null`, usa `editingTraining` como referencia
+2. **Durante la edición**: Compara los valores actuales con `lastSavedState` (si existe) o `editingTraining`
+3. **Después de guardar**: Crea un snapshot en `lastSavedState` con los valores actuales
+4. **Siguiente comparación**: Usa `lastSavedState` como referencia, por lo que no detecta cambios (valores idénticos)
+
+**Ventaja del sistema de snapshot:**
+- No depende de que el componente padre actualice `editingTraining` después de guardar
+- Funciona correctamente tanto en modo creación como en modo edición
+- Soluciona el problema de "cambios sin guardar" después de actualizar exitosamente
+
+**Resultado:**
+- ✅ Cualquier cambio en campos activa el flag `hasUnsavedChanges`
+- ✅ El botón "Enviar a aprobar" queda bloqueado hasta guardar
+- ✅ Modal de error muestra claramente: "Debe guardar los cambios antes de enviar a aprobar"
+- ✅ Después de guardar exitosamente, el flag se resetea y permite enviar a aprobar
+
+---
+
+### **MEJORA 2: Indicador de carga para archivos pesados**
+
+**Problema identificado:**
+- Al subir archivos de video pesados (>10MB), la página se quedaba congelada
+- No había feedback visual de que el proceso estaba en curso
+- Los usuarios no sabían si el sistema estaba funcionando o si se había colgado
+- Esto generaba frustración y múltiples intentos de subida
+
+**Solución implementada:**
+
+**Estados agregados:**
+```javascript
+const [isUploadingFile, setIsUploadingFile] = useState(false);
+const [uploadProgress, setUploadProgress] = useState('');
+```
+
+**Detección de archivos pesados en handleFileUpload:**
+```javascript
+const handleFileUpload = async (file, levelIndex, fileType, subIndex = null) => {
+  // Calcular tamaño del archivo en MB
+  const fileSizeMB = file.size / (1024 * 1024);
+  
+  // Si el archivo es mayor a 10MB, mostrar overlay de carga
+  if (fileSizeMB > 10) {
+    setIsUploadingFile(true);
+    setUploadProgress(`Procesando archivo pesado (${fileSizeMB.toFixed(1)} MB)...`);
+  }
+  
+  try {
+    // Crear URL temporal para preview con FileReader
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const tempUrl = e.target.result;
+      
+      // Actualizar el campo correspondiente
+      if (fileType === 'image') {
+        setImage(tempUrl);
+      } else if (fileType === 'training') {
+        updateLevelField(levelIndex, 'training.url', tempUrl);
+      }
+      // ... más casos
+      
+      // Marcar como cambio no guardado
+      setHasUnsavedChanges(true);
+      
+      // Ocultar loading después de procesar
+      if (fileSizeMB > 10) {
+        setTimeout(() => {
+          setIsUploadingFile(false);
+          setUploadProgress('');
+        }, 500);
+      }
+    };
+    
+    reader.readAsDataURL(file);
+    
+    // Guardar archivo en pendientes para subir al guardar
+    setPendingLevelFiles(prev => ({
+      ...prev,
+      [fileKey]: file
+    }));
+  } catch (error) {
+    console.error('Error al procesar archivo:', error);
+    setIsUploadingFile(false);
+  }
+};
+```
+
+**Componente LoadingOverlay agregado al JSX:**
+```jsx
+{/* Loading overlay durante subida de archivos */}
+{isUploadingFile && (
+  <LoadingOverlay label={uploadProgress || 'Procesando archivo...'} />
+)}
+```
+
+**Resultado:**
+- ✅ Archivos mayores a 10MB muestran overlay de carga automáticamente
+- ✅ Mensaje de progreso indica el tamaño del archivo: "Procesando archivo pesado (15.3 MB)..."
+- ✅ Usuario sabe que el sistema está procesando y no congelado
+- ✅ El overlay se oculta automáticamente después de 500ms de procesado el archivo
+- ✅ No afecta archivos pequeños (<10MB) que se procesan instantáneamente
+
+---
+
+### **MEJORA 3: Soporte completo para archivos de video .MOV**
+
+**Problema identificado:**
+- Los archivos de video con extensión `.mov` (QuickTime) no se visualizaban correctamente en el preview
+- El navegador no reconocía el tipo MIME del archivo
+- Usuarios que subían videos desde iPhone/Mac no podían ver el preview
+
+**Solución implementada:**
+
+**1. Función para detectar tipo MIME del video:**
+```javascript
+// En PreviewTraining (componente de preview de clase magistral)
+const getVideoMimeType = (videoUrl) => {
+  if (!videoUrl) return 'video/mp4';
+  const url = videoUrl.toLowerCase();
+  if (url.includes('.mov') || url.includes('quicktime')) return 'video/quicktime';
+  if (url.includes('.webm')) return 'video/webm';
+  if (url.includes('.ogg')) return 'video/ogg';
+  if (url.includes('.avi')) return 'video/x-msvideo';
+  if (url.includes('.mkv')) return 'video/x-matroska';
+  return 'video/mp4'; // default
+};
+```
+
+**2. Actualización del tag `<video>` en PreviewTraining:**
+```jsx
+// ANTES (sin tipo MIME especificado):
+<video 
+  controls 
+  className="w-full h-auto"
+  src={url.startsWith('http') || url.startsWith('data:') ? url : `${import.meta.env.VITE_API_URL}${url}`}
+>
+  Tu navegador no soporta el elemento de video.
+</video>
+
+// DESPUÉS (con elemento <source> y tipo MIME):
+<video 
+  controls 
+  className="w-full h-auto"
+>
+  <source 
+    src={url.startsWith('http') || url.startsWith('data:') ? url : `${import.meta.env.VITE_API_URL}${url}`}
+    type={getVideoMimeType(url)}
+  />
+  Tu navegador no soporta el elemento de video.
+</video>
+```
+
+**3. Misma actualización en PreviewTest (escenas del examen):**
+```jsx
+// En PreviewTest para videos de escenas
+<video
+  controls={false}
+  autoPlay
+  disablePictureInPicture
+  controlsList="nodownload nofullscreen noremoteplayback"
+  className="w-full h-auto object-contain"
+  style={{ maxHeight: '50vh' }}
+>
+  <source
+    src={scene.videoUrl.startsWith('http') || scene.videoUrl.startsWith('data:') ? scene.videoUrl : `${import.meta.env.VITE_API_URL}${scene.videoUrl}`}
+    type={getVideoMimeType(scene.videoUrl)}
+  />
+  Tu navegador no soporta el elemento de video.
+</video>
+```
+
+**Tipos MIME soportados:**
+- `.mov` → `video/quicktime` (iPhone, Mac)
+- `.mp4` → `video/mp4` (estándar)
+- `.webm` → `video/webm` (web optimizado)
+- `.ogg` → `video/ogg` (formato libre)
+- `.avi` → `video/x-msvideo` (Windows)
+- `.mkv` → `video/x-matroska` (alta calidad)
+
+**Resultado:**
+- ✅ Videos `.mov` ahora se visualizan correctamente en el preview
+- ✅ El navegador detecta correctamente el codec QuickTime
+- ✅ Compatible con videos grabados en iPhone, Mac y dispositivos Apple
+- ✅ Soporte extendido para todos los formatos de video comunes
+- ✅ No afecta videos existentes en otros formatos
+
+---
+
+## 🆕 Cambios front-end recientes (Oct 2025)
+
+Pequeño resumen de implementaciones y ajustes realizados en el frontend que afectan el flujo de creación/edición de capacitaciones:
+
+- Validación y bloqueo de creación de nuevos niveles/escenas: el UI ahora impide crear un nuevo nivel o escena si el anterior no está completo. "Completo" exige los campos mínimos (ver sección de validaciones). Se consideran vacíos los textos por defecto como "Nivel 1" o "Opción A/B" para evitar bypass.
+
+- Modal de errores detallado (`ErrorListModal`): se utiliza para mostrar listas de validación cuando el usuario intenta acciones no permitidas (p.ej. + Nuevo nivel sin completar). Reemplaza llamadas ad-hoc a modales de advertencia en ese flujo.
+
+- Confirmaciones antes de eliminar: se añadieron `ConfirmActionModal` en los puntos de borrado importantes (eliminar nivel, eliminar escena, eliminar video de escena, eliminar opción, eliminar archivo de clase magistral) — la acción solo se ejecuta tras confirmación explícita.
+
+- Restricción de formatos en inputs de subida del frontend: los `accept` en los inputs de archivo se cambiaron para aceptar únicamente formatos reproducibles por navegador en los casos de video (p.ej. `LevelTraining` acepta `.mp4,.webm,.ogv` además de documentos; `LevelTestEditor` acepta `video/mp4,video/webm,video/ogg`). El backend sigue soportando más tipos, pero la restricción evita subir formatos no reproducibles en preview.
+
+- Mejora en preview de video: se añadió detección de MIME y uso de `<source>` en los tags `<video>` para mejorar la compatibilidad (p.ej. `.mov`).
+
+- UX y textos: se actualizaron varios labels de acción y placeholders a español (p.ej. "Seleccionar archivo" en lugar de "Choose File" en componentes principales). Queda pendiente una pasada de armonización en todo el proyecto para eliminar restos de textos antiguos.
+
+- Manejo de archivos pesados y overlay de carga: cuando se suben archivos grandes (>10MB) aparece un `LoadingOverlay` para dar feedback al usuario y evitar múltiples intentos de subida.
+
+Estas notas resumen los cambios aplicados recientemente en el frontend que son relevantes para administradores y editores de contenidos.
+
+
 **Fecha de documentación:** Octubre 2025  
 **Versión del sistema:** 1.0  
 **Estado:** Producción
+

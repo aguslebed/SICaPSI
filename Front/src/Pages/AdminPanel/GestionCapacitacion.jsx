@@ -8,7 +8,7 @@ import ErrorListModal from '../../Components/Modals/ErrorListModal';
 import WarningModal from '../../Components/Modals/WarningModal';
 import ConfirmActionModal from '../../Components/Modals/ConfirmActionModal';
 import { useState, useEffect, useRef } from 'react';
-import { getAllActiveTrainings, getAllTrainings, createTraining, updateTraining, addLevelsToTraining, updateLevelsInTraining, deleteTraining, getTrainingById, enrollStudentsToTraining, deleteTrainingFile, uploadTrainingFile, moveTempFiles, replaceTrainingFile } from '../../API/Request';
+import { getAllActiveTrainings, getAllTrainings, createTraining, updateTraining, addLevelsToTraining, updateLevelsInTraining, deleteTraining, getTrainingById, enrollStudentsToTraining, enrollTrainerToTraining, deleteTrainingFile, uploadTrainingFile, moveTempFiles, replaceTrainingFile, getTrainerByTrainingId, getUsersEnrolledInTraining, unenrollStudentsFromTraining } from '../../API/Request';
 import LoadingOverlay from '../../Components/Shared/LoadingOverlay';
 import './AdminPanel.css';
 
@@ -16,6 +16,9 @@ export default function GestionCapacitacion() {
   const [trainings, setTrainings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Estado para cachear profesores por trainingId
+  const [trainersMap, setTrainersMap] = useState({});
   
   // Estados para modales
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -53,6 +56,34 @@ export default function GestionCapacitacion() {
   // Referencias para los dropdowns
   const nivelMenuRef = useRef(null);
   const estadoMenuRef = useRef(null);
+
+  // Helper: obtiene el profesor para cada capacitación que no tenga `trainer` poblado
+  const fetchAndAttachTrainers = async (trainingsList) => {
+    if (!Array.isArray(trainingsList) || trainingsList.length === 0) return trainingsList;
+
+    const mapUpdates = {};
+
+    const jobs = trainingsList.map(async (t) => {
+      try {
+        // Skip si ya está cacheado
+        if (trainersMap[t._id]) return;
+
+        const trainer = await getTrainerByTrainingId(t._id);
+        
+        if (trainer) mapUpdates[t._id] = trainer;
+      } catch (err) {
+        console.warn('fetchAndAttachTrainers: no se pudo cargar trainer para', t._id, err?.message || err);
+      }
+    });
+
+    await Promise.all(jobs);
+
+    if (Object.keys(mapUpdates).length > 0) {
+      setTrainersMap(prev => ({ ...prev, ...mapUpdates }));
+    }
+
+    return trainingsList;
+  };
 
   // Cerrar dropdowns al hacer click fuera
   useEffect(() => {
@@ -123,7 +154,10 @@ export default function GestionCapacitacion() {
         const data = await getAllTrainings(); // Cambiar a getAllTrainings para obtener todas
         // backend may return an array or { items: [] }
         const items = Array.isArray(data) ? data : (data?.items || []);
-        if (mounted) setTrainings(items);
+        if (mounted) {
+          const enriched = await fetchAndAttachTrainers(items);
+          setTrainings(enriched);
+        }
       } catch (err) {
         console.error('Error fetching trainings', err);
         if (mounted) setError(err);
@@ -145,7 +179,8 @@ export default function GestionCapacitacion() {
     try {
       const data = await getAllTrainings(); // Cambiar a getAllTrainings para obtener todas
       const items = Array.isArray(data) ? data : (data?.items || []);
-      setTrainings(items);
+  const enriched = await fetchAndAttachTrainers(items);
+  setTrainings(enriched);
     } catch (err) {
       console.error('Error fetching trainings', err);
       setError(err);
@@ -292,6 +327,31 @@ export default function GestionCapacitacion() {
           setWarningMessage(`Capacitación guardada, pero hubo un problema inscribiendo guardias: ${enrollError.message}`);
           setShowWarningModal(true);
         }
+      } else if (isEditing && Array.isArray(selectedStudents) && selectedStudents.length === 0) {
+        // Si estamos editando y el array de estudiantes quedó vacío, debemos desinscribir
+        // a todos los estudiantes actualmente inscritos en esta capacitación.
+        try {
+          const currentlyEnrolled = await getUsersEnrolledInTraining(finalTrainingId);
+          const idsToUnenroll = Array.isArray(currentlyEnrolled) ? currentlyEnrolled.map(u => u._id || u.id || u.userId).filter(Boolean) : [];
+          if (idsToUnenroll.length > 0) {
+            await unenrollStudentsFromTraining(finalTrainingId, idsToUnenroll);
+          }
+        } catch (unenrollError) {
+          console.warn('Error desinscribiendo guardias:', unenrollError);
+          setWarningMessage(`Capacitación guardada, pero hubo un problema desinscribiendo guardias: ${unenrollError.message}`);
+          setShowWarningModal(true);
+        }
+      }
+
+      // Inscribir profesor si está asignado
+      if (trainingData.assignedTeacher && trainingData.assignedTeacher.trim()) {
+        try {
+          await enrollTrainerToTraining(finalTrainingId, trainingData.assignedTeacher);
+        } catch (enrollError) {
+          console.warn('Error inscribiendo profesor:', enrollError);
+          setWarningMessage(`Capacitación guardada, pero hubo un problema inscribiendo al profesor: ${enrollError.message}`);
+          setShowWarningModal(true);
+        }
       }
 
       await refreshTrainings();
@@ -410,11 +470,49 @@ export default function GestionCapacitacion() {
       // Limpiar estado anterior primero
       setEditingTraining(null);
       
-  // Obtener datos frescos del backend
-  const trainingData = await getTrainingById(trainingId);
+      // Obtener datos frescos del backend
+      const trainingData = await getTrainingById(trainingId);
+      
+      // Validar que solo se pueda editar en estados Borrador o Rechazada
+      const isExpired = trainingData.endDate && new Date(trainingData.endDate) < new Date();
+      let estadoActual = 'Borrador';
+      
+      if (trainingData.isActive && !trainingData.pendingApproval && !trainingData.rejectedBy) {
+        estadoActual = 'Activa';
+      } else if (!trainingData.isActive && trainingData.pendingApproval && !trainingData.rejectedBy) {
+        estadoActual = 'Pendiente';
+      } else if (!trainingData.isActive && !trainingData.pendingApproval && trainingData.rejectedBy) {
+        estadoActual = 'Rechazada';
+      } else if (!trainingData.isActive && !trainingData.pendingApproval && !trainingData.rejectedBy && isExpired) {
+        estadoActual = 'Finalizada';
+      }
+      
+      // Solo permitir edición en Borrador o Rechazada
+      if (estadoActual !== 'Borrador' && estadoActual !== 'Rechazada') {
+        setErrorMessages([
+          `No se puede editar una capacitación en estado "${estadoActual}".`,
+          'Solo se pueden editar capacitaciones en estado "Borrador" o "Rechazada".'
+        ]);
+        setErrorModalTitle('Edición no permitida');
+        setErrorModalMessageText('La capacitación no se puede editar en su estado actual:');
+        setShowErrorModal(true);
+        return;
+      }
       
       setEditingTraining(trainingData);
       setOpenCreateTraining(true);
+      // Si fue rechazada, mostrar motivo de rechazo al abrir el editor
+      if (estadoActual === 'Rechazada' && (trainingData.rejectionReason || trainingData.rejectedBy)) {
+        const reviewer = trainingData.rejectedBy
+          ? (typeof trainingData.rejectedBy === 'object'
+              ? `${trainingData.rejectedBy.firstName || ''} ${trainingData.rejectedBy.lastName || ''}`.trim()
+              : `${trainingData.rejectedBy}`)
+          : '';
+        const reason = trainingData.rejectionReason || 'Sin motivo especificado';
+        const byText = reviewer ? ` por ${reviewer}` : '';
+        setWarningMessage(`Capacitación rechazada${byText}. Motivo: ${reason}`);
+        setShowWarningModal(true);
+      }
     } catch (error) {
       console.error('Error obteniendo capacitación:', error);
       setErrorMessages([`Error al cargar capacitación: ${error.message}`]);
@@ -706,10 +804,14 @@ export default function GestionCapacitacion() {
                     // Niveles info
                     const nivelesCount = t.levels?.length || t.totalLevels || 0;
                     const nivelesLabel = nivelesCount > 0 ? `${nivelesCount} nivel${nivelesCount > 1 ? 'es' : ''}` : 'Sin niveles';
-                    
-                    // Profesor info
-                    const profesor = t.createdBy ? `${t.createdBy.firstName || ''} ${t.createdBy.lastName || ''}`.trim() : '-';
-                    const estado = t.createdBy ? 'Asignado' : 'Sin asignar';
+
+                    // Profesor info - usar trainersMap primero, luego fallback a createdBy
+                    const trainerFromMap = trainersMap[t._id];
+                   
+                    const profesor = trainerFromMap 
+                      ? `${trainerFromMap.firstName || ''} ${trainerFromMap.lastName || ''}`.trim()
+                      : "No hay profesor asignado";
+                    const estado = trainerFromMap || t.createdBy ? 'Asignado' : 'Sin asignar';
                     
                     // Determinar estado de aprobación
                     const isExpired = t.endDate && new Date(t.endDate) < new Date();
@@ -759,14 +861,28 @@ export default function GestionCapacitacion() {
                         </td>
                         <td data-label="Acciones">
                           <div className="admin-actions">
-                            <button 
-                              className="admin-action-btn" 
-                              title="Editar capacitación"
-                              onClick={() => handleEditTraining(t._id)}
-                              disabled={loading}
-                            >
-                              📝
-                            </button>
+                            {(() => {
+                              // Solo permitir edición en estados Borrador o Rechazada
+                              const canEdit = estadoAprobacion === 'Borrador' || estadoAprobacion === 'Rechazada';
+                              const editTitle = canEdit 
+                                ? 'Editar capacitación' 
+                                : `No se puede editar una capacitación en estado "${estadoAprobacion}"`;
+                              
+                              return (
+                                <button 
+                                  className="admin-action-btn" 
+                                  title={editTitle}
+                                  onClick={() => canEdit && handleEditTraining(t._id)}
+                                  disabled={loading || !canEdit}
+                                  style={{
+                                    opacity: canEdit ? 1 : 0.5,
+                                    cursor: canEdit ? 'pointer' : 'not-allowed'
+                                  }}
+                                >
+                                  📝
+                                </button>
+                              );
+                            })()}
                             <button 
                               className="admin-action-btn"
                               title="Eliminar capacitación"

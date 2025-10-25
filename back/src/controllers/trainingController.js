@@ -34,6 +34,15 @@ export function makeTrainingController({ trainingService, trainingValidator }) {
       } 
     },
 
+    async getPendingContent(req, res, next) {
+      try {
+        const trainings = await trainingService.getPendingContent();
+        res.status(200).json(trainings);
+      } catch (err) {
+        next(err);
+      }
+    },
+
     async getTrainingById(req, res, next) {
       try {
         const { id } = req.params;
@@ -45,22 +54,62 @@ export function makeTrainingController({ trainingService, trainingValidator }) {
       }
     },
 
+    async getTrainerByTrainingId(req, res, next) {
+      try {
+        const { id } = req.params;
+        const trainer = await trainingService.getTrainerByTrainingId(id);
+        if (!trainer) throw new AppError("Profesor de la capacitación no encontrado", 404, "TRAINER_404");
+        res.status(200).json(trainer);
+      } catch (err) {
+        next(err);
+      }
+    },
+
     async updateTraining(req, res, next) {
       try {
         const { id } = req.params;
         const trainingData = req.body;
         console.log('📥 Datos recibidos para actualizar:', { id, trainingData });
         
-        // Detectar si es actualización parcial (solo algunos campos)
+        // Detectar si es actualización de estado (aprobación/rechazo) - skip validation
         const fields = Object.keys(trainingData);
-        const isPartialUpdate = fields.length <= 3 && !fields.includes('levels');
+        const isStatusUpdate = (
+          fields.includes('isActive') || 
+          fields.includes('pendingApproval') || 
+          fields.includes('rejectionReason') ||
+          fields.includes('rejectedBy')
+        ) && fields.length <= 5;
         
-        const { isValid, errors } = trainingValidator.validate(trainingData, { 
-          isUpdate: true, 
-          isPartialUpdate: isPartialUpdate 
-        });
-        console.log('🔍 Validación:', { isValid, errors, isPartialUpdate });
-        if (!isValid) throw new AppError("Datos de capacitación inválidos", 400, "TRAINING_400", errors);
+        // Si NO es actualización de estado, validar
+        if (!isStatusUpdate) {
+          const isPartialUpdate = fields.length <= 3 && !fields.includes('levels');
+          const { isValid, errors } = trainingValidator.validate(trainingData, { 
+            isUpdate: true, 
+            isPartialUpdate: isPartialUpdate 
+          });
+          console.log('🔍 Validación:', { isValid, errors, isPartialUpdate });
+          if (!isValid) throw new AppError("Datos de capacitación inválidos", 400, "TRAINING_400", errors);
+        } else {
+          console.log('✅ Actualización de estado detectada, omitiendo validación');
+          // Forzar consistencia de estado y setear rejectedBy según el usuario autenticado
+          const userId = req.user?.userId || req.user?._id;
+          const approving = trainingData.isActive === true && trainingData.pendingApproval === false;
+          const rejecting = (trainingData.isActive === false && trainingData.pendingApproval === false) || (typeof trainingData.rejectionReason === 'string' && trainingData.rejectionReason.trim().length > 0);
+
+          if (approving) {
+            // Al aprobar, limpiar campos de rechazo
+            trainingData.pendingApproval = false;
+            trainingData.rejectionReason = '';
+            trainingData.rejectedBy = null;
+          }
+          if (rejecting) {
+            // Al rechazar, asegurar flags y setear quién rechazó
+            trainingData.isActive = false;
+            trainingData.pendingApproval = false;
+            if (userId) trainingData.rejectedBy = userId;
+          }
+        }
+        
         const updatedTraining = await trainingService.updateTraining(id, trainingData);
         res.status(200).json(updatedTraining);
       } catch (err) {

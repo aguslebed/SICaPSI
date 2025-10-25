@@ -42,7 +42,8 @@ export default function ValidarContenido() {
   const handleAprobar = async () => {
     try {
       setLoading(true);
-      await updateTraining(selectedContenido._id, { isActive: true });
+      // Approving: mark active and clear pendingApproval and any previous rejection info
+      await updateTraining(selectedContenido._id, { isActive: true, pendingApproval: false, rejectedBy: null, rejectionReason: '' });
       setToast({ show: true, message: 'Capacitación aprobada exitosamente', type: 'success' });
       setSelectedContenido(null);
       await loadPendingContent();
@@ -67,7 +68,8 @@ export default function ValidarContenido() {
     }
     try {
       setLoading(true);
-      await updateTraining(selectedContenido._id, { isActive: false, rejectReason });
+      // Send rejectionReason field to match backend model and clear pendingApproval
+      await updateTraining(selectedContenido._id, { isActive: false, pendingApproval: false, rejectionReason: rejectReason });
       setToast({ show: true, message: 'Capacitación rechazada exitosamente', type: 'success' });
       setShowModal(false);
       setShowRejectModal(false);
@@ -189,7 +191,8 @@ export default function ValidarContenido() {
                     }
                     setLoading(true);
                     try {
-                      await updateTraining(selectedContenido._id, { isActive: false, rejectReason });
+                      // Use rejectionReason field name expected by the backend
+                      await updateTraining(selectedContenido._id, { isActive: false, pendingApproval: false, rejectionReason: rejectReason });
                       setToast({ show: true, message: 'Capacitación rechazada exitosamente', type: 'success' });
                       setShowRejectModal(false);
                       setSelectedContenido(null);

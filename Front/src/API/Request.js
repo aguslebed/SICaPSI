@@ -26,6 +26,16 @@ export async function login(email, password) {
     // 2. Obtener datos completos del usuario autenticado
     const { data } = await api.get("/users/connect/me"); 
 
+    // 3. Actualizar último login
+    if (data.user?._id) {
+      try {
+        await updateUserLastLogin(data.user._id);
+      } catch (loginUpdateError) {
+        // No romper el login si falla la actualización del lastLogin
+        console.warn("⚠️ No se pudo actualizar último login:", loginUpdateError);
+      }
+    }
+
     // Devolver directamente la data (sin envolver en {data})
     return data;
   } catch (error) {
@@ -115,6 +125,22 @@ export async function updateUser(userId, patch) {
   } catch (error) {
     if (error.response) {
       throw new Error(error.response.data?.message || 'Error al actualizar usuario');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+// Actualiza el último login del usuario con la fecha/hora actual
+export async function updateUserLastLogin(userId) {
+  try {
+    const { data } = await api.patch(`/users/${encodeURIComponent(userId)}/last-login`);
+    return data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al actualizar último login');
     } else if (error.request) {
       throw new Error('Error de conexión con el servidor');
     } else {
@@ -402,6 +428,24 @@ export async function getTotalTrainingProgress(trainingId, userId) {
 }
 
 /**
+ * Obtener estadísticas detalladas de un nivel específico
+ * GET /progress/trainings/:trainingId/levels/:levelId/statistics
+ */
+export async function getLevelStatistics(trainingId, levelId) {
+  try {
+    const { data } = await api.get(
+      `progress/trainings/${encodeURIComponent(trainingId)}/levels/${encodeURIComponent(levelId)}/statistics`
+    );
+    return data;
+  } catch (error) {
+    console.error('Error obteniendo estadísticas del nivel:', error);
+    if (error.response) throw new Error(error.response.data?.message || 'Error al obtener estadísticas del nivel');
+    if (error.request) throw new Error('Error de conexión con el servidor');
+    throw new Error('Error en la configuración de la petición');
+  }
+}
+
+/**
  * Obtener resumen de progreso para todas las capacitaciones
  * GET /progress/trainings/all
  */
@@ -538,8 +582,10 @@ export async function getAllLevelsInTraining(trainingId) {
     return data;
   } catch (error) {
     console.error("❌ Error obteniendo niveles:", error);
+    console.error("❌ Error response:", error.response?.data);
     if (error.response) {
-      throw new Error(error.response.data?.message || 'Error al obtener niveles');
+      const errorMsg = error.response.data?.error || error.response.data?.message || 'Error al obtener niveles';
+      throw new Error(errorMsg);
     } else if (error.request) {
       throw new Error('Error de conexión con el servidor');
     } else {
@@ -697,6 +743,8 @@ export async function moveTempFiles(trainingId, tempFiles) {
   }
 }
 
+
+
 // Obtener una capacitación por ID
 export async function getTrainingById(trainingId) {
   try {
@@ -709,6 +757,26 @@ export async function getTrainingById(trainingId) {
     console.error("❌ Error obteniendo capacitación:", error);
     if (error.response) {
       throw new Error(error.response.data?.message || 'Error al obtener capacitación');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+// Obtener el profesor (trainer) de una capacitación por ID
+export async function getTrainerByTrainingId(trainingId) {
+  try {
+    console.log('🔍 getTrainerByTrainingId llamado con trainingId:', trainingId);
+    const response = await api.get(`/training/${encodeURIComponent(trainingId)}/trainer`);
+    console.log('📦 Response completo:', response);
+    console.log('📦 Response.data:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('❌ Error obteniendo profesor del training:', error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al obtener profesor');
     } else if (error.request) {
       throw new Error('Error de conexión con el servidor');
     } else {
@@ -773,6 +841,46 @@ export async function enrollStudentsToTraining(trainingId, studentIds) {
   }
 }
 
+// Desinscribir estudiantes de una capacitación
+export async function unenrollStudentsFromTraining(trainingId, studentIds) {
+  try {
+    const { data } = await api.patch('/enrollment/unenrollStudent', {
+      trainingId,
+      userIds: studentIds
+    });
+    return data;
+  } catch (error) {
+    console.error("❌ Error desinscribiendo estudiantes:", error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al desinscribir estudiantes');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+// Inscribir profesor a una capacitación
+export async function enrollTrainerToTraining(trainingId, teacherId) {
+  try {
+    const { data } = await api.post('/enrollment/enrollTrainer', {
+      trainingId,
+      userIds: [teacherId] // El backend espera 'userIds' como array
+    });
+    return data;
+  } catch (error) {
+    console.error("❌ Error inscribiendo profesor:", error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al inscribir profesor');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
 // --- PROGRESS / LEVEL APPROVAL ---
 // Checks whether a level is approved given the user's level object (with results)
 export async function checkLevelApproved(trainingId, userId,levelId, levelWithResults) {
@@ -803,11 +911,16 @@ export async function checkLevelApproved(trainingId, userId,levelId, levelWithRe
 // Obtener contenidos pendientes para validación (used by DirectivoPanel)
 export async function getPendingContent() {
   try {
-    // Intentar ruta esperada en backend; si no existe, devolver array vacío para evitar romper la UI
     const { data } = await api.get('/training/pending-content');
     return Array.isArray(data) ? data : (data?.items || data || []);
   } catch (error) {
-    console.warn('getPendingContent: endpoint no disponible o error', error?.response?.data || error.message);
-    return [];
+    console.error('❌ Error obteniendo contenidos pendientes:', error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al obtener contenidos pendientes');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
   }
 }

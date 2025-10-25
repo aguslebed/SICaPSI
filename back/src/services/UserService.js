@@ -180,6 +180,19 @@ export class UserService extends IUserService {
     if (!user) return null;
     return await this.User.findByIdAndDelete(id).exec();
   }
+
+  /**
+   * Actualiza el último login del usuario con la fecha/hora actual
+   */
+  async updateLastLogin(userId) {
+    const updated = await this.User.findByIdAndUpdate(
+      userId,
+      { lastLogin: new Date() },
+      { new: true }
+    ).exec();
+    console.log(updated, " -- updated lastLogin -- ");
+    return updated;
+  }
 }
 
 export default UserService;

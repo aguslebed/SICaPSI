@@ -4,6 +4,7 @@ import { BsFileBarGraphFill } from 'react-icons/bs';
 import { FaComments } from 'react-icons/fa';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getUsersEnrolledInTraining } from '../../../API/Request';
+import StudentProgressModal from '../../../Components/Modals/StudentProgressModal';
 import '../../AdminPanel/AdminPanel.css';
 
 export default function Students() {
@@ -14,6 +15,8 @@ export default function Students() {
   const [appliedSearch, setAppliedSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [showProgressModal, setShowProgressModal] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -44,6 +47,43 @@ export default function Students() {
       return hay.includes(q);
     });
   }, [students, appliedSearch]);
+
+  const handleShowProgress = (student) => {
+    setSelectedStudent(student);
+    setShowProgressModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowProgressModal(false);
+    setSelectedStudent(null);
+  };
+
+  const handleSendMessage = (student) => {
+    // Navegar a mensajería con state que incluye el alumno seleccionado
+    navigate(`/trainer/${idTraining}/messages`, {
+      state: {
+        composeOpen: true,
+        recipientStudent: student
+      }
+    });
+  };
+
+  // Formatear fecha de último acceso
+  const formatLastLogin = (lastLogin) => {
+    if (!lastLogin) return '-';
+    try {
+      const date = new Date(lastLogin);
+      return date.toLocaleString('es-AR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return '-';
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -102,18 +142,18 @@ export default function Students() {
                             <td className="py-2 px-2 text-left">{s.firstName || s.first_name || ''}</td>
                             <td className="py-2 px-2 text-left">{s.documentNumber || s.dni || s.document_number || ''}</td>
                             <td className="py-2 px-2 text-left">{s.email || ''}</td>
-                            <td className="py-2 px-2 text-left">{s.lastLogin || s.last_login || ''}</td>
+                            <td className="py-2 px-2 text-left">{formatLastLogin(s.lastLogin || s.last_login)}</td>
                             <td className="py-2 px-2 text-left">
                               <div className="flex items-center gap-2">
                                 <button
-                                  onClick={() => navigate(`/trainer/${idTraining}/reports`)}
+                                  onClick={() => handleShowProgress(s)}
                                   className="inline-flex items-center gap-2 px-3 py-1 bg-[#0077b6] text-white rounded-md hover:bg-blue-700 transition"
                                 >
                                   <BsFileBarGraphFill className="text-sm" />
                                   <span>Seguimiento</span>
                                 </button>
                                 <button
-                                  onClick={() => navigate(`/trainer/${idTraining}/messages`)}
+                                  onClick={() => handleSendMessage(s)}
                                   className="inline-flex items-center gap-2 px-3 py-1 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 transition"
                                 >
                                   <FaComments className="text-sm" />
@@ -132,6 +172,14 @@ export default function Students() {
           )}
         </main>
       </div>
+
+      {/* Modal de seguimiento */}
+      <StudentProgressModal
+        isOpen={showProgressModal}
+        onClose={handleCloseModal}
+        student={selectedStudent}
+        trainingId={idTraining}
+      />
     </div>
   );
 }

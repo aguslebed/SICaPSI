@@ -7,6 +7,8 @@ import { fileURLToPath } from "url";
 
 //Controller
 import  {makeTrainingController}  from "../controllers/trainingController.js";
+import makeAuthMiddleware from "../middlewares/authMiddleware.js";
+import { JwtTokenService } from "../services/JwtTokenService.js";
 
 //service
 import {TrainingService} from "../services/TrainingService.js"
@@ -100,10 +102,28 @@ const controller = makeTrainingController({
     trainingValidator: new TrainingValidator()
  });
 
+// Auth middleware setup (aligned with userRoutes)
+const resolvedSecret = (process.env.JWT_SECRET && process.env.JWT_SECRET.length >= 32)
+        ? process.env.JWT_SECRET
+        : (process.env.NODE_ENV === 'production' ? null : 'dev_secret_please_override_0123456789abcdef');
+const jwtTokenService = new JwtTokenService({ secret: resolvedSecret });
+const authMiddleware = makeAuthMiddleware({ tokenService: jwtTokenService });
 
-router.post("/createTraining", controller.createTraining)
-router.get("/getAllActiveTrainings", controller.getAllActiveTrainings)
-router.get("/getAllTrainings", controller.getAllTrainings)
+// Admin/Directivo guard
+const adminMiddleware = (req, res, next) => {
+    if (!req.user || !['Administrador', 'Directivo'].includes(req.user.role)) {
+        return res.status(403).json({ 
+            message: 'Acceso denegado. Se requieren permisos de administrador.' 
+        });
+    }
+    next();
+};
+
+
+router.post("/createTraining", authMiddleware, controller.createTraining)
+router.get("/getAllActiveTrainings", authMiddleware, controller.getAllActiveTrainings)
+router.get("/getAllTrainings", authMiddleware, controller.getAllTrainings)
+router.get("/pending-content", authMiddleware, adminMiddleware, controller.getPendingContent)
 
 // Delete file endpoint (debe ir antes de las rutas con parámetros)
 router.delete("/delete-file", (req, res) => {
@@ -191,12 +211,13 @@ router.post("/replace-file", upload.single('file'), (req, res) => {
     }
 });
 
-router.get("/:id", controller.getTrainingById)
-router.patch("/:id", controller.updateTraining)
-router.delete("/:id", controller.deleteTraining)
+router.get("/:id", authMiddleware, controller.getTrainingById)
+router.get("/:id/trainer", authMiddleware, controller.getTrainerByTrainingId)
+router.patch("/:id", authMiddleware, adminMiddleware, controller.updateTraining)
+router.delete("/:id", authMiddleware, adminMiddleware, controller.deleteTraining)
 
 // Upload endpoints
-router.post("/upload-image", upload.single('image'), (req, res) => {
+router.post("/upload-image", authMiddleware, upload.single('image'), (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ message: 'No se proporcionó archivo' });
@@ -217,7 +238,7 @@ router.post("/upload-image", upload.single('image'), (req, res) => {
 });
 
 // Mover archivos de carpeta temporal a carpeta definitiva con trainingId
-router.post("/move-temp-files", (req, res) => {
+router.post("/move-temp-files", authMiddleware, (req, res) => {
     try {
         const { trainingId, tempFiles } = req.body;
         
@@ -269,7 +290,7 @@ router.post("/move-temp-files", (req, res) => {
     }
 });
 
-router.post("/upload-file", upload.single('file'), (req, res) => {
+router.post("/upload-file", authMiddleware, upload.single('file'), (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ message: 'No se proporcionó archivo' });

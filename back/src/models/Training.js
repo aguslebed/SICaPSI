@@ -27,7 +27,27 @@ const TrainingSchema = new mongoose.Schema({
   endDate: {type: Date, default: null},
   assignedTeacher: {type: String, default: ''},
 }, { 
-  timestamps: true
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
+// Virtual computed status for UI convenience
+TrainingSchema.virtual('status').get(function() {
+  try {
+    if (this.pendingApproval) return 'pendiente';
+    const hasRejection = !!(this.rejectionReason && this.rejectionReason.trim().length);
+    if (!this.isActive && hasRejection) return 'rechazada';
+    if (this.isActive) return 'activa';
+    if (this.endDate) {
+      const now = new Date();
+      const end = new Date(this.endDate);
+      if (end < now) return 'finalizada';
+    }
+    return 'borrador';
+  } catch {
+    return 'borrador';
+  }
 });
 
 // Índices para mejor performance

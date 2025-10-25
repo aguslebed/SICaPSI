@@ -1,6 +1,6 @@
 // Servicio concreto para cursos
 import { ITrainingService } from '../interfaces/ITrainingService.js';
-
+import mongoose from 'mongoose';
 
 export class TrainingService extends ITrainingService {
   constructor({ UserModel, LevelModel, TrainingModel }) {
@@ -15,10 +15,11 @@ export class TrainingService extends ITrainingService {
    
       .populate({
         path: 'assignedTraining',
-        select: 'title subtitle description image isActive totalLevels levels createdBy report progressPercentage',
+        select: 'title subtitle description image isActive totalLevels levels createdBy rejectedBy rejectionReason pendingApproval report progressPercentage startDate endDate',
         populate: [
           { path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level },
-          { path: 'createdBy', select: 'firstName lastName email', model: this.User }
+          { path: 'createdBy', select: 'firstName lastName email', model: this.User },
+          { path: 'rejectedBy', select: 'firstName lastName email', model: this.User }
         ],
         model: this.Training
       })
@@ -46,6 +47,7 @@ export class TrainingService extends ITrainingService {
  async getAllActiveTrainings() {
    const trainings = await this.Training.find({ isActive: true })
      .populate({ path: 'createdBy', select: 'firstName lastName email', model: this.User })
+     .populate({ path: 'rejectedBy', select: 'firstName lastName email', model: this.User })
      .populate({ path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level })
      .exec();
    return trainings;
@@ -55,6 +57,18 @@ export class TrainingService extends ITrainingService {
  async getAllTrainings() {
    const trainings = await this.Training.find({})
      .populate({ path: 'createdBy', select: 'firstName lastName email', model: this.User })
+     .populate({ path: 'rejectedBy', select: 'firstName lastName email', model: this.User })
+     .populate({ path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level })
+     .sort({ createdAt: -1 }) // Más recientes primero
+     .exec();
+   return trainings;
+ }
+
+ // Devuelve capacitaciones pendientes de aprobación
+ async getPendingContent() {
+   const trainings = await this.Training.find({ pendingApproval: true })
+     .populate({ path: 'createdBy', select: 'firstName lastName email', model: this.User })
+     .populate({ path: 'rejectedBy', select: 'firstName lastName email', model: this.User })
      .populate({ path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level })
      .sort({ createdAt: -1 }) // Más recientes primero
      .exec();
@@ -65,6 +79,7 @@ export class TrainingService extends ITrainingService {
  async getTrainingById(trainingId) {
    const training = await this.Training.findById(trainingId)
      .populate({ path: 'createdBy', select: 'firstName lastName email', model: this.User })
+     .populate({ path: 'rejectedBy', select: 'firstName lastName email', model: this.User })
      .populate({ 
        path: 'levels', 
        select: 'levelNumber title description bibliography training test isActive', 
@@ -74,6 +89,53 @@ export class TrainingService extends ITrainingService {
    
    return training;
  }
+
+/**
+ * Devuelve el usuario que actúa como profesor de la capacitación (assignedTeacher) dado un trainingId.
+ * Compatible con assignedTeacher guardado como ObjectId o como string (por ejemplo, email).
+ * @param {String} trainingId
+ * @returns {Object|null} Usuario (campos públicos) o null si no existe
+ */
+async getTrainerByTrainingId(trainingId) {
+  try {
+    // Buscar el campo assignedTeacher en la colección Training
+    const training = await this.Training.findById(trainingId)
+      .select('assignedTeacher')
+      .exec();
+
+    if (!training || !training.assignedTeacher) return null;
+
+    const assignedValue = training.assignedTeacher;
+
+    // Buscar el usuario por ObjectId o, si no es válido, por email o string exacto
+    let trainer = null;
+
+    if (mongoose.Types.ObjectId.isValid(assignedValue)) {
+      // Buscar por ObjectId
+      trainer = await this.User.findById(assignedValue)
+        .select('firstName lastName email phone profileImage role')
+        .exec();
+    }
+
+    // Si no lo encontró por ID o no era un ObjectId válido, buscar por email
+    if (!trainer) {
+      trainer = await this.User.findOne({
+        $or: [
+          { email: assignedValue },
+          { _id: assignedValue } // si fue guardado como string del ObjectId
+        ]
+      })
+        .select('firstName lastName email phone profileImage role')
+        .exec();
+    }
+
+    return trainer || null;
+  } catch (error) {
+    console.error('❌ Error en getTrainerByTrainingId:', error);
+    throw new Error('Error al obtener el capacitador de la capacitación');
+  }
+}
+
 
  // Actualizar una capacitación
  async updateTraining(trainingId, trainingData) {
@@ -114,6 +176,7 @@ export class TrainingService extends ITrainingService {
    // Populate y retornar
    const updatedTraining = await this.Training.findById(trainingId)
      .populate({ path: 'createdBy', select: 'firstName lastName email', model: this.User })
+    .populate({ path: 'rejectedBy', select: 'firstName lastName email', model: this.User })
      .populate({ path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level })
      .exec();
 
