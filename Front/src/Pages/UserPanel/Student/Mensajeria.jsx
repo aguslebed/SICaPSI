@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useMemo, useState, useEffect } from "react";
+import { useParams, useLocation } from "react-router-dom";
 import BuzonEntrada from "../../../Components/Mensajeria/BuzonEntrada";
 import BuzonSalida from "../../../Components/Mensajeria/BuzonSalida";
 import BuzonEliminados from "../../../Components/Mensajeria/BuzonEliminados";
@@ -13,12 +13,24 @@ import SideBar from "../../../Components/Student/SideBar";
 
 export default function Mensajeria() {
   const { idTraining } = useParams();
+  const location = useLocation();
   const [tab, setTab] = useState("entrada");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [composeOpen, setComposeOpen] = useState(false);
+  const [prefilledRecipient, setPrefilledRecipient] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   const [sortBy, setSortBy] = useState('fecha');
   const { userData, setUserData } = useUser();
+
+  // Detectar si venimos con un alumno seleccionado desde Students
+  useEffect(() => {
+    if (location.state?.composeOpen && location.state?.recipientStudent) {
+      setPrefilledRecipient(location.state.recipientStudent);
+      setComposeOpen(true);
+      // Limpiar el state para que no se reabra si el usuario navega
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   const counts = useMemo(() => {
     const items = userData?.messages?.items || [];
@@ -150,8 +162,12 @@ export default function Mensajeria() {
       {/* Compose Modal global */}
       <ComposeModal
         open={composeOpen}
-        onClose={() => setComposeOpen(false)}
+        onClose={() => {
+          setComposeOpen(false);
+          setPrefilledRecipient(null);
+        }}
         trainingId={idTraining}
+        prefilledRecipient={prefilledRecipient}
         onSend={async (payload) => {
           try {
             await sendMessage({ to: payload.to, subject: payload.subject, body: payload.body, attachments: payload.attachments, trainingId: idTraining, recipientEmails: payload.recipientEmails, recipientIds: payload.recipientIds });

@@ -4,7 +4,7 @@ import { listUsers, uploadMessageAttachments } from "../../API/Request";
 import { X, Paperclip, Send, Smile } from 'lucide-react';
 import EmojiPicker from './EmojiPicker';
 
-export default function ComposeModal({ open, onClose, onSend, onSuccess, initialTo, initialSubject, initialBody, trainingId }) {
+export default function ComposeModal({ open, onClose, onSend, onSuccess, initialTo, initialSubject, initialBody, trainingId, prefilledRecipient }) {
   const [toInput, setToInput] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
@@ -52,13 +52,22 @@ export default function ComposeModal({ open, onClose, onSend, onSuccess, initial
       if (Array.isArray(input)) return input.map(r => (typeof r === 'string' ? { email: r } : r)).filter(Boolean);
       return [];
     };
-    const pre = normalizeRecipients(initialTo);
-    const byEmail = (email) => users.find(u => (u.email || '').toLowerCase() === (email || '').toLowerCase());
-    const resolved = pre.map(r => (r.email ? (byEmail(r.email) || r) : r));
-    setSelectedRecipients(resolved);
+    
+    // Si hay prefilledRecipient (alumno seleccionado), usarlo
+    let recipientsToSet = [];
+    if (prefilledRecipient) {
+      recipientsToSet = [prefilledRecipient];
+      setToInput(prefilledRecipient.email || '');
+    } else {
+      const pre = normalizeRecipients(initialTo);
+      const byEmail = (email) => users.find(u => (u.email || '').toLowerCase() === (email || '').toLowerCase());
+      recipientsToSet = pre.map(r => (r.email ? (byEmail(r.email) || r) : r));
+    }
+    
+    setSelectedRecipients(recipientsToSet);
 
     queueMicrotask?.(() => bodyRef.current?.focus());
-  }, [open, initialTo, initialSubject, initialBody, users]);
+  }, [open, initialTo, initialSubject, initialBody, users, prefilledRecipient]);
 
   // Auto-resize textarea to avoid inner scrollbars
   const autoResizeBody = () => {
