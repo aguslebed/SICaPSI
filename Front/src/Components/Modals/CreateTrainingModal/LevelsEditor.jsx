@@ -29,7 +29,8 @@ export default function LevelsEditor(props) {
     showWarningModal, // Nueva prop para mostrar modal de advertencia
     onBibliographyTempChange, // Nueva prop para pasar valores temporales al preview
     editingBibliographyIndex,
-    setEditingBibliographyIndex
+    setEditingBibliographyIndex,
+    bibResetTrigger
   } = props;
 
   const [showConfirmDeleteLevel, setShowConfirmDeleteLevel] = useState(false);
@@ -279,6 +280,7 @@ export default function LevelsEditor(props) {
             onTempValuesChange={onBibliographyTempChange}
             editingIndex={editingBibliographyIndex}
             setEditingIndex={setEditingBibliographyIndex}
+            resetTrigger={bibResetTrigger}
           />
         )}
 

@@ -316,9 +316,21 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                       <input
                         type="url"
                         value={level.test.scenes[selectedScene].videoUrl || ''}
-                        onChange={(e) => {
+                        onChange={async (e) => {
+                          const newValue = e.target.value;
+                          const currentValue = level.test.scenes[selectedScene].videoUrl;
+
+                          // Si el valor actual es un archivo subido al servidor, eliminarlo cuando se reemplace
+                          if (currentValue && typeof currentValue === 'string' && currentValue.startsWith('/uploads/') && currentValue !== newValue) {
+                            try {
+                              await handleFileDelete(currentValue, levelIndex);
+                            } catch (err) {
+                              console.error('Error eliminando archivo anterior:', err);
+                            }
+                          }
+
                           const newScenes = [...(level.test.scenes || [])];
-                          newScenes[selectedScene] = { ...newScenes[selectedScene], videoUrl: e.target.value };
+                          newScenes[selectedScene] = { ...newScenes[selectedScene], videoUrl: newValue };
                           updateLevelField(levelIndex, 'test.scenes', newScenes);
                         }}
                         onFocus={() => handleFocusScene(selectedScene)}
@@ -339,7 +351,7 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                         <input
                           type="file"
                           className="hidden"
-                          accept="video/mp4,video/webm,video/ogg"
+                          accept=".mp4,.webm,.ogv"
                           onChange={async (e) => {
                             const file = e.target.files?.[0];
                             if (!file) return;
@@ -352,9 +364,13 @@ export default function LevelTestEditor({ level, levelIndex, updateLevelField, s
                               return;
                             }
 
-                            if (!file.type.match(/^video\/(mp4|webm|ogg)$/)) {
+                            // Validar por MIME o por extensión como fallback (soporta .ogv)
+                            const allowedByMime = file.type && /^(video\/mp4|video\/webm|video\/(ogg|ogv))$/i.test(file.type);
+                            const name = (file.name || '').toLowerCase();
+                            const allowedByExt = name.endsWith('.mp4') || name.endsWith('.webm') || name.endsWith('.ogv');
+                            if (!allowedByMime && !allowedByExt) {
                               if (showWarningModal) {
-                                showWarningModal('Formato no válido. Solo MP4, WebM, OGG (formatos web-compatibles).');
+                                showWarningModal('Formato no válido. Solo MP4, WebM, OGV.');
                               }
                               e.target.value = '';
                               return;

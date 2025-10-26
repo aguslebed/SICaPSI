@@ -1,5 +1,10 @@
 ﻿import React, { useState } from 'react';
 import RichTextInput, { getPlainTextFromRichText } from './RichTextInput';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import { registerLocale } from 'react-datepicker';
+import es from 'date-fns/locale/es';
+registerLocale('es', es);
 
 export default function PresentationForm(props) {
   const {
@@ -143,7 +148,14 @@ export default function PresentationForm(props) {
                 <div className="flex-1">
                   <label className="block text-[10px] text-gray-600 mb-0.5">Fecha de Inicio</label>
                   <div className="relative">
-                    <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full border border-gray-200 rounded-sm px-2 py-1 text-xs focus:ring-2 focus:ring-green-50 focus:border-transparent cursor-pointer" />
+                    <DatePicker
+                      selected={startDate ? new Date(startDate.split('/').reverse().join('-')) : null}
+                      onChange={(date) => setStartDate(date ? date.toLocaleDateString('es-ES') : '')}
+                      dateFormat="dd/MM/yyyy"
+                      locale="es"
+                      className="w-full border border-gray-200 rounded-sm px-2 py-1 text-xs focus:ring-2 focus:ring-green-50 focus:border-transparent"
+                      placeholderText="dd/mm/yyyy"
+                    />
                     
                   </div>
                 </div>
@@ -151,7 +163,14 @@ export default function PresentationForm(props) {
                 <div className="flex-1">
                   <label className="block text-[10px] text-gray-600 mb-0.5">Fecha de Fin</label>
                   <div className="relative">
-                    <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full border border-gray-200 rounded-sm px-2 py-1 text-xs focus:ring-2 focus:ring-green-50 focus:border-transparent cursor-pointer" />
+                    <DatePicker
+                      selected={endDate ? new Date(endDate.split('/').reverse().join('-')) : null}
+                      onChange={(date) => setEndDate(date ? date.toLocaleDateString('es-ES') : '')}
+                      dateFormat="dd/MM/yyyy"
+                      locale="es"
+                      className="w-full border border-gray-200 rounded-sm px-2 py-1 text-xs focus:ring-2 focus:ring-green-50 focus:border-transparent"
+                      placeholderText="dd/mm/yyyy"
+                    />
                     
                   </div>
                 </div>

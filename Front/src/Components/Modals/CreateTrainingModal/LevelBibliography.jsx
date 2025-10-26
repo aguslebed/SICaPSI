@@ -11,7 +11,8 @@ export default function LevelBibliography({
   showWarningModal,
   onTempValuesChange,
   editingIndex,
-  setEditingIndex
+  setEditingIndex,
+  resetTrigger
 }) {
   const [tempBibTitle, setTempBibTitle] = useState('');
   const [tempBibDescription, setTempBibDescription] = useState('');
@@ -52,6 +53,22 @@ export default function LevelBibliography({
       });
     }
   }, [tempBibTitle, tempBibDescription, tempBibUrl, onTempValuesChange]);
+
+  // Reset externo: cuando resetTrigger cambie, limpiar los campos temporales
+  React.useEffect(() => {
+    if (typeof resetTrigger === 'number') {
+      // Usar la función local para asegurar limpieza consistente
+      setTempBibTitle('');
+      setTempBibDescription('');
+      setTempBibDescriptionLength(0);
+      setTempBibUrl('');
+      if (setEditingIndex) setEditingIndex(null);
+      // Notificar al padre que los valores temporales se limpiaron
+      if (onTempValuesChange) {
+        onTempValuesChange({ title: '', description: '', url: '' });
+      }
+    }
+  }, [resetTrigger]);
 
   const resetForm = () => {
     if (setEditingIndex) {
@@ -233,13 +250,6 @@ export default function LevelBibliography({
                     Cancelar edición
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={saveBibliographyItem}
-                  className="bg-white hover:bg-gray-50 text-gray-700 border border-green-600 px-3 py-1.5 rounded-sm text-xs font-medium cursor-pointer"
-                >
-                  {isEditing ? 'Guardar cambios' : '+ Agregar'}
-                </button>
               </div>
             </td>
           </tr>

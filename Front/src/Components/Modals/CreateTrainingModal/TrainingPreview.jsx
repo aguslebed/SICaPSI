@@ -1,6 +1,8 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 import { Home, BookOpen, PlayCircle, FileText, Users } from 'lucide-react';
 import { normalizeRichTextValue, getPlainTextFromRichText } from './RichTextInput';
+import ConfirmActionModal from '../ConfirmActionModal';
 
 // Subcomponente para Preview de Presentación
 function PreviewPresentacion({ title, subtitle, description, image }) {
@@ -188,9 +190,11 @@ function PreviewTraining({ level }) {
 
   const isLocalFile = url && url.startsWith('/uploads/');
   const isDataUrl = url && url.startsWith('data:');
-  // Mejorar detección de archivos de video para incluir todos los tipos MIME
+  const isBlobUrl = url && url.startsWith('blob:');
+  // Mejorar detección de archivos de video para incluir blob URLs y tipos comunes
   const isVideoFile = url && (
-    url.match(/\.(mp4|mov|avi|mkv|webm|ogg)$/i) || 
+    url.match(/\.(mp4|mov|avi|mkv|webm|ogg)$/i) ||
+    isBlobUrl ||
     (isDataUrl && (
       url.startsWith('data:video/') || 
       url.includes('video/quicktime') ||
@@ -204,14 +208,16 @@ function PreviewTraining({ level }) {
 
   // Función para obtener el tipo MIME del video
   const getVideoMimeType = (videoUrl) => {
-    if (!videoUrl) return 'video/mp4';
-    const url = videoUrl.toLowerCase();
-    if (url.includes('.mov') || url.includes('quicktime')) return 'video/quicktime';
-    if (url.includes('.webm')) return 'video/webm';
-    if (url.includes('.ogg')) return 'video/ogg';
-    if (url.includes('.avi')) return 'video/x-msvideo';
-    if (url.includes('.mkv')) return 'video/x-matroska';
-    return 'video/mp4'; // default
+    if (!videoUrl) return undefined;
+    if (videoUrl.startsWith('blob:')) return undefined; // let browser infer from blob
+    const urlLower = String(videoUrl).toLowerCase();
+    if (urlLower.includes('.mov') || urlLower.includes('quicktime')) return 'video/quicktime';
+    if (urlLower.includes('.webm')) return 'video/webm';
+    if (urlLower.includes('.ogg')) return 'video/ogg';
+    if (urlLower.includes('.avi')) return 'video/x-msvideo';
+    if (urlLower.includes('.mkv')) return 'video/x-matroska';
+    if (urlLower.includes('.mp4')) return 'video/mp4';
+    return undefined; // let browser infer if unknown
   };
 
   return (
@@ -278,13 +284,13 @@ function PreviewTraining({ level }) {
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
               />
-            ) : url && (isLocalFile || isDataUrl) && isVideoFile ? (
+            ) : url && (isLocalFile || isDataUrl || isBlobUrl) && isVideoFile ? (
               <video 
                 controls 
                 className="w-full h-auto"
               >
                 <source 
-                  src={url.startsWith('http') || url.startsWith('data:') ? url : `${import.meta.env.VITE_API_URL}${url}`}
+                  src={url.startsWith('http') || url.startsWith('data:') || url.startsWith('blob:') ? url : `${import.meta.env.VITE_API_URL}${url}`}
                   type={getVideoMimeType(url)}
                 />
                 Tu navegador no soporta el elemento de video.
@@ -329,6 +335,8 @@ function PreviewTraining({ level }) {
 
 // Subcomponente para Preview de Bibliografía
 function PreviewBibliografia({ level, levelIndex, updateLevelField, handleFileDelete, tempBibData, editingIndex, onSelectItem }) {
+  const [showConfirmDelete, setShowConfirmDelete] = React.useState(false);
+  const [itemToDelete, setItemToDelete] = React.useState(null);
   // Función para manejar el acceso a archivos (descarga o enlace externo)
   const handleAccess = async (url, event) => {
     if (event) {
@@ -489,7 +497,8 @@ function PreviewBibliografia({ level, levelIndex, updateLevelField, handleFileDe
                 <button
                   onClick={(event) => {
                     event.stopPropagation();
-                    handleDelete(item.realIndex);
+                    setItemToDelete(item.realIndex);
+                    setShowConfirmDelete(true);
                   }}
                   className="absolute top-3 right-3 p-2 bg-white/80 hover:bg-red-50 text-red-400 hover:text-red-600 border border-red-200 hover:border-red-400 rounded-full transition-all cursor-pointer shadow-sm hover:shadow-md z-10"
                   title="Eliminar elemento"
@@ -570,6 +579,26 @@ function PreviewBibliografia({ level, levelIndex, updateLevelField, handleFileDe
           );
         })}
       </div>
+
+      {ReactDOM.createPortal(
+        <ConfirmActionModal
+          open={showConfirmDelete}
+          onClose={() => setShowConfirmDelete(false)}
+          title="Eliminar bibliografía"
+          message="¿Confirma que desea eliminar este elemento de bibliografía? Esta acción no se puede deshacer."
+          confirmLabel="Eliminar"
+          cancelLabel="Cancelar"
+          onConfirm={() => {
+            if (itemToDelete !== null) {
+              handleDelete(itemToDelete);
+            }
+            setShowConfirmDelete(false);
+            setItemToDelete(null);
+          }}
+          style={{ zIndex: 100 }}
+        />,
+        document.body
+      )}
     </div>
   );
 }
@@ -660,14 +689,16 @@ function PreviewTest({ level, selectedScene }) {
 
   // Función para obtener el tipo MIME del video
   const getVideoMimeType = (videoUrl) => {
-    if (!videoUrl) return 'video/mp4';
-    const url = videoUrl.toLowerCase();
-    if (url.includes('.mov') || url.includes('quicktime')) return 'video/quicktime';
-    if (url.includes('.webm')) return 'video/webm';
-    if (url.includes('.ogg')) return 'video/ogg';
-    if (url.includes('.avi')) return 'video/x-msvideo';
-    if (url.includes('.mkv')) return 'video/x-matroska';
-    return 'video/mp4'; // default
+    if (!videoUrl) return undefined;
+    if (String(videoUrl).startsWith('blob:')) return undefined; // let browser infer from blob
+    const urlLower = String(videoUrl).toLowerCase();
+    if (urlLower.includes('.mov') || urlLower.includes('quicktime')) return 'video/quicktime';
+    if (urlLower.includes('.webm')) return 'video/webm';
+    if (urlLower.includes('.ogg')) return 'video/ogg';
+    if (urlLower.includes('.avi')) return 'video/x-msvideo';
+    if (urlLower.includes('.mkv')) return 'video/x-matroska';
+    if (urlLower.includes('.mp4')) return 'video/mp4';
+    return undefined; // unknown, let browser infer
   };
 
   // Si hay una escena para mostrar (ya sea editando o previsualizando)
@@ -699,33 +730,46 @@ function PreviewTest({ level, selectedScene }) {
                 style={{ maxHeight: '50vh' }}
               >
                 <source
-                  src={scene.videoUrl.startsWith('http') || scene.videoUrl.startsWith('data:') ? scene.videoUrl : `${import.meta.env.VITE_API_URL}${scene.videoUrl}`}
+                  src={scene.videoUrl.startsWith('http') || scene.videoUrl.startsWith('data:') || scene.videoUrl.startsWith('blob:') ? scene.videoUrl : `${import.meta.env.VITE_API_URL}${scene.videoUrl}`}
                   type={getVideoMimeType(scene.videoUrl)}
                 />
                 Tu navegador no soporta el elemento de video.
               </video>
             ) : (
-              <div className="w-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900" style={{ minHeight: '40vh' }}>
-                <div className="text-center px-8 py-12">
-                  <svg 
-                    className="w-20 h-20 mx-auto mb-4 text-gray-600" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth={1.5} 
-                      d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" 
-                    />
-                  </svg>
-                  <p className="text-gray-400 text-lg font-medium mb-2">
-                    Sin video configurado
-                  </p>
-                  <p className="text-gray-500 text-sm">
-                    Coloca una URL o carga un archivo de video para esta escena
-                  </p>
+              <div className="w-full relative" style={{ paddingBottom: '56.25%' }}>
+                <div className="absolute inset-0 bg-gradient-to-br from-gray-800 via-gray-900 to-black flex items-center justify-center">
+                  <div className="text-center px-8 py-12">
+                    <svg 
+                      className="w-24 h-24 mx-auto mb-4 text-blue-400 animate-pulse" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={1.5} 
+                        d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" 
+                      />
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={1.5} 
+                        d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+                      />
+                    </svg>
+                    <p className="text-white text-xl font-bold mb-3">
+                      [Vista previa del video de la clase]
+                    </p>
+                    <p className="text-gray-400 text-sm mb-4">
+                      Aquí se reproducirá el contenido multimedia de la capacitación
+                    </p>
+                    <div className="inline-block bg-blue-500/20 border-2 border-blue-400 border-dashed rounded-lg px-6 py-3">
+                      <p className="text-blue-300 text-xs font-semibold">
+                        💡 Agrega una URL de YouTube o sube un video (MP4, MOV, AVI, etc.)
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -804,7 +848,7 @@ function PreviewTest({ level, selectedScene }) {
           {/* Imagen/video inicial */}
           {imageUrl ? (
             <img
-              src={imageUrl.startsWith('http') || imageUrl.startsWith('data:') ? imageUrl : `${import.meta.env.VITE_API_URL}${imageUrl}`}
+              src={imageUrl.startsWith('http') || imageUrl.startsWith('data:') || imageUrl.startsWith('blob:') ? imageUrl : `${import.meta.env.VITE_API_URL}${imageUrl}`}
               alt={title || 'Test de Evaluación'}
               className="rounded-2xl w-full object-cover mb-8 max-h-[50vh]"
             />

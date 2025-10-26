@@ -76,7 +76,7 @@ export default function LevelTraining({ level, levelIndex, updateLevelField, upl
                     <label className="inline-block">
                       <input
                         type="file"
-                        accept=".mp4,.webm,.ogv,.pdf,.ppt,.pptx"
+                        accept=".mp4,.webm,.ogv"
                         onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (!file) return;
@@ -102,7 +102,7 @@ export default function LevelTraining({ level, levelIndex, updateLevelField, upl
                       <span className="inline-block bg-gray-500 border border-gray-500 text-white px-3 py-1.5 rounded-lg text-xs cursor-pointer hover:bg-gray-600">Choose File</span>
                     </label>
 
-                    {uploadingFiles && uploadingFiles[`level-${levelIndex}-training`] && <div className="animate-spin h-3 w-3 border-2 border-gray-200 border-t-green-600 rounded-full" />}
+                    {uploadingFiles && uploadingFiles[`training-${levelIndex}`] && <div className="animate-spin h-3 w-3 border-2 border-gray-200 border-t-green-600 rounded-full" />}
                     {level.training.url && (
                       <button
                         type="button"

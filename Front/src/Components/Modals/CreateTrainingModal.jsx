@@ -142,6 +142,9 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
     url: ''
   });
 
+  // Trigger para limpiar inputs de bibliografía en LevelBibliography desde el padre
+  const [bibResetTrigger, setBibResetTrigger] = useState(0);
+
   // Handler para recibir cambios temporales de bibliografía
   const handleBibliographyTempChange = useCallback((tempData) => {
     setBibliographyTempData(tempData);
@@ -1181,6 +1184,10 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
         // Mostrar modal de éxito SOLO si NO estamos en flujo de "enviar a aprobar".
         // Usamos effectivePendingApproval aquí para respetar el flag forzado desde el llamador.
         if (!effectivePendingApproval) {
+          // Limpiar inputs temporales de bibliografía justo antes de mostrar el modal de éxito
+          setBibliographyTempData({ title: '', description: '', url: '' });
+          setEditingBibliographyIndex(null);
+          setBibResetTrigger((t) => t + 1);
           setShowSuccessModal(true);
         }
       } catch (err) {
@@ -1400,6 +1407,7 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
               onBibliographyTempChange={handleBibliographyTempChange}
               editingBibliographyIndex={editingBibliographyIndex}
               setEditingBibliographyIndex={setEditingBibliographyIndex}
+              bibResetTrigger={bibResetTrigger}
             />
           )}
           {/* Asignar Profesor */}
