@@ -22,6 +22,10 @@ const TrainingLevels = () => {
   }
   const curso = userData.training.find(c => c._id === idTraining);
   const niveles = curso?.levels || [];
+  
+  // Determinar el prefijo de ruta según el rol del usuario
+  const userRole = userData?.user?.role;
+  const baseRoute = userRole === 'Capacitador' ? '/trainer' : '/userPanel';
 
   const toggleNivel = (nivelId) => {
     if (openLevel === nivelId) {
@@ -32,13 +36,13 @@ const TrainingLevels = () => {
   };
 
   const Linkbibliografia = (nivelId) => {
-    navigate(`/userPanel/${idTraining}/${nivelId}/bibliogrhapy`); 
+    navigate(`${baseRoute}/${idTraining}/${nivelId}/bibliogrhapy`); 
   };
   const LinkCapacitacion = (nivelId) => {
-    navigate(`/userPanel/${idTraining}/${nivelId}/training`);
+    navigate(`${baseRoute}/${idTraining}/${nivelId}/training`);
   };
   const LinkEvaluacion = (nivelId) => {
-    navigate(`/userPanel/${idTraining}/${nivelId}/levelTest`);
+    navigate(`${baseRoute}/${idTraining}/${nivelId}/levelTest`);
   };
 
   return (
