@@ -148,7 +148,16 @@ export default function ValidarContenido() {
                   <div style={{ flex: 2 }}>{getAuthorName(contenido.createdBy)}</div>
                   <div style={{ flex: 1 }}>{formatDate(contenido.createdAt)}</div>
                   <div style={{ flex: 1 }}>
-                    <span style={{ background: contenido.isActive ? '#1976d2' : '#757575', color: 'white', padding: '4px 12px', borderRadius: '12px', fontSize: '0.95rem', fontWeight: 'bold' }}>{contenido.isActive ? 'Activo' : 'Inactivo'}</span>
+                      <span style={{ 
+                        background: contenido.pendingApproval ? '#ffa726' : (contenido.isActive ? '#1976d2' : '#757575'), 
+                        color: 'white', 
+                        padding: '4px 12px', 
+                        borderRadius: '12px', 
+                        fontSize: '0.95rem', 
+                        fontWeight: 'bold'
+                      }}>
+                        {contenido.pendingApproval ? 'Pendiente' : (contenido.isActive ? 'Activo' : 'Inactivo')}
+                      </span>
                   </div>
                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <button
@@ -241,6 +250,19 @@ export default function ValidarContenido() {
                   />
                 )}
               </div>
+              {/* Estado */}
+              <div style={{ textAlign: 'center', marginBottom: '0.7rem' }}>
+                <span style={{ 
+                  background: selectedContenido.pendingApproval ? '#ffa726' : (selectedContenido.isActive ? '#1976d2' : '#757575'), 
+                  color: 'white', 
+                  padding: '4px 12px', 
+                  borderRadius: '12px', 
+                  fontSize: '1rem', 
+                  fontWeight: 'bold'
+                }}>
+                  {selectedContenido.pendingApproval ? 'Pendiente' : (selectedContenido.isActive ? 'Activo' : 'Inactivo')}
+                </span>
+              </div>
               {/* Título */}
               <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '1.5rem', marginBottom: '0.5rem', marginTop: '0.5rem' }}>
                 {selectedContenido.title}
@@ -254,20 +276,25 @@ export default function ValidarContenido() {
                 {selectedContenido.description}
               </div>
               {/* Botones de acción */}
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', marginTop: '1.2rem' }}>
-                <button
-                  onClick={() => setShowRejectModal(true)}
-                  style={{ background: '#f44336', color: 'white', border: 'none', borderRadius: '24px', padding: '0.7rem 2.2rem', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
-                >
-                  Rechazar &rarr;
-                </button>
-                <button
-                  onClick={handleAprobar}
-                  style={{ background: '#4caf50', color: 'white', border: 'none', borderRadius: '24px', padding: '0.7rem 2.2rem', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
-                >
-                  Aprobar &rarr;
-                </button>
-              </div>
+              {selectedContenido.pendingApproval && (
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', marginTop: '1.2rem' }}>
+                  <button
+                    onClick={() => setShowRejectModal(true)}
+                    style={{ background: '#f44336', color: 'white', border: 'none', borderRadius: '24px', padding: '0.7rem 2.2rem', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+                  >
+                    Rechazar &rarr;
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await handleAprobar();
+                      setSelectedContenido(null);
+                    }}
+                    style={{ background: '#4caf50', color: 'white', border: 'none', borderRadius: '24px', padding: '0.7rem 2.2rem', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+                  >
+                    Aprobar &rarr;
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
