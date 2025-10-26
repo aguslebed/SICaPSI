@@ -600,6 +600,440 @@ class ProgressService {
     }
   }
 
+  /**
+   * Obtiene estadísticas detalladas de un usuario en una capacitación específica, nivel por nivel
+   * @param {string|ObjectId} userId - ID del usuario
+   * @param {string|ObjectId} trainingId - ID de la capacitación
+   * @returns {Object} Estadísticas completas del usuario con desglose por nivel
+   */
+  async getUserTrainingStatistics(userId, trainingId) {
+    if (!userId || !trainingId) {
+      return {
+        user: null,
+        training: null,
+        levelStatistics: [],
+        error: 'userId y trainingId son requeridos'
+      };
+    }
+
+    const uId = toObjectId(userId);
+    const tId = toObjectId(trainingId);
+
+    try {
+      // 1. Obtener datos del usuario
+      const user = await User.findById(uId)
+        .select('firstName lastName email documentType documentNumber birthDate phone role')
+        .lean();
+
+      if (!user) {
+        throw new Error('Usuario no encontrado');
+      }
+
+      // 2. Obtener datos de la capacitación y sus niveles
+      const levels = await Level.find({ trainingId: tId })
+        .sort({ levelNumber: 1 })
+        .lean();
+
+      if (levels.length === 0) {
+        return {
+          user: {
+            id: user._id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            documentType: user.documentType,
+            documentNumber: user.documentNumber,
+            birthDate: user.birthDate,
+            phone: user.phone,
+            role: user.role
+          },
+          training: { id: tId },
+          levelStatistics: [],
+          summary: {
+            totalLevels: 0,
+            levelsAttempted: 0,
+            levelsApproved: 0,
+            averageScore: 0,
+            averagePercentage: 0
+          }
+        };
+      }
+
+      // 3. Obtener registros de progreso del usuario para esta capacitación
+      const progressRecords = await UserLevelProgress.find({
+        userId: uId,
+        trainingId: tId
+      }).lean();
+
+      // Crear mapa de progreso por nivel
+      const progressMap = {};
+      for (const record of progressRecords) {
+        progressMap[record.levelId.toString()] = record;
+      }
+
+      // 4. Construir estadísticas por nivel
+      const levelStatistics = [];
+      let totalScore = 0;
+      let totalPossible = 0;
+      let levelsAttempted = 0;
+      let levelsApproved = 0;
+
+      for (const level of levels) {
+        const levelId = level._id.toString();
+        const progressRecord = progressMap[levelId];
+
+        // Calcular puntaje máximo posible del nivel
+        const scenes = level?.test?.scenes || [];
+        let maxPossibleScore = 0;
+        let totalScenes = 0;
+
+        for (const scene of scenes) {
+          if (scene.lastOne === true) continue;
+          totalScenes++;
+          const opts = Array.isArray(scene.options) ? scene.options : [];
+          const maxOpt = opts.length > 0 ? Math.max(...opts.map(o => Number(o?.points ?? 0))) : 0;
+          const bonus = Number(scene.bonus || 0);
+          maxPossibleScore += Math.max(0, maxOpt + bonus);
+        }
+
+        if (progressRecord) {
+          // El usuario intentó este nivel
+          levelsAttempted++;
+          if (progressRecord.approved) {
+            levelsApproved++;
+          }
+
+          const earnedPoints = progressRecord.earnedPoints || 0;
+          const percentage = progressRecord.percentage || 0;
+          totalScore += earnedPoints;
+          totalPossible += maxPossibleScore;
+
+          // Analizar decisiones tomadas (selectedOptions)
+          const decisions = [];
+          const selectedOptions = progressRecord.selectedOptions || [];
+          let correctDecisions = 0;
+          let incorrectDecisions = 0;
+
+          for (const selected of selectedOptions) {
+            const sceneId = selected.idScene;
+            const scene = scenes.find(s => String(s.idScene) === String(sceneId));
+            
+            if (scene) {
+              const selectedOption = scene.options?.find(o => 
+                String(o._id) === String(selected.optionId) || 
+                o.description === selected.description
+              );
+
+              const points = selected.points || 0;
+              const isCorrect = points > 0;
+              
+              if (isCorrect) {
+                correctDecisions++;
+              } else {
+                incorrectDecisions++;
+              }
+
+              decisions.push({
+                sceneId: sceneId,
+                sceneDescription: scene.description,
+                selectedOption: selected.description || selectedOption?.description || 'Desconocida',
+                points: points,
+                isCorrect: isCorrect,
+                maxPossiblePoints: scene.options ? Math.max(...scene.options.map(o => Number(o?.points ?? 0))) : 0
+              });
+            }
+          }
+
+          levelStatistics.push({
+            levelId: level._id,
+            levelNumber: level.levelNumber,
+            levelTitle: level.title,
+            attempted: true,
+            approved: progressRecord.approved,
+            status: progressRecord.status,
+            completedAt: progressRecord.completedAt,
+            score: {
+              earned: earnedPoints,
+              total: maxPossibleScore,
+              percentage: percentage
+            },
+            errors: {
+              total: incorrectDecisions,
+              correct: correctDecisions,
+              totalDecisions: decisions.length
+            },
+            decisions: decisions
+          });
+        } else {
+          // El usuario no intentó este nivel
+          levelStatistics.push({
+            levelId: level._id,
+            levelNumber: level.levelNumber,
+            levelTitle: level.title,
+            attempted: false,
+            approved: false,
+            status: 'not_attempted',
+            completedAt: null,
+            score: {
+              earned: 0,
+              total: maxPossibleScore,
+              percentage: 0
+            },
+            errors: {
+              total: 0,
+              correct: 0,
+              totalDecisions: 0
+            },
+            decisions: []
+          });
+          totalPossible += maxPossibleScore;
+        }
+      }
+
+      // 5. Calcular resumen general
+      const averageScore = levelsAttempted > 0 
+        ? Math.round((totalScore / levelsAttempted) * 10) / 10
+        : 0;
+
+      const averagePercentage = totalPossible > 0
+        ? Math.round((totalScore / totalPossible) * 100)
+        : 0;
+
+      return {
+        user: {
+          id: user._id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          fullName: `${user.firstName} ${user.lastName}`,
+          email: user.email,
+          documentType: user.documentType,
+          documentNumber: user.documentNumber,
+          birthDate: user.birthDate,
+          phone: user.phone,
+          role: user.role
+        },
+        training: {
+          id: tId
+        },
+        levelStatistics: levelStatistics,
+        summary: {
+          totalLevels: levels.length,
+          levelsAttempted: levelsAttempted,
+          levelsApproved: levelsApproved,
+          levelsPending: levels.length - levelsAttempted,
+          averageScore: averageScore,
+          averagePercentage: averagePercentage,
+          totalScore: totalScore,
+          totalPossibleScore: totalPossible
+        }
+      };
+
+    } catch (err) {
+      console.error('ProgressService.getUserTrainingStatistics: error', err);
+      return {
+        user: null,
+        training: null,
+        levelStatistics: [],
+        summary: null,
+        error: err.message
+      };
+    }
+  }
+
+  /**
+   * Calcula el camino óptimo (máximo puntaje) para un nivel específico.
+   * Recorre el grafo de decisiones siguiendo el campo 'next' de las opciones.
+   * @param {string|ObjectId} trainingId - ID de la capacitación
+   * @param {string|ObjectId} levelId - ID del nivel
+   * @returns {Object} Camino óptimo con las mejores decisiones por escena (solo escenas visitadas)
+   */
+  async getOptimalPath(trainingId, levelId) {
+    if (!trainingId || !levelId) {
+      return {
+        levelId: null,
+        optimalPath: [],
+        totalMaxScore: 0,
+        error: 'trainingId y levelId son requeridos'
+      };
+    }
+
+    const tId = toObjectId(trainingId);
+    const lId = toObjectId(levelId);
+
+    try {
+      // Obtener el nivel desde DB
+      const level = await Level.findById(lId).lean();
+      
+      if (!level || level.trainingId.toString() !== tId.toString()) {
+        throw new Error('Level not found or does not belong to this training');
+      }
+
+      const scenes = level?.test?.scenes || [];
+      
+      if (scenes.length === 0) {
+        return {
+          levelId: lId,
+          levelNumber: level.levelNumber,
+          levelTitle: level.title,
+          trainingId: tId,
+          optimalPath: [],
+          totalMaxScore: 0,
+          totalScenes: 0,
+          visitedScenes: 0,
+          message: 'No hay escenas definidas en este nivel'
+        };
+      }
+
+      // Crear mapa de escenas por idScene para acceso rápido
+      const sceneMap = {};
+      for (const scene of scenes) {
+        sceneMap[scene.idScene] = scene;
+      }
+
+      // Encontrar la primera escena (idScene === 1 o la primera en el array)
+      let currentSceneId = 1;
+      let currentScene = sceneMap[currentSceneId];
+      
+      if (!currentScene) {
+        // Si no hay escena con idScene=1, tomar la primera del array
+        currentScene = scenes[0];
+        currentSceneId = currentScene.idScene;
+      }
+
+      const optimalPath = [];
+      const visitedScenes = new Set(); // Para detectar ciclos infinitos
+      let totalMaxScore = 0;
+
+      // Recorrer el grafo siguiendo las mejores decisiones
+      while (currentScene && !visitedScenes.has(currentSceneId)) {
+        visitedScenes.add(currentSceneId);
+
+        // Si es escena final, agregarla y terminar
+        if (currentScene.lastOne === true) {
+          optimalPath.push({
+            sceneId: currentScene.idScene,
+            sceneDescription: currentScene.description,
+            isLastScene: true,
+            bestOption: null,
+            maxPoints: 0,
+            bonus: 0,
+            totalPoints: 0,
+            nextScene: null,
+            message: 'Escena final (no suma puntos)'
+          });
+          break;
+        }
+
+        const opts = Array.isArray(currentScene.options) ? currentScene.options : [];
+        const bonus = Number(currentScene.bonus || 0);
+
+        if (opts.length === 0) {
+          // Escena sin opciones: solo cuenta bonus y termina
+          optimalPath.push({
+            sceneId: currentScene.idScene,
+            sceneDescription: currentScene.description,
+            isLastScene: false,
+            bestOption: null,
+            maxPoints: 0,
+            bonus: bonus,
+            totalPoints: Math.max(0, bonus),
+            nextScene: null,
+            message: 'Sin opciones disponibles - fin del camino'
+          });
+          totalMaxScore += Math.max(0, bonus);
+          break;
+        }
+
+        // Encontrar la opción con más puntos
+        let bestOption = null;
+        let maxOptionPoints = -Infinity;
+
+        for (const option of opts) {
+          const points = Number(option?.points ?? 0);
+          if (points > maxOptionPoints) {
+            maxOptionPoints = points;
+            bestOption = option;
+          }
+        }
+
+        // Calcular puntos totales de esta escena
+        const sceneTotalPoints = Math.max(0, maxOptionPoints + bonus);
+        totalMaxScore += sceneTotalPoints;
+
+        // Determinar siguiente escena
+        const nextSceneId = bestOption?.next || null;
+
+        optimalPath.push({
+          sceneId: currentScene.idScene,
+          sceneDescription: currentScene.description,
+          isLastScene: false,
+          bestOption: {
+            id: bestOption?._id,
+            description: bestOption?.description || 'Sin descripción',
+            points: maxOptionPoints,
+            next: nextSceneId
+          },
+          maxPoints: maxOptionPoints,
+          bonus: bonus,
+          totalPoints: sceneTotalPoints,
+          nextScene: nextSceneId,
+          alternativeOptions: opts
+            .filter(o => o !== bestOption)
+            .map(o => ({
+              id: o._id,
+              description: o.description || 'Sin descripción',
+              points: Number(o?.points ?? 0),
+              next: o.next,
+              leadsTo: o.next ? `Escena ${o.next}` : 'Fin'
+            }))
+            .sort((a, b) => b.points - a.points)
+        });
+
+        // Avanzar a la siguiente escena
+        if (nextSceneId === null || nextSceneId === undefined) {
+          // No hay siguiente escena, fin del camino
+          break;
+        }
+
+        currentSceneId = nextSceneId;
+        currentScene = sceneMap[currentSceneId];
+
+        if (!currentScene) {
+          // La escena referenciada no existe
+          console.warn(`Escena ${currentSceneId} referenciada pero no encontrada en el nivel`);
+          break;
+        }
+      }
+
+      // Detectar si hubo un ciclo
+      if (visitedScenes.has(currentSceneId) && currentScene && !currentScene.lastOne) {
+        console.warn('Se detectó un ciclo infinito en el nivel');
+      }
+
+      return {
+        levelId: lId,
+        levelNumber: level.levelNumber,
+        levelTitle: level.title,
+        trainingId: tId,
+        optimalPath: optimalPath,
+        totalMaxScore: totalMaxScore,
+        totalScenes: scenes.length,
+        visitedScenes: optimalPath.length,
+        unvisitedScenes: scenes.length - optimalPath.length,
+        message: `Camino óptimo calculado: ${totalMaxScore} puntos máximos en ${optimalPath.length} escenas visitadas`
+      };
+
+    } catch (err) {
+      console.error('ProgressService.getOptimalPath: error', err);
+      return {
+        levelId: null,
+        optimalPath: [],
+        totalMaxScore: 0,
+        error: err.message
+      };
+    }
+  }
+
     
 
 }

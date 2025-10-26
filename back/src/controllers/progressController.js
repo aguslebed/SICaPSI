@@ -81,6 +81,46 @@ export function makeProgressController() {
       }
     },
 
+    async getUserTrainingStatistics(req, res, next) {
+      try {
+        const userId = req.params.userId;
+        const trainingId = req.params.trainingId;
+
+        if (!userId) throw new AppError('Falta userId', 400);
+        if (!trainingId) throw new AppError('Falta trainingId', 400);
+
+        const statistics = await progressService.getUserTrainingStatistics(userId, trainingId);
+        
+        if (statistics.error) {
+          throw new AppError(statistics.error, 404);
+        }
+
+        return res.status(200).json({ success: true, data: statistics });
+      } catch (err) {
+        next(err);
+      }
+    },
+
+    async getOptimalPath(req, res, next) {
+      try {
+        const trainingId = req.params.trainingId;
+        const levelId = req.params.levelId;
+
+        if (!trainingId) throw new AppError('Falta trainingId', 400);
+        if (!levelId) throw new AppError('Falta levelId', 400);
+
+        const optimalPath = await progressService.getOptimalPath(trainingId, levelId);
+        
+        if (optimalPath.error) {
+          throw new AppError(optimalPath.error, 404);
+        }
+
+        return res.status(200).json({ success: true, data: optimalPath });
+      } catch (err) {
+        next(err);
+      }
+    },
+
 
 
 

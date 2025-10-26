@@ -446,6 +446,42 @@ export async function getLevelStatistics(trainingId, levelId) {
 }
 
 /**
+ * Obtener estadísticas detalladas de un usuario en una capacitación (nivel por nivel)
+ * GET /progress/users/:userId/trainings/:trainingId/statistics
+ */
+export async function getUserTrainingStatistics(userId, trainingId) {
+  try {
+    const { data } = await api.get(
+      `progress/users/${encodeURIComponent(userId)}/trainings/${encodeURIComponent(trainingId)}/statistics`
+    );
+    return data;
+  } catch (error) {
+    console.error('Error obteniendo estadísticas del usuario:', error);
+    if (error.response) throw new Error(error.response.data?.message || 'Error al obtener estadísticas del usuario');
+    if (error.request) throw new Error('Error de conexión con el servidor');
+    throw new Error('Error en la configuración de la petición');
+  }
+}
+
+/**
+ * Obtener el camino óptimo (máximo puntaje) de un nivel específico
+ * GET /progress/trainings/:trainingId/levels/:levelId/optimal-path
+ */
+export async function getOptimalPath(trainingId, levelId) {
+  try {
+    const { data } = await api.get(
+      `progress/trainings/${encodeURIComponent(trainingId)}/levels/${encodeURIComponent(levelId)}/optimal-path`
+    );
+    return data;
+  } catch (error) {
+    console.error('Error obteniendo camino óptimo:', error);
+    if (error.response) throw new Error(error.response.data?.message || 'Error al obtener camino óptimo');
+    if (error.request) throw new Error('Error de conexión con el servidor');
+    throw new Error('Error en la configuración de la petición');
+  }
+}
+
+/**
  * Obtener resumen de progreso para todas las capacitaciones
  * GET /progress/trainings/all
  */

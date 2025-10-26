@@ -22,6 +22,12 @@ router.post('/trainings/:trainingId/totalProgress', controller.totalTrainingProg
 // Obtener estadísticas detalladas de un nivel específico
 router.get('/trainings/:trainingId/levels/:levelId/statistics', controller.getLevelStatistics);
 
+// Obtener el camino óptimo (máximo puntaje) de un nivel específico
+router.get('/trainings/:trainingId/levels/:levelId/optimal-path', controller.getOptimalPath);
+
+// Obtener estadísticas detalladas de un usuario en una capacitación (nivel por nivel)
+router.get('/users/:userId/trainings/:trainingId/statistics', controller.getUserTrainingStatistics);
+
 // Obtener resumen de progreso para todas las capacitaciones
 router.get('/trainings/all', controller.allTrainingsProgress);
 
