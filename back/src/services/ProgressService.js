@@ -214,8 +214,22 @@ class ProgressService {
 
     const result = { approved, earnedPoints: earned, totalPoints: totalPossible, percentage, selectedOptions };
 
-    // SIEMPRE guardar el intento (aprobado o desaprobado)
+    // Verificar el rol del usuario antes de guardar
     try {
+      const userRecord = await this.userRepo.findById(uId, 'role');
+      
+      if (!userRecord) {
+        console.warn('⚠️ Usuario no encontrado. No se guardará el progreso.');
+        return result;
+      }
+
+      // Solo guardar si es un alumno
+      if (userRecord.role !== 'Alumno') {
+        console.log('ℹ️ Usuario no es Alumno (rol: ' + userRecord.role + '). Resultado calculado pero no guardado.');
+        return result;
+      }
+
+      // SIEMPRE guardar el intento para alumnos (aprobado o desaprobado)
       const levelId = dbLevel._id;
       
       console.log('🔍 Guardando intento en UserLevelProgress:', {
