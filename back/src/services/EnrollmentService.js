@@ -1,85 +1,124 @@
 import { IEnrollmentService } from "../interfaces/IEnrollmentService.js";
+import UserRepository from "../repositories/UserRepository.js";
+import TrainingRepository from "../repositories/TrainingRepository.js";
+import {
+  isAlreadyEnrolled,
+  isNotEnrolled,
+  removeTrainingFromList,
+  isTrainer,
+  hasUsers,
+  createUserNotFoundError,
+  createStudentNotFoundError,
+  createTrainingNotFoundError,
+  createAlreadyEnrolledError,
+  createTrainerAlreadyEnrolledError,
+  createNotEnrolledError,
+  createInvalidRoleError,
+  createNoUsersEnrolledError,
+  createEnrollmentSuccessMessage,
+  createUnenrollmentSuccessMessage
+} from "../utils/EnrollmentValidator.js";
 
 export class EnrollmentService extends IEnrollmentService {
-  constructor({ UserModel, TrainingModel }) {
+  /**
+   * Constructor con inyección de dependencias
+   * @param {Object} dependencies - Dependencias del servicio
+   * @param {Object} dependencies.UserModel - Modelo User (para retrocompatibilidad)
+   * @param {Object} dependencies.TrainingModel - Modelo Training (para retrocompatibilidad)
+   * @param {UserRepository} dependencies.userRepo - Repositorio de usuarios
+   * @param {TrainingRepository} dependencies.trainingRepo - Repositorio de capacitaciones
+   */
+  constructor(dependencies = {}) {
     super();
-    this.user = UserModel;
-    this.training = TrainingModel;
+    // Mantener retrocompatibilidad con modelos directos
+    this.user = dependencies.UserModel;
+    this.training = dependencies.TrainingModel;
+    
+    // DIP: Inyección de repositorios (con defaults para producción)
+    this.userRepo = dependencies.userRepo || new UserRepository();
+    this.trainingRepo = dependencies.trainingRepo || new TrainingRepository();
   }
  //Inscribir alumno en la capacitacion
   async enrollUserToTraining(userId, trainingId) {
-    const user = await this.user.findById(userId);
+    // Usar repositorio para obtener usuario (documento para .save())
+    const user = await this.userRepo.findByIdDocument(userId);
     
-    if (!user) throw new Error("Alumno no encontrado");
+    if (!user) throw new Error(createStudentNotFoundError());
 
-    const training = await this.training.findById(trainingId);
-    if (!training) throw new Error("Capacitacion no encontrado");
+    // Verificar existencia de capacitación
+    const trainingExists = await this.trainingRepo.exists(trainingId);
+    if (!trainingExists) throw new Error(createTrainingNotFoundError());
 
-    if (user.assignedTraining.includes(trainingId)) {
-      throw new Error("El alumno ya está inscrito en la capacitacion");
+    // Validar con función pura
+    if (isAlreadyEnrolled(user.assignedTraining, trainingId)) {
+      throw new Error(createAlreadyEnrolledError());
     }
 
     user.assignedTraining.push(trainingId);
-    await user.save(trainingId);
+    await user.save();
 
-    return { message: "Inscripción exitosa", training };
+    // Obtener training para respuesta
+    const training = await this.trainingRepo.findById(trainingId);
+    return { message: createEnrollmentSuccessMessage(), training };
   }
 
  //Desinscribir alumno de capacitacion
   async unenrollUserToTraining(userId, trainingId) {
-    const user = await this.user.findById(userId);
+    // Usar repositorio para obtener usuario (documento para .save())
+    const user = await this.userRepo.findByIdDocument(userId);
 
-    if (!user) throw new Error("Alumno no encontrado");
+    if (!user) throw new Error(createStudentNotFoundError());
 
-    const training = await this.training.findById(trainingId);
-    if (!training) throw new Error("Capacitacion no encontrado");
+    // Verificar existencia de capacitación
+    const trainingExists = await this.trainingRepo.exists(trainingId);
+    if (!trainingExists) throw new Error(createTrainingNotFoundError());
 
-    if (!user.assignedTraining.includes(trainingId)) {
-      throw new Error("El alumno no está inscrito en la capacitacion");
+    // Validar con función pura
+    if (isNotEnrolled(user.assignedTraining, trainingId)) {
+      throw new Error(createNotEnrolledError());
     }
 
-    user.assignedTraining = user.assignedTraining.filter(
-      id => id.toString() !== trainingId.toString()
-    );
-
+    // Usar función pura para filtrar
+    user.assignedTraining = removeTrainingFromList(user.assignedTraining, trainingId);
     await user.save();
 
-    return { message: "Alumno desinscripto correctamente", training };
+    // Obtener training para respuesta
+    const training = await this.trainingRepo.findById(trainingId);
+    return { message: createUnenrollmentSuccessMessage(), training };
   }
 
   //Devuelve todos los alumnos que NO estan anotados en una capacitacion
   async getUsersNotEnrolledInTraining(trainingId) {
-  const users = await this.user.find({
-    role: "Alumno", 
-    assignedTraining: { $ne: trainingId } 
-  }).exec();
-
-  return users;
-}
+    // Usar repositorio con filtro de rol y capacitación
+    const users = await this.userRepo.findByRoleNotEnrolled("Alumno", trainingId);
+    return users;
+  }
 
 
   //Busca si un usuario esta inscrito en una capacitacion. (Podria ser estudiante o capacitador)
   async getUserEnrollments(userId) {
-    const user = await this.user.findByIdWithTrainings(userId);
-    if (!user) throw new Error("Usuario no encontrado");
+    // Usar repositorio con populate de trainings
+    const user = await this.userRepo.findByIdWithTrainings(userId, {
+      path: 'assignedTraining'
+    });
+    
+    if (!user) throw new Error(createUserNotFoundError());
     
     return user.assignedTraining;
   }
 
   //Devuelve todos los alumnos que estan anotados en una capacitacion
   async getUsersEnrolledInTraining(trainingId) {
-
-    const training = await this.training.findById(trainingId);
+    // Verificar existencia de capacitación
+    const trainingExists = await this.trainingRepo.exists(trainingId);
+    if (!trainingExists) throw new Error(createTrainingNotFoundError());
     
-    if (!training) throw new Error("Capacitacion no encontrado");
-    
-    const users = await this.user.find({
-      role: "Alumno",
-      assignedTraining: trainingId
-    }).exec();
+    // Usar repositorio para buscar usuarios inscritos
+    const users = await this.userRepo.findByRoleEnrolled("Alumno", trainingId);
 
-    if (!users || users.length === 0) {
-      throw new Error("No hay usuarios inscritos en esta capacitación");
+    // Validar con función pura
+    if (!hasUsers(users)) {
+      throw new Error(createNoUsersEnrolledError());
     }
 
     return users;
@@ -87,35 +126,38 @@ export class EnrollmentService extends IEnrollmentService {
 
   //Inscribir capacitador en la capacitacion
   async enrollTrainerToTraining(userId, trainingId) {
-    const user = await this.user.findById(userId);
+    // Usar repositorio para obtener usuario (documento para .save())
+    const user = await this.userRepo.findByIdDocument(userId);
 
-    if (!user) throw new Error("Usuario no encontrado");
+    if (!user) throw new Error(createUserNotFoundError());
 
-    const training = await this.training.findById(trainingId);
-    if (!training) throw new Error("Capacitacion no encontrado");
+    // Verificar existencia de capacitación
+    const trainingExists = await this.trainingRepo.exists(trainingId);
+    if (!trainingExists) throw new Error(createTrainingNotFoundError());
 
-    if (user.role !== "Capacitador") {
-      throw new Error("El usuario no es un capacitador");
+    // Validar rol con función pura
+    if (!isTrainer(user.role)) {
+      throw new Error(createInvalidRoleError());
     }
 
-    if (user.assignedTraining.includes(trainingId)) {
-      throw new Error("El capacitador ya está inscrito en la capacitacion");
+    // Validar inscripción previa con función pura
+    if (isAlreadyEnrolled(user.assignedTraining, trainingId)) {
+      throw new Error(createTrainerAlreadyEnrolledError());
     }
 
     user.assignedTraining.push(trainingId);
-    await user.save(trainingId);
+    await user.save();
 
-    return { message: "Inscripción exitosa", training };
+    // Obtener training para respuesta
+    const training = await this.trainingRepo.findById(trainingId);
+    return { message: createEnrollmentSuccessMessage(), training };
   }
 
 
   //Devuelve todos los capacitadores que NO estan anotados en una capacitacion en especifico
   async getTrainersNotEnrolledInTraining(trainingId) {
-    const users = await this.user.find({
-      role: "Capacitador", 
-      assignedTraining: { $ne: trainingId } 
-    }).exec();
-
+    // Usar repositorio con filtro de rol y capacitación
+    const users = await this.userRepo.findByRoleNotEnrolled("Capacitador", trainingId);
     return users;
   }
 }
