@@ -1,51 +1,78 @@
 // Servicio concreto para usuario
 import { IUserService } from '../interfaces/IUserService.js';
+import UserRepository from '../repositories/UserRepository.js';
+import TrainingRepository from '../repositories/TrainingRepository.js';
+import {
+  emailExists,
+  isTeacher,
+  extractUniqueIds,
+  unifyUsersByIdMultiple,
+  objectIdsToStrings,
+  filterTrainingScope,
+  buildUserFilter,
+  createEmailExistsError,
+  createUserNotFoundError,
+  createSenderNotFoundError,
+  createInvalidPasswordError
+} from '../utils/UserValidator.js';
 
 export class UserService extends IUserService {
-  constructor({ UserModel, TrainingModel }) {
+  /**
+   * Constructor con inyección de dependencias
+   * @param {Object} dependencies - Dependencias del servicio
+   * @param {Object} dependencies.UserModel - Modelo User (para retrocompatibilidad)
+   * @param {Object} dependencies.TrainingModel - Modelo Training (para retrocompatibilidad)
+   * @param {UserRepository} dependencies.userRepo - Repositorio de usuarios
+   * @param {TrainingRepository} dependencies.trainingRepo - Repositorio de capacitaciones
+   */
+  constructor(dependencies = {}) {
     super();
-    this.User = UserModel;
-    this.Training = TrainingModel;
+    // Mantener retrocompatibilidad con modelos directos
+    this.User = dependencies.UserModel;
+    this.Training = dependencies.TrainingModel;
+    
+    // DIP: Inyección de repositorios (con defaults para producción)
+    this.userRepo = dependencies.userRepo || new UserRepository();
+    this.trainingRepo = dependencies.trainingRepo || new TrainingRepository();
   }
 
   async getById(id) {
-  return await this.User.findById(id).exec();
+    return await this.userRepo.findById(id);
   }
 
   async create(data) {
-    const exists = await this.User.findOne({ email: data.email });
-    if (exists) {
-      throw new Error("El mail ya está registrado");
+    // Usar repositorio para verificar email duplicado
+    const exists = await this.userRepo.findByEmailDocument(data.email);
+    
+    // Validar con función pura
+    if (emailExists(exists)) {
+      throw new Error(createEmailExistsError());
     }
+    
     // Hash de contraseña si existe el campo
     if (data.password) {
       const bcrypt = await import('bcryptjs');
       data.password = await bcrypt.default.hash(data.password, 10);
     }
-    const entity = new this.User({
+    
+    // Usar repositorio para crear
+    const userData = {
       ...data,
       role: data.role || "Alumno", // Por defecto todos los nuevos usuarios son Alumno
       ultimoIngreso: data.ultimoIngreso ?? null,
       legajo: data.legajo ?? null,
       imagenPerfil: data.imagenPerfil ?? null
-    });
-    return await entity.save();
+    };
+    
+    return await this.userRepo.create(userData);
   }
 
   async list(query = {}) {
-    const filter = {};
+    // Usar función pura para construir filtro
+    const filter = buildUserFilter(query);
     
-    // Filtrar por rol si se especifica
-    if (query.role) {
-      filter.role = query.role;
-    }
-    
-    // Filtrar por estado si se especifica
-    if (query.status) {
-      filter.status = query.status;
-    }
-    
-    return await this.User.find(filter).sort({ createdAt: -1 }).exec();
+    // Usar repositorio para buscar
+    return await this.userRepo.findWithFilter(filter, { createdAt: -1 });
   }
 
   /**
@@ -54,40 +81,33 @@ export class UserService extends IUserService {
    * - Compañeros: estudiantes que comparten al menos uno de esos trainings
    */
   async findRecipientsForCompose({ senderId, trainingId }) {
-    const sender = await this.User.findById(senderId).select('assignedTraining role').lean();
-    if (!sender) throw new Error('Usuario remitente no encontrado');
+    // Usar repositorio para obtener sender
+    const sender = await this.userRepo.findById(senderId, 'assignedTraining role');
+    if (!sender) throw new Error(createSenderNotFoundError());
 
-    const assigned = (sender.assignedTraining || []).map((id) => id.toString());
-    let trainingScope = assigned;
-    if (trainingId) {
-      const tStr = trainingId.toString();
-      if (assigned.includes(tStr)) {
-        trainingScope = [tStr];
-      }
-    }
+    // Usar funciones puras para transformar datos
+    const assigned = objectIdsToStrings(sender.assignedTraining);
+    const trainingScope = filterTrainingScope(assigned, trainingId);
 
-    // Profesores: createdBy de trainings dentro del scope
+    // Profesores: createdBy de trainings dentro del scope (usar modelo directo para query compleja)
     const trainings = await this.Training.find({ _id: { $in: trainingScope } }).select('createdBy').lean();
-    const teacherIds = [...new Set(trainings.map(t => t.createdBy?.toString()).filter(Boolean))];
+    const teacherIds = extractUniqueIds(trainings.map(t => ({ _id: t.createdBy })));
 
-    // Compañeros: estudiantes que comparten al menos un training del scope
-    const classmates = await this.User.find({
-      _id: { $ne: senderId },
-      role: 'Alumno',
-      assignedTraining: { $in: trainingScope }
-    }).select('firstName lastName email role assignedTraining').lean();
+    // Compañeros: usar repositorio para buscar
+    const classmates = await this.userRepo.findByRoleWithCommonTrainings(
+      senderId,
+      'Alumno',
+      trainingScope,
+      'firstName lastName email role assignedTraining'
+    );
 
-    // Profesores (cualquier rol) identificados por createdBy
+    // Profesores: usar repositorio para buscar por IDs
     const teachers = teacherIds.length
-      ? await this.User.find({ _id: { $in: teacherIds } }).select('firstName lastName email role').lean()
+      ? await this.userRepo.findByIds(teacherIds, 'firstName lastName email role')
       : [];
 
-    // Unificar y devolver únicos por _id
-    const byId = new Map();
-    for (const u of [...teachers, ...classmates]) {
-      byId.set(u._id.toString(), u);
-    }
-    return Array.from(byId.values());
+    // Unificar con función pura
+    return unifyUsersByIdMultiple(teachers, classmates);
   }
 
   async update(id, patch) {
@@ -95,19 +115,27 @@ export class UserService extends IUserService {
       const bcrypt = await import('bcryptjs');
       patch.password = await bcrypt.default.hash(patch.password, 10);
     }
+    
+    // Usar repositorio para actualizar
     const updated = await this.User.findByIdAndUpdate(id, patch, { new: true }).exec();
+    
     if (!updated) {
-      throw new Error("Usuario no encontrado");
+      throw new Error(createUserNotFoundError());
     }
     return updated;
   }
 
   async changePassword(userId, currentPassword, newPassword) {
-    const user = await this.User.findById(userId).exec();
-    if (!user) throw new Error('Usuario no encontrado');
+    // Usar repositorio para obtener usuario
+    const user = await this.userRepo.findByIdDocument(userId);
+    if (!user) throw new Error(createUserNotFoundError());
+    
     const bcrypt = (await import('bcryptjs')).default;
     const ok = await bcrypt.compare(currentPassword, user.password);
-    if (!ok) throw new Error('La contraseña actual es incorrecta');
+    
+    // Validar con función pura (indirectamente)
+    if (!ok) throw new Error(createInvalidPasswordError());
+    
     user.password = await bcrypt.hash(newPassword, 10);
     await user.save();
     return user;
@@ -119,12 +147,12 @@ export class UserService extends IUserService {
    * Respeta OCP: Extiende funcionalidad sin modificar métodos existentes
    */
   async getTeachers() {
-    return await this.User.find({ 
-      role: 'Capacitador'
-    })
-    .populate('assignedTraining', 'title subtitle')
-    .sort({ createdAt: -1 })
-    .exec();
+    // Usar repositorio con populate
+    return await this.userRepo.findByRoleWithPopulate(
+      'Capacitador',
+      { path: 'assignedTraining', select: 'title subtitle' },
+      { createdAt: -1 }
+    );
   }
 
   /**
@@ -132,14 +160,12 @@ export class UserService extends IUserService {
    * Respeta SRP: Solo obtiene datos de un profesor específico
    */
   async getTeacherById(id) {
-    const teacher = await this.User.findOne({ 
-      _id: id,
-      role: 'Capacitador'
-    })
-    .populate('assignedTraining', 'title subtitle')
-    .exec();
-    
-    return teacher;
+    // Usar repositorio con filtro de rol
+    return await this.userRepo.findByIdAndRole(
+      id,
+      'Capacitador',
+      { path: 'assignedTraining', select: 'title subtitle' }
+    );
   }
 
   /**
@@ -148,48 +174,43 @@ export class UserService extends IUserService {
    * Respeta ISP: Método específico para una tarea específica
    */
   async updateTeacherStatus(id, status) {
-    const teacher = await this.User.findOneAndUpdate(
-      { 
-        _id: id,
-        role: 'Capacitador'
-      },
-      { status: status },
-      { new: true }
-    )
-    .populate('assignedTraining', 'title subtitle')
-    .exec();
-    
-    return teacher;
+    // Usar repositorio con actualización por rol
+    return await this.userRepo.updateStatusByIdAndRole(
+      id,
+      'Capacitador',
+      status,
+      { path: 'assignedTraining', select: 'title subtitle' }
+    );
   }
 
   /**
    * Obtener guardias inscritos en una capacitación específica
    */
   async getEnrolledStudents(trainingId) {
-    return await this.User.find({
-      role: "Alumno",
-      assignedTraining: trainingId
-    })
-    .select('firstName lastName email documentNumber status')
-    .sort({ firstName: 1, lastName: 1 })
-    .exec();
+    // Usar repositorio con filtros específicos
+    return await this.userRepo.findByRoleAndTraining(
+      "Alumno",
+      trainingId,
+      'firstName lastName email documentNumber status',
+      { firstName: 1, lastName: 1 }
+    );
   }
 
   async delete(id) {
-    const user = await this.User.findById(id).exec();
+    // Verificar existencia con repositorio
+    const user = await this.userRepo.findById(id);
     if (!user) return null;
-    return await this.User.findByIdAndDelete(id).exec();
+    
+    // Usar repositorio para eliminar
+    return await this.userRepo.deleteById(id);
   }
 
   /**
    * Actualiza el último login del usuario con la fecha/hora actual
    */
   async updateLastLogin(userId) {
-    const updated = await this.User.findByIdAndUpdate(
-      userId,
-      { lastLogin: new Date() },
-      { new: true }
-    ).exec();
+    // Usar repositorio para actualizar
+    const updated = await this.userRepo.updateLastLogin(userId);
     console.log(updated, " -- updated lastLogin -- ");
     return updated;
   }

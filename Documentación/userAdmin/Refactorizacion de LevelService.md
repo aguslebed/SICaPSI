@@ -26,7 +26,7 @@ Cada componente tiene una única responsabilidad bien definida:
 
 Las clases de alto nivel (LevelService) ya no dependen de implementaciones concretas (Mongoose models), sino de abstracciones (Repositories).
 
-#### **Repositorios creados**:
+#### **Repositorios creados/utilizados**:
 
 ##### **TrainingRepository** (`back/src/repositories/TrainingRepository.js`)
 Abstrae acceso a datos de `Training`:
@@ -235,11 +235,35 @@ const existing = await this.levels.find({ trainingId, levelNumber: { $in: levelN
 
 ---
 
+## Métodos Refactorizados
+
+### `getAllLevelsInTraining(trainingId)`
+- ✅ Usa `trainingRepo.exists()` para validar
+- ✅ Usa `levelRepo.findByTrainingId()` para obtener niveles
+
+### `addLevelsToTraining(trainingId, levels)`
+- ✅ Usa `trainingRepo.exists()` para validar
+- ✅ Usa `extractLevelNumbers()` para extraer datos
+- ✅ Usa `hasDuplicates()` para validar
+- ✅ Usa `createDuplicateErrorMessage()` para mensajes consistentes
+- ✅ Usa `extractIds()` para transformar datos
+- ✅ Usa `trainingRepo.pushLevels()` para actualizar
+
+### `updateLevelsInTraining(trainingId, levels)`
+- ✅ Usa `trainingRepo.exists()` para validar
+- ✅ Usa `determineLevelOperation()` para lógica de negocio
+- ✅ Usa `levelRepo.findByTrainingAndNumber()` para búsquedas
+- ✅ Usa `extractIds()` para transformar datos
+- ✅ Usa `trainingRepo.setLevels()` para actualizar
+
+---
+
 ## Próximos Pasos Sugeridos
 
 1. **Agregar tests unitarios** para LevelValidator
 2. **Agregar tests de integración** para LevelService con repos reales
 3. **Migrar operaciones de modelo directo** a repositorio si se vuelven comunes
-4. **Aplicar mismo patrón** a TrainingService y UserService
+4. **Aplicar mismo patrón** a otros servicios pendientes
 5. **Agregar JSDoc** más detallado en repositorios
 6. **Considerar cache** en repositorios para queries frecuentes
+

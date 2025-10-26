@@ -140,7 +140,7 @@ export default function Statistics() {
             {/* Header */}
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                    Estadísticas de la Capacitación
+                    Estadísticas de la Capacitación (A desarrollar)
                 </h1>
                 <p className="text-gray-600 mt-2">
                     {training.title || 'Capacitación actual'}

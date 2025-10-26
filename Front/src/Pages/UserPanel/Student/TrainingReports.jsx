@@ -77,7 +77,7 @@ const TrainingReports = () => {
           {/* Contenido principal */}
           <main className="flex-1 min-w-0 py-6 md:py-8">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6">
-            Mis reportes
+            Mis reportes (A desarrollar)
           </h1>
 
           <div className="overflow-x-auto">
