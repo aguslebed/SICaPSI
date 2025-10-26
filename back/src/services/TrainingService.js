@@ -1,92 +1,145 @@
 // Servicio concreto para cursos
 import { ITrainingService } from '../interfaces/ITrainingService.js';
 import mongoose from 'mongoose';
+import TrainingRepository from '../repositories/TrainingRepository.js';
+import UserRepository from '../repositories/UserRepository.js';
+import LevelRepository from '../repositories/LevelRepository.js';
+import {
+  titleExists,
+  isValidObjectId,
+  createDuplicateTitleError,
+  createDuplicateTitleOnUpdateError,
+  createTrainingNotFoundError,
+  createGetTrainerError,
+  determineUserSearchStrategy
+} from '../utils/TrainingValidator.js';
 
 export class TrainingService extends ITrainingService {
-  constructor({ UserModel, LevelModel, TrainingModel }) {
+  /**
+   * Constructor con inyección de dependencias
+   * @param {Object} dependencies - Dependencias del servicio
+   * @param {Object} dependencies.UserModel - Modelo User (para retrocompatibilidad)
+   * @param {Object} dependencies.LevelModel - Modelo Level (para retrocompatibilidad)
+   * @param {Object} dependencies.TrainingModel - Modelo Training (para retrocompatibilidad)
+   * @param {TrainingRepository} dependencies.trainingRepo - Repositorio de capacitaciones
+   * @param {UserRepository} dependencies.userRepo - Repositorio de usuarios
+   * @param {LevelRepository} dependencies.levelRepo - Repositorio de niveles
+   */
+  constructor(dependencies = {}) {
     super();
-    this.User = UserModel;
-    this.Level = LevelModel;
-    this.Training = TrainingModel;
+    // Mantener retrocompatibilidad con modelos directos
+    this.User = dependencies.UserModel;
+    this.Level = dependencies.LevelModel;
+    this.Training = dependencies.TrainingModel;
+    
+    // DIP: Inyección de repositorios (con defaults para producción)
+    this.trainingRepo = dependencies.trainingRepo || new TrainingRepository();
+    this.userRepo = dependencies.userRepo || new UserRepository();
+    this.levelRepo = dependencies.levelRepo || new LevelRepository();
   }
 
   async getCoursesForUser(userId) {
-    const user = await this.User.findById(userId)
-   
-      .populate({
-        path: 'assignedTraining',
-        select: 'title subtitle description image isActive totalLevels levels createdBy rejectedBy rejectionReason pendingApproval report progressPercentage startDate endDate',
-        populate: [
-          { path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level },
-          { path: 'createdBy', select: 'firstName lastName email', model: this.User },
-          { path: 'rejectedBy', select: 'firstName lastName email', model: this.User }
-        ],
-        model: this.Training
-      })
-      .exec();
+    // Configurar opciones de populate
+    const populateOptions = {
+      path: 'assignedTraining',
+      select: 'title subtitle description image isActive totalLevels levels createdBy rejectedBy rejectionReason pendingApproval report progressPercentage startDate endDate',
+      populate: [
+        { path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level },
+        { path: 'createdBy', select: 'firstName lastName email', model: this.User },
+        { path: 'rejectedBy', select: 'firstName lastName email', model: this.User }
+      ],
+      model: this.Training
+    };
+
+    // Usar repositorio para obtener usuario con trainings poblados
+    const user = await this.userRepo.findByIdWithTrainings(userId, populateOptions);
     return user ? user.assignedTraining : [];
   }
 
 
-  
   //Esta funcion crea una capacitacion nueva
   async createTraining(trainingData) {
-   const training = await this.Training.findOne({ title: trainingData.title });
+    // Usar repositorio para verificar título duplicado
+    const training = await this.trainingRepo.findByTitle(trainingData.title);
 
-   // Por ahora es la unica restriccion.
-   if (training) {
-     throw new Error("El título de la capacitación ya existe");
-   }
+    // Validar con función pura
+    if (titleExists(training)) {
+      throw new Error(createDuplicateTitleError());
+    }
 
-   const newTraining = new this.Training(trainingData);
-   await newTraining.save();
-   return newTraining;
- }
+    // Usar repositorio para crear
+    const newTraining = await this.trainingRepo.create(trainingData);
+    return newTraining;
+  }
 
  //Devuelve todos las capacitaciones activas
  async getAllActiveTrainings() {
-   const trainings = await this.Training.find({ isActive: true })
-     .populate({ path: 'createdBy', select: 'firstName lastName email', model: this.User })
-     .populate({ path: 'rejectedBy', select: 'firstName lastName email', model: this.User })
-     .populate({ path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level })
-     .exec();
+   // Configurar opciones de populate
+   const populateOptions = [
+     { path: 'createdBy', select: 'firstName lastName email', model: this.User },
+     { path: 'rejectedBy', select: 'firstName lastName email', model: this.User },
+     { path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level }
+   ];
+
+   // Usar repositorio para buscar con filtro y populate
+   const trainings = await this.trainingRepo.findWithPopulate(
+     { isActive: true },
+     populateOptions
+   );
    return trainings;
  }
 
  //Devuelve TODAS las capacitaciones (activas e inactivas)
  async getAllTrainings() {
-   const trainings = await this.Training.find({})
-     .populate({ path: 'createdBy', select: 'firstName lastName email', model: this.User })
-     .populate({ path: 'rejectedBy', select: 'firstName lastName email', model: this.User })
-     .populate({ path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level })
-     .sort({ createdAt: -1 }) // Más recientes primero
-     .exec();
+   // Configurar opciones de populate
+   const populateOptions = [
+     { path: 'createdBy', select: 'firstName lastName email', model: this.User },
+     { path: 'rejectedBy', select: 'firstName lastName email', model: this.User },
+     { path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level }
+   ];
+
+   // Usar repositorio para buscar con populate y ordenar
+   const trainings = await this.trainingRepo.findWithPopulate(
+     {},
+     populateOptions,
+     { createdAt: -1 } // Más recientes primero
+   );
    return trainings;
  }
 
  // Devuelve capacitaciones pendientes de aprobación
  async getPendingContent() {
-   const trainings = await this.Training.find({ pendingApproval: true })
-     .populate({ path: 'createdBy', select: 'firstName lastName email', model: this.User })
-     .populate({ path: 'rejectedBy', select: 'firstName lastName email', model: this.User })
-     .populate({ path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level })
-     .sort({ createdAt: -1 }) // Más recientes primero
-     .exec();
+   // Configurar opciones de populate
+   const populateOptions = [
+     { path: 'createdBy', select: 'firstName lastName email', model: this.User },
+     { path: 'rejectedBy', select: 'firstName lastName email', model: this.User },
+     { path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level }
+   ];
+
+   // Usar repositorio para buscar con filtro, populate y ordenar
+   const trainings = await this.trainingRepo.findWithPopulate(
+     { pendingApproval: true },
+     populateOptions,
+     { createdAt: -1 } // Más recientes primero
+   );
    return trainings;
  }
 
  // Obtener una capacitación por ID
  async getTrainingById(trainingId) {
-   const training = await this.Training.findById(trainingId)
-     .populate({ path: 'createdBy', select: 'firstName lastName email', model: this.User })
-     .populate({ path: 'rejectedBy', select: 'firstName lastName email', model: this.User })
-     .populate({ 
+   // Configurar opciones de populate
+   const populateOptions = [
+     { path: 'createdBy', select: 'firstName lastName email', model: this.User },
+     { path: 'rejectedBy', select: 'firstName lastName email', model: this.User },
+     { 
        path: 'levels', 
        select: 'levelNumber title description bibliography training test isActive', 
        model: this.Level 
-     })
-     .exec();
-   
+     }
+   ];
+
+   // Usar repositorio para buscar con populate
+   const training = await this.trainingRepo.findByIdWithPopulate(trainingId, populateOptions);
    return training;
  }
 
@@ -98,41 +151,33 @@ export class TrainingService extends ITrainingService {
  */
 async getTrainerByTrainingId(trainingId) {
   try {
-    // Buscar el campo assignedTeacher en la colección Training
-    const training = await this.Training.findById(trainingId)
-      .select('assignedTeacher')
-      .exec();
+    // Usar repositorio para buscar el campo assignedTeacher
+    const training = await this.trainingRepo.findByIdWithSelect(trainingId, 'assignedTeacher');
 
     if (!training || !training.assignedTeacher) return null;
 
     const assignedValue = training.assignedTeacher;
 
-    // Buscar el usuario por ObjectId o, si no es válido, por email o string exacto
-    let trainer = null;
+    // Determinar estrategia de búsqueda con función pura
+    const strategy = determineUserSearchStrategy(assignedValue);
 
-    if (mongoose.Types.ObjectId.isValid(assignedValue)) {
+    let trainer = null;
+    const selectFields = 'firstName lastName email phone profileImage role';
+
+    if (strategy.searchById && isValidObjectId(assignedValue)) {
       // Buscar por ObjectId
-      trainer = await this.User.findById(assignedValue)
-        .select('firstName lastName email phone profileImage role')
-        .exec();
+      trainer = await this.userRepo.findById(assignedValue, selectFields);
     }
 
-    // Si no lo encontró por ID o no era un ObjectId válido, buscar por email
+    // Si no lo encontró por ID o no era un ObjectId válido, buscar por email o ambos
     if (!trainer) {
-      trainer = await this.User.findOne({
-        $or: [
-          { email: assignedValue },
-          { _id: assignedValue } // si fue guardado como string del ObjectId
-        ]
-      })
-        .select('firstName lastName email phone profileImage role')
-        .exec();
+      trainer = await this.userRepo.findByIdOrEmail(assignedValue, selectFields);
     }
 
     return trainer || null;
   } catch (error) {
     console.error('❌ Error en getTrainerByTrainingId:', error);
-    throw new Error('Error al obtener el capacitador de la capacitación');
+    throw new Error(createGetTrainerError());
   }
 }
 
@@ -143,10 +188,10 @@ async getTrainerByTrainingId(trainingId) {
    
    // Verificar si existe otra capacitación con el mismo título (si se está cambiando)
    if (trainingData.title) {
-     const existingTraining = await this.Training.findOne({ 
-       title: trainingData.title, 
-       _id: { $ne: trainingId } 
-     });
+     const existingTraining = await this.trainingRepo.findByTitleExcludingId(
+       trainingData.title,
+       trainingId
+     );
      
      console.log('🔍 Búsqueda de duplicados:', { 
        title: trainingData.title, 
@@ -154,17 +199,18 @@ async getTrainerByTrainingId(trainingId) {
        found: existingTraining ? existingTraining._id : null 
      });
      
-     if (existingTraining) {
-       console.log('❌ Título duplicado encontrado:', existingTraining._id.toString(), 'vs', trainingId.toString());
-       throw new Error("Ya existe otra capacitación con ese título");
+     // Validar con función pura
+     if (titleExists(existingTraining)) {
+       console.log('❌ Título duplicado encontrado');
+       throw new Error(createDuplicateTitleOnUpdateError());
      }
    }
 
-   // Obtener la capacitación actual
-   const training = await this.Training.findById(trainingId);
+   // Obtener la capacitación actual (documento Mongoose, no lean)
+   const training = await this.trainingRepo.findByIdDocument(trainingId);
    
    if (!training) {
-     throw new Error("Capacitación no encontrada");
+     throw new Error(createTrainingNotFoundError());
    }
 
    // Actualizar campos
@@ -173,28 +219,31 @@ async getTrainerByTrainingId(trainingId) {
    // Guardar (esto ejecutará el middleware pre-save que actualiza isActive según fechas)
    await training.save();
 
-   // Populate y retornar
-   const updatedTraining = await this.Training.findById(trainingId)
-     .populate({ path: 'createdBy', select: 'firstName lastName email', model: this.User })
-    .populate({ path: 'rejectedBy', select: 'firstName lastName email', model: this.User })
-     .populate({ path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level })
-     .exec();
+   // Configurar opciones de populate para retornar
+   const populateOptions = [
+     { path: 'createdBy', select: 'firstName lastName email', model: this.User },
+     { path: 'rejectedBy', select: 'firstName lastName email', model: this.User },
+     { path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level }
+   ];
 
+   // Populate y retornar usando repositorio
+   const updatedTraining = await this.trainingRepo.findByIdWithPopulate(trainingId, populateOptions);
    return updatedTraining;
  }
 
  // Eliminar una capacitación
  async deleteTraining(trainingId) {
-   const training = await this.Training.findById(trainingId);
+   // Usar repositorio para verificar existencia
+   const training = await this.trainingRepo.findById(trainingId);
    if (!training) {
-     throw new Error("Capacitación no encontrada");
+     throw new Error(createTrainingNotFoundError());
    }
 
-   // Eliminar todos los niveles asociados
+   // Eliminar todos los niveles asociados usando modelo directo (deleteMany)
    await this.Level.deleteMany({ trainingId: trainingId });
 
-   // Eliminar la capacitación
-   await this.Training.findByIdAndDelete(trainingId);
+   // Eliminar la capacitación usando repositorio
+   await this.trainingRepo.deleteById(trainingId);
 
    // Eliminar carpeta de archivos multimedia
    const fs = await import('fs');

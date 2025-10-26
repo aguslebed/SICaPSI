@@ -62,6 +62,103 @@ class TrainingRepository {
     const training = await Training.findById(id).select('_id').lean();
     return !!training;
   }
+
+  /**
+   * Crea una nueva capacitación
+   * @param {Object} trainingData - Datos de la capacitación
+   * @returns {Promise<Object>} Capacitación creada
+   */
+  async create(trainingData) {
+    const newTraining = new Training(trainingData);
+    return newTraining.save();
+  }
+
+  /**
+   * Busca capacitaciones con filtros y populate
+   * @param {Object} filter - Filtro de búsqueda
+   * @param {Array} populateOptions - Opciones de populate
+   * @param {Object} sortOptions - Opciones de ordenamiento
+   * @returns {Promise<Array>} Array de capacitaciones
+   */
+  async findWithPopulate(filter = {}, populateOptions = [], sortOptions = {}) {
+    let query = Training.find(filter);
+    
+    populateOptions.forEach(popOption => {
+      query = query.populate(popOption);
+    });
+    
+    if (Object.keys(sortOptions).length > 0) {
+      query = query.sort(sortOptions);
+    }
+    
+    return query.exec();
+  }
+
+  /**
+   * Busca una capacitación por ID con populate
+   * @param {string|ObjectId} id - ID de la capacitación
+   * @param {Array} populateOptions - Opciones de populate
+   * @returns {Promise<Object|null>} Capacitación encontrada o null
+   */
+  async findByIdWithPopulate(id, populateOptions = []) {
+    let query = Training.findById(id);
+    
+    populateOptions.forEach(popOption => {
+      query = query.populate(popOption);
+    });
+    
+    return query.exec();
+  }
+
+  /**
+   * Busca una capacitación por título
+   * @param {string} title - Título de la capacitación
+   * @returns {Promise<Object|null>} Capacitación encontrada o null
+   */
+  async findByTitle(title) {
+    return Training.findOne({ title }).lean();
+  }
+
+  /**
+   * Busca capacitación por título excluyendo un ID
+   * @param {string} title - Título de la capacitación
+   * @param {string|ObjectId} excludeId - ID a excluir
+   * @returns {Promise<Object|null>} Capacitación encontrada o null
+   */
+  async findByTitleExcludingId(title, excludeId) {
+    return Training.findOne({ 
+      title, 
+      _id: { $ne: excludeId } 
+    }).lean();
+  }
+
+  /**
+   * Busca capacitación por ID sin lean (para usar .save())
+   * @param {string|ObjectId} id - ID de la capacitación
+   * @returns {Promise<Object|null>} Documento de Mongoose
+   */
+  async findByIdDocument(id) {
+    return Training.findById(id);
+  }
+
+  /**
+   * Elimina una capacitación por ID
+   * @param {string|ObjectId} id - ID de la capacitación
+   * @returns {Promise<Object|null>} Capacitación eliminada
+   */
+  async deleteById(id) {
+    return Training.findByIdAndDelete(id);
+  }
+
+  /**
+   * Busca capacitación con select de campo específico
+   * @param {string|ObjectId} id - ID de la capacitación
+   * @param {string} selectFields - Campos a seleccionar
+   * @returns {Promise<Object|null>} Capacitación con campos seleccionados
+   */
+  async findByIdWithSelect(id, selectFields) {
+    return Training.findById(id).select(selectFields).lean();
+  }
 }
 
 export default TrainingRepository;
