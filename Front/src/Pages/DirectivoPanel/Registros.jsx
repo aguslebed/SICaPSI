@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import NavBar from '../../Components/Student/NavBar';
 import LoadingOverlay from '../../Components/Shared/LoadingOverlay';
 import './DirectivoPanel.css';
+import '../AdminPanel/AdminPanel.css';
 
 export default function Registros() {
-  const [loading, setLoading] = useState(false);
+  const [loading, _setLoading] = useState(false);
   const [registros, setRegistros] = useState([]);
   const [filtroAccion, setFiltroAccion] = useState('');
   const [filtroFecha, setFiltroFecha] = useState('');
@@ -39,26 +40,28 @@ export default function Registros() {
     alert('Funcionalidad de generación de reportes pendiente');
   };
 
-  const handleVerDetalle = (id) => {
-    console.log('Ver detalle del registro:', id);
-    // Aquí se abriría un modal con más detalles del registro
-  };
+  
 
   return (
     <>
       <NavBar />
       <main className="admin-container">
         <div className="admin-content-wrapper">
-          <h2 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>Registros de actividad</h2>
+          <h1 className="admin-title">Registros de actividad</h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-            <input
-              type="text"
-              placeholder="Buscar por capacitador"
-              value={filtroCapacitador}
-              onChange={e => setFiltroCapacitador(e.target.value)}
-              style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #bdbdbd', width: '200px' }}
-            />
-            <button style={{ background: '#1976d2', color: 'white', border: 'none', borderRadius: '6px', padding: '0.5rem 0.8rem', cursor: 'pointer' }}>🔍</button>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <input
+                type="text"
+                placeholder="Buscar por capacitador"
+                value={filtroCapacitador}
+                onChange={e => setFiltroCapacitador(e.target.value)}
+                className="admin-search-input"
+                style={{ flex: 1, minWidth: 0, width: '200px' }}
+              />
+              <button className="admin-search-btn" title="Buscar" onClick={() => { /* opcional: disparar búsqueda */ }}>
+                🔎
+              </button>
+            </div>
             <select
               value={filtroAccion}
               onChange={e => setFiltroAccion(e.target.value)}
@@ -87,15 +90,15 @@ export default function Registros() {
               Generar Reportes
             </button>
           </div>
-          <div style={{ background: '#1976d2', borderRadius: '8px 8px 0 0', color: 'white', fontWeight: 'bold', fontSize: '1.1rem', display: 'flex', padding: '0.7rem 0.5rem' }}>
+          <div style={{ background: '#1976d2', borderRadius: 0, color: 'white', display: 'flex', padding: '0.7rem 0.5rem' }}>
             <div style={{ flex: 2, textAlign: 'left', paddingLeft: '1rem' }}>Capacitadores</div>
             <div style={{ flex: 2, textAlign: 'left' }}>Acción</div>
             <div style={{ flex: 2, textAlign: 'left' }}>Fecha/Hora</div>
             <div style={{ flex: 1, textAlign: 'left' }}>DNI</div>
           </div>
-          <div style={{ background: 'white', borderRadius: '0 0 8px 8px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', minHeight: '120px' }}>
-            {registrosPagina.map((registro, idx) => (
-              <div key={registro.id} style={{ display: 'flex', alignItems: 'center', padding: '1rem 0.5rem', borderBottom: idx === registrosPagina.length - 1 ? 'none' : '1px solid #e0e0e0' }}>
+          <div className="admin-table-wrapper registros-table" style={{ background: 'white', borderRadius: '0 0 8px 8px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', minHeight: '120px' }}>
+              {registrosPagina.map((registro, idx) => (
+              <div key={registro.id} className="registros-row" style={{ display: 'flex', alignItems: 'center', padding: '1rem 0.5rem', borderBottom: idx === registrosPagina.length - 1 ? 'none' : '1px solid #e0e0e0' }}>
                 <div style={{ flex: 2, paddingLeft: '1rem' }}>{registro.capacitador}</div>
                 <div style={{ flex: 2 }}>{registro.accion}</div>
                 <div style={{ flex: 2 }}>{registro.fecha}</div>
@@ -106,7 +109,7 @@ export default function Registros() {
               <div style={{ padding: '2rem', textAlign: 'center', color: '#757575' }}>No se encontraron registros.</div>
             )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1rem', fontSize: '0.95rem', color: '#757575' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1rem', color: '#757575' }}>
             <span>Mostrando {((pagina - 1) * registrosPorPagina) + 1} a {Math.min(pagina * registrosPorPagina, totalRegistros)} de {totalRegistros} registros</span>
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
               {[...Array(totalPaginas)].map((_, i) => (

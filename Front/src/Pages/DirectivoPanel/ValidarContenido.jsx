@@ -128,8 +128,8 @@ export default function ValidarContenido() {
       )}
       <main className="admin-container">
         <div className="admin-content-wrapper">
-          <h2 style={{ fontSize: '1.5rem', fontWeight: '500', marginBottom: '1.5rem' }}>Contenidos</h2>
-          <div style={{ background: '#1976d2', borderRadius: '8px 8px 0 0', color: 'white', fontWeight: 'bold', fontSize: '1.1rem', display: 'flex', padding: '0.7rem 0.5rem', marginBottom: '-1px' }}>
+          <h1 className="admin-title">Contenidos</h1>
+          <div style={{ background: '#1976d2', borderRadius: 0, color: 'white', display: 'flex', padding: '0.7rem 0.5rem', marginBottom: '-1px' }}>
             <div style={{ flex: 2, textAlign: 'left', paddingLeft: '1rem' }}>Título</div>
             <div style={{ flex: 2, textAlign: 'left' }}>Subtítulo / Descripción</div>
             <div style={{ flex: 2, textAlign: 'left' }}>Creado por</div>
@@ -137,23 +137,22 @@ export default function ValidarContenido() {
             <div style={{ flex: 1, textAlign: 'left' }}>Estado</div>
             <div style={{ flex: 1, textAlign: 'left' }}>Acciones</div>
           </div>
-          <div style={{ background: 'white', borderRadius: '0 0 8px 8px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', minHeight: '60px' }}>
+          <div className="admin-table-wrapper registros-table" style={{ background: 'white', borderRadius: '0 0 8px 8px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', minHeight: '60px' }}>
             {contenidos.length === 0 ? (
               <div style={{ padding: '2rem', textAlign: 'center', color: '#757575' }}>No hay contenidos pendientes de validación</div>
-            ) : (
+              ) : (
               contenidos.map((contenido, idx) => (
-                <div key={contenido._id} style={{ display: 'flex', alignItems: 'center', padding: '1rem 0.5rem', borderBottom: idx === contenidos.length - 1 ? 'none' : '1px solid #e0e0e0', fontSize: '1rem', background: 'white' }}>
-                  <div style={{ flex: 2, paddingLeft: '1rem', fontWeight: 'bold' }}>{contenido.title}</div>
+                <div key={contenido._id} className="registros-row" style={{ display: 'flex', alignItems: 'center', padding: '1rem 0.5rem', borderBottom: idx === contenidos.length - 1 ? 'none' : '1px solid #e0e0e0' }}>
+                  <div style={{ flex: 2, paddingLeft: '1rem' }}>{contenido.title}</div>
                   <div style={{ flex: 2 }}>{contenido.subtitle || contenido.description}</div>
                   <div style={{ flex: 2 }}>{getAuthorName(contenido.createdBy)}</div>
                   <div style={{ flex: 1 }}>{formatDate(contenido.createdAt)}</div>
                   <div style={{ flex: 1 }}>
                       <span style={{ 
-                        background: contenido.pendingApproval ? '#ffa726' : (contenido.isActive ? '#1976d2' : '#757575'), 
-                        color: 'white', 
-                        padding: '4px 12px', 
-                        borderRadius: '12px', 
-                        fontSize: '0.95rem', 
+                        background: contenido.pendingApproval ? '#ffa726' : (contenido.isActive ? '#1976d2' : '#757575'),
+                        color: 'white',
+                        padding: '4px 12px',
+                        borderRadius: '12px',
                         fontWeight: 'bold'
                       }}>
                         {contenido.pendingApproval ? 'Pendiente' : (contenido.isActive ? 'Activo' : 'Inactivo')}
@@ -162,7 +161,7 @@ export default function ValidarContenido() {
                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <button
                       onClick={() => setSelectedContenido(contenido)}
-                      style={{ background: 'none', border: 'none', color: '#1976d2', cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      style={{ background: 'none', border: 'none', color: '#1976d2', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}
                     >
                       <FiEye style={{ fontSize: '1.2rem' }} /> Previsualizar
                     </button>
@@ -209,6 +208,7 @@ export default function ValidarContenido() {
                       await loadPendingContent();
                       setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
                     } catch (error) {
+                      console.error('Error en enviar rechazo:', error);
                       setToast({ show: true, message: 'Error al rechazar la capacitación', type: 'error' });
                       setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
                     } finally {

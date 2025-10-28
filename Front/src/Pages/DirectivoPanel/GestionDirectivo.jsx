@@ -66,10 +66,7 @@ export default function GestionDirectivo() {
     return filtrados.slice(start, start + size);
   }, [filtrados, page]);
 
-   const handleRedactar = () => {
-    // Implementar funcionalidad de generación de reportes
-    alert('Funcionalidad de Redactar pendiente');
-  };
+  
 
   useEffect(() => setPage(1), [appliedSearch, selectedRole]);
 
@@ -110,7 +107,6 @@ export default function GestionDirectivo() {
                   <option value="directivo">Directivo</option>
                 </select>
               </div>
-              <button className="cursor-pointer admin-primary-btn px-5 py-3 bg-green-500 font-bold rounded-xl text-white" onClick={handleRedactar}>Redactar</button>
             </div>
 
             {/* Tabla */}
