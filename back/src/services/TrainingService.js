@@ -67,8 +67,25 @@ export class TrainingService extends ITrainingService {
       throw new Error(createDuplicateTitleError());
     }
 
+    // Convertir fechas de formato DD/MM/YYYY a formato ISO
+    const dataToSave = { ...trainingData };
+    
+    if (dataToSave.startDate && typeof dataToSave.startDate === 'string') {
+      const [day, month, year] = dataToSave.startDate.split('/');
+      if (day && month && year) {
+        dataToSave.startDate = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
+      }
+    }
+    
+    if (dataToSave.endDate && typeof dataToSave.endDate === 'string') {
+      const [day, month, year] = dataToSave.endDate.split('/');
+      if (day && month && year) {
+        dataToSave.endDate = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
+      }
+    }
+
     // Usar repositorio para crear
-    const newTraining = await this.trainingRepo.create(trainingData);
+    const newTraining = await this.trainingRepo.create(dataToSave);
     return newTraining;
   }
 
@@ -206,6 +223,23 @@ async getTrainerByTrainingId(trainingId) {
      }
    }
 
+   // Convertir fechas de formato DD/MM/YYYY a formato ISO
+   const dataToUpdate = { ...trainingData };
+   
+   if (dataToUpdate.startDate && typeof dataToUpdate.startDate === 'string') {
+     const [day, month, year] = dataToUpdate.startDate.split('/');
+     if (day && month && year) {
+       dataToUpdate.startDate = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
+     }
+   }
+   
+   if (dataToUpdate.endDate && typeof dataToUpdate.endDate === 'string') {
+     const [day, month, year] = dataToUpdate.endDate.split('/');
+     if (day && month && year) {
+       dataToUpdate.endDate = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
+     }
+   }
+
    // Obtener la capacitación actual (documento Mongoose, no lean)
    const training = await this.trainingRepo.findByIdDocument(trainingId);
    
@@ -214,7 +248,7 @@ async getTrainerByTrainingId(trainingId) {
    }
 
    // Actualizar campos
-   Object.assign(training, trainingData);
+   Object.assign(training, dataToUpdate);
    
    // Guardar (esto ejecutará el middleware pre-save que actualiza isActive según fechas)
    await training.save();
