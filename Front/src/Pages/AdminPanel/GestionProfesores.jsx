@@ -105,6 +105,11 @@ export default function GestionProfesores() {
   }, []);
 
   // aplicar filtros (en memoria)
+  const stripHtml = (value) =>
+    typeof value === 'string' ? value.replace(/<[^>]+>/g, '').trim() : value ?? '';
+
+  const renderHtml = (value) => ({ __html: value || '' });
+
   const filtrados = useMemo(() => {
     let rows = [...rowsRaw];
 
@@ -112,7 +117,7 @@ export default function GestionProfesores() {
     if (appliedSearch.trim()) {
       const q = appliedSearch.toLowerCase();
       rows = rows.filter((r) =>
-        [r.nombre, r.apellido, r.email, r.dni, ...(r.curso || [])]
+        [r.nombre, r.apellido, r.email, r.dni, ...(r.curso || []).map(stripHtml)]
           .join(" ")
           .toLowerCase()
           .includes(q)
@@ -337,7 +342,11 @@ export default function GestionProfesores() {
                   <td data-label="DNI">{r.dni}</td>
                   <td data-label="Estado"><Chip estado={r.estado} /></td>
                   <td data-label="Fecha de creación">{r.creado ? new Date(r.creado).toLocaleDateString() : "-"}</td>
-                  <td data-label="Curso Asignado">{r.curso?.map((c, i) => <div key={i}>{c}</div>)}</td>
+                  <td data-label="Curso Asignado">
+                    {r.curso?.map((c, i) => (
+                      <div key={i} dangerouslySetInnerHTML={renderHtml(c)} />
+                    ))}
+                  </td>
                   <td data-label="Acciones">
                     <div className="admin-actions">
                       {/* Editar */}

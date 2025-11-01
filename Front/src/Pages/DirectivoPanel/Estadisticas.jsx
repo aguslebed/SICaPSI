@@ -15,16 +15,21 @@ export default function Estadisticas() {
   const [individualRows, setRowsRaw] = useState([]);
   const [generalRows, setGeneralRows] = useState([]);
 
+  const stripHtml = (value) =>
+    typeof value === 'string' ? value.replace(/<[^>]+>/g, '').trim() : value ?? '';
+
+  const renderHtml = (value) => ({ __html: value || '' });
+
   const filteredGeneral = generalRows.filter(r =>
-    (generalCap === 'all' || r.cap === generalCap) &&
+    (generalCap === 'all' || stripHtml(r.cap) === generalCap) &&
     (r.nivel.toLowerCase().includes(generalSearch.toLowerCase()) ||
-      String(r.cap).includes(generalSearch))
+      stripHtml(r.cap).toLowerCase().includes(generalSearch.toLowerCase()))
   );
 
   const filteredIndividuals = individualRows.filter(r =>
-    (studentCap === 'all' || r.cap.includes(studentCap)) &&
+    (studentCap === 'all' || stripHtml(r.cap).includes(studentCap)) &&
     (r.nombre.toLowerCase().includes(studentSearch.toLowerCase()) ||
-      r.cap.toLowerCase().includes(studentSearch.toLowerCase()))
+      stripHtml(r.cap).toLowerCase().includes(studentSearch.toLowerCase()))
   );
 
   const generateGeneralPDF = () => {
@@ -32,7 +37,7 @@ export default function Estadisticas() {
     doc.text('Progreso General de Capacitaciones', 20, 10);
     autoTable(doc, {
       head: [['Capacitación', 'Total Niveles', 'Usuarios', '%Completados', 'Total Niveles Completados']],
-      body: filteredGeneral.map(row => [row.cap, row.nivel, row.usuarios, row.vistos, row.completados]),
+      body: filteredGeneral.map(row => [stripHtml(row.cap), row.nivel, row.usuarios, row.vistos, row.completados]),
     });
     doc.save('progreso_general.pdf');
   };
@@ -42,7 +47,7 @@ export default function Estadisticas() {
     doc.text('Progreso Individual de Estudiantes', 20, 10);
     autoTable(doc, {
       head: [['Nombre', 'Capacitación', 'Nivel', 'Avance', 'Fecha de inicio']],
-      body: filteredIndividuals.map(row => [row.nombre, row.cap, row.nivel, row.avance, row.inicio ? new Date(row.inicio).toLocaleDateString() : '-']),
+      body: filteredIndividuals.map(row => [row.nombre, stripHtml(row.cap), row.nivel, row.avance, row.inicio ? new Date(row.inicio).toLocaleDateString() : '-']),
     });
     doc.save('progreso_individual.pdf');
   };
@@ -173,7 +178,7 @@ export default function Estadisticas() {
                   {filteredGeneral.length > 0 ? (
                     filteredGeneral.map((r, i) => (
                       <tr key={i}>
-                        <td>{r.cap}</td>
+                        <td dangerouslySetInnerHTML={renderHtml(r.cap)} />
                         <td>{r.nivel}</td>
                         <td>{r.usuarios}</td>
                         <td>{r.vistos}</td>
@@ -241,7 +246,7 @@ export default function Estadisticas() {
                       filteredIndividuals.map((r, i) => (
                         <tr key={i}>
                           <td>{r.nombre}</td>
-                          <td>{r.cap}</td>
+                          <td dangerouslySetInnerHTML={renderHtml(r.cap)} />
                           <td>{r.nivel}</td>
                           <td>{r.avance}</td>
                           <td>{r.inicio ? new Date(r.inicio).toLocaleDateString() : '-'}</td>

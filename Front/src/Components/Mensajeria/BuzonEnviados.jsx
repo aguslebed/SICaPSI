@@ -2,25 +2,47 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import ModalWrapper from "../Modals/ModalWrapper";
 import MessageDetail from "./MessageDetail";
 import ComposeModal from "./ComposeModal";
-import { sendMessage, getMe, moveMessageToTrash, bulkMoveToTrash } from "../../API/Request";
+import { sendMessage, getMe, bulkMoveToTrash } from "../../API/Request";
 import { useUser } from "../../context/UserContext";
 import LoadingOverlay from "../Shared/LoadingOverlay";
 import ErrorModal from "../Modals/ErrorModal";
 import SucessModal from "../Modals/SucessModal";
 import ConfirmActionModal from "../Modals/ConfirmActionModal";
+import { Search } from "lucide-react";
+
+const normalizeTrainingId = (value) => {
+  if (!value) return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    if (value._id) return value._id;
+    if (value.$oid) return value.$oid;
+    if (typeof value.toString === 'function') {
+      const str = value.toString();
+      return str.startsWith('ObjectId(') ? str.slice(9, -1) : str;
+    }
+  }
+  return String(value);
+};
 
 export default function BuzonEnviados({ hideCompose = false, trainingId, sortBy = 'fecha' }) {
   const { userData, setUserData } = useUser();
 
   // Mensajes enviados (carpeta 'sent')
+  const normalizedTrainingId = useMemo(() => (trainingId ? String(trainingId) : null), [trainingId]);
+
   const sent = useMemo(
     () => (userData?.messages?.items || [])
       .filter((m) => m.folder === "sent")
-      .filter((m) => { const t = m?.trainingId; const tid = (t && (t._id || t)) || undefined; return !tid || tid === trainingId; }),
-    [userData, trainingId]
+      .filter((m) => {
+        if (!normalizedTrainingId) return true;
+        const messageTid = normalizeTrainingId(m?.trainingId);
+        return !messageTid || messageTid === normalizedTrainingId;
+      }),
+    [userData, normalizedTrainingId]
   );
 
   const [messages, setMessages] = useState(sent);
+  const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -54,20 +76,33 @@ export default function BuzonEnviados({ hideCompose = false, trainingId, sortBy 
     }
     // Orden simple por fecha desc, u opcionalmente por sortBy si llega desde padre
     let list = sent;
+    const q = query.trim().toLowerCase();
+    if (q) {
+      list = list.filter((m) => {
+        const recipientName = `${m.recipient?.firstName || ''} ${m.recipient?.lastName || ''}`.toLowerCase();
+        const recipientEmail = (m.recipient?.email || '').toLowerCase();
+        const subject = (m.subject || '').toLowerCase();
+        const body = (m.message || '').toLowerCase();
+        return recipientName.includes(q) || recipientEmail.includes(q) || subject.includes(q) || body.includes(q);
+      });
+    }
     if (sortBy === 'remitente') {
       list = [...list].sort((a, b) => {
         const an = `${a.recipient?.lastName || ''} ${a.recipient?.firstName || ''}`.toLowerCase();
         const bn = `${b.recipient?.lastName || ''} ${b.recipient?.firstName || ''}`.toLowerCase();
         return an.localeCompare(bn);
       });
+    } else if (sortBy === 'unread') {
+      // En enviados no existe concepto de leído/no leído; mantener orden cronológico
+      list = [...list].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     } else if (sortBy === 'fecha') {
       list = [...list].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
     setMessages(list);
-  }, [sent, sortBy]);
+  }, [sent, sortBy, query]);
 
   // Reset a la primera página cuando cambia el orden
-  useEffect(() => { setCurrentPage(1); }, [sortBy]);
+  useEffect(() => { setCurrentPage(1); }, [sortBy, query]);
 
   // Clamp current page si cambia el tamaño de la lista
   useEffect(() => {
@@ -111,11 +146,28 @@ export default function BuzonEnviados({ hideCompose = false, trainingId, sortBy 
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-xl font-semibold">📤 Mensajes enviados</h3>
-        {!hideCompose && (
-          <button className="cursor-pointer bg-green-500 text-white px-4 py-2 rounded" onClick={() => setComposeOpen(true)}>Redactar</button>
-        )}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <h3 className="text-xl font-semibold">📤 Mensajes enviados</h3>
+          {!hideCompose && (
+            <button className="cursor-pointer inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-full hover:bg-green-700" onClick={() => setComposeOpen(true)}>
+              <span className="text-lg leading-none">📝</span>
+              <span>Redactar</span>
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <input
+            type="text"
+            placeholder="Buscar"
+            className="border px-3 py-2 rounded flex-1 min-w-0"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <button type="button" className="cursor-pointer px-3 py-2 border rounded text-blue-600 hover:bg-blue-50">
+            <Search size={18} />
+          </button>
+        </div>
       </div>
 
       <div className="flex items-center justify-between text-sm text-gray-700">

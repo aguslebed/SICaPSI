@@ -273,6 +273,22 @@ async getTrainerByTrainingId(trainingId) {
      throw new Error(createTrainingNotFoundError());
    }
 
+   // Capturar usuarios que tienen asignada la capacitación antes de eliminarla
+   let assignedUsers = [];
+   if (this.User) {
+     assignedUsers = await this.User.find({ assignedTraining: trainingId })
+       .select('_id role')
+       .lean();
+   }
+
+   // Remover la capacitación de los usuarios afectados para mantener consistencia
+   if (this.User && assignedUsers.length > 0) {
+     await this.User.updateMany(
+       { assignedTraining: trainingId },
+       { $pull: { assignedTraining: trainingId } }
+     );
+   }
+
    // Eliminar todos los niveles asociados usando modelo directo (deleteMany)
    await this.Level.deleteMany({ trainingId: trainingId });
 
@@ -297,7 +313,16 @@ async getTrainerByTrainingId(trainingId) {
      }
    }
 
-   return { message: "Capacitación, niveles y archivos asociados eliminados exitosamente" };
+   return {
+     message: "Capacitación, niveles y archivos asociados eliminados exitosamente",
+     trainingId,
+     trainingTitle: training?.title || null,
+     affectedUserIds: Array.isArray(assignedUsers)
+       ? assignedUsers
+           .map((u) => (typeof u._id?.toString === 'function' ? u._id.toString() : u._id))
+           .filter(Boolean)
+       : []
+   };
  }
 
 

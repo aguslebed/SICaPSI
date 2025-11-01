@@ -3,23 +3,40 @@ import { useUser } from "../../context/UserContext";
 import ModalWrapper from "../Modals/ModalWrapper";
 import MessageDetail from "./MessageDetail";
 import ComposeModal from "./ComposeModal";
-import { sendMessage, setMessageRead, moveMessageToTrash, getMe, bulkMoveToTrash, bulkSetMessageRead } from "../../API/Request";
+import { sendMessage, setMessageRead, getMe, bulkMoveToTrash, bulkSetMessageRead } from "../../API/Request";
 import { Search, Paperclip } from "lucide-react";
 import LoadingOverlay from "../Shared/LoadingOverlay";
 import ErrorModal from "../Modals/ErrorModal";
 import SucessModal from "../Modals/SucessModal";
 import ConfirmActionModal from "../Modals/ConfirmActionModal";
 
+const normalizeTrainingId = (value) => {
+  if (!value) return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    if (value._id) return value._id;
+    if (value.$oid) return value.$oid;
+    if (typeof value.toString === 'function') {
+      const str = value.toString();
+      return str.startsWith('ObjectId(') ? str.slice(9, -1) : str;
+    }
+  }
+  return String(value);
+};
+
 export default function BuzonEntrada({ hideCompose = false, trainingId, sortBy = 'fecha' }) {
   const { userData, setUserData } = useUser();
 
   // Solo mensajes de entrada (carpeta inbox)
+  const normalizedTrainingId = useMemo(() => (trainingId ? String(trainingId) : null), [trainingId]);
+
   const inbox = useMemo(() => (userData?.messages?.items || [])
     .filter((m) => m.folder === "inbox")
     .filter((m) => {
-      const t = m?.trainingId; const tid = (t && (t._id || t)) || undefined;
-      return !tid || tid === trainingId; // legacy sin trainingId: mostrar en todos
-    }), [userData, trainingId]);
+      if (!normalizedTrainingId) return true;
+      const messageTid = normalizeTrainingId(m?.trainingId);
+      return !messageTid || messageTid === normalizedTrainingId;
+    }), [userData, normalizedTrainingId]);
   const [messages, setMessages] = useState(inbox);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(null);
@@ -53,7 +70,9 @@ export default function BuzonEntrada({ hideCompose = false, trainingId, sortBy =
       list = inbox.filter((m) => {
         const subject = (m.subject || '').toLowerCase();
         const senderName = `${m.sender?.firstName || ''} ${m.sender?.lastName || ''}`.toLowerCase();
-        return subject.includes(q) || senderName.includes(q);
+        const senderEmail = (m.sender?.email || '').toLowerCase();
+        const body = (m.message || '').toLowerCase();
+        return subject.includes(q) || senderName.includes(q) || senderEmail.includes(q) || body.includes(q);
       });
     }
     // Orden

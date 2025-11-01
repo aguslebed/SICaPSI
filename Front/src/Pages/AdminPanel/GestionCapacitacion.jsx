@@ -7,7 +7,7 @@ import SuccessModal from '../../Components/Modals/SuccessModal';
 import ErrorListModal from '../../Components/Modals/ErrorListModal';
 import WarningModal from '../../Components/Modals/WarningModal';
 import ConfirmActionModal from '../../Components/Modals/ConfirmActionModal';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { getAllActiveTrainings, getAllTrainings, createTraining, updateTraining, addLevelsToTraining, updateLevelsInTraining, deleteTraining, getTrainingById, enrollStudentsToTraining, enrollTrainerToTraining, deleteTrainingFile, uploadTrainingFile, moveTempFiles, replaceTrainingFile, getTrainerByTrainingId, getUsersEnrolledInTraining, unenrollStudentsFromTraining } from '../../API/Request';
 import LoadingOverlay from '../../Components/Shared/LoadingOverlay';
 import './AdminPanel.css';
@@ -58,7 +58,7 @@ export default function GestionCapacitacion() {
   const estadoMenuRef = useRef(null);
 
   // Helper: obtiene el profesor para cada capacitación que no tenga `trainer` poblado
-  const fetchAndAttachTrainers = async (trainingsList) => {
+  const fetchAndAttachTrainers = useCallback(async (trainingsList) => {
     if (!Array.isArray(trainingsList) || trainingsList.length === 0) return trainingsList;
 
     const mapUpdates = {};
@@ -83,7 +83,24 @@ export default function GestionCapacitacion() {
     }
 
     return trainingsList;
-  };
+  }, [trainersMap]);
+
+  // Función para refrescar las capacitaciones con memoización
+  const refreshTrainings = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getAllTrainings();
+      const items = Array.isArray(data) ? data : (data?.items || []);
+      const enriched = await fetchAndAttachTrainers(items);
+      setTrainings(enriched);
+    } catch (err) {
+      console.error('Error fetching trainings', err);
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchAndAttachTrainers]);
 
   // Cerrar dropdowns al hacer click fuera
   useEffect(() => {
@@ -145,49 +162,31 @@ export default function GestionCapacitacion() {
     { _id: 'p2', displayName: 'Pedro Pascal' },
   ];
 
-  useEffect(() => {
-    let mounted = true;
-    const fetchTrainings = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await getAllTrainings(); // Cambiar a getAllTrainings para obtener todas
-        // backend may return an array or { items: [] }
-        const items = Array.isArray(data) ? data : (data?.items || []);
-        if (mounted) {
-          const enriched = await fetchAndAttachTrainers(items);
-          setTrainings(enriched);
-        }
-      } catch (err) {
-        console.error('Error fetching trainings', err);
-        if (mounted) setError(err);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
+  const initialLoadRef = useRef(false);
 
-    fetchTrainings();
-    return () => { mounted = false; };
-  }, []);
+  useEffect(() => {
+    if (initialLoadRef.current) return;
+    initialLoadRef.current = true;
+    refreshTrainings();
+  }, [refreshTrainings]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const handleRealtimeStatus = () => {
+      refreshTrainings();
+    };
+    const handleRealtimeDeleted = () => {
+      refreshTrainings();
+    };
+    window.addEventListener('realtime:training-status-changed', handleRealtimeStatus);
+    window.addEventListener('realtime:training-deleted', handleRealtimeDeleted);
+    return () => {
+      window.removeEventListener('realtime:training-status-changed', handleRealtimeStatus);
+      window.removeEventListener('realtime:training-deleted', handleRealtimeDeleted);
+    };
+  }, [refreshTrainings]);
   const [openCreateTraining, setOpenCreateTraining] = useState(false);
   const [editingTraining, setEditingTraining] = useState(null);
-
-  // Función para refrescar las capacitaciones
-  const refreshTrainings = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getAllTrainings(); // Cambiar a getAllTrainings para obtener todas
-      const items = Array.isArray(data) ? data : (data?.items || []);
-  const enriched = await fetchAndAttachTrainers(items);
-  setTrainings(enriched);
-    } catch (err) {
-      console.error('Error fetching trainings', err);
-      setError(err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Función para manejar la creación/actualización de capacitaciones
   const handleCreateTraining = async (trainingData, levels, additionalData = {}) => {
@@ -338,8 +337,12 @@ export default function GestionCapacitacion() {
           }
         } catch (unenrollError) {
           console.warn('Error desinscribiendo guardias:', unenrollError);
-          setWarningMessage(`Capacitación guardada, pero hubo un problema desinscribiendo guardias: ${unenrollError.message}`);
-          setShowWarningModal(true);
+          const errorMessage = unenrollError?.message || '';
+          const isNoUsersError = errorMessage.includes('No hay usuarios inscritos en esta capacitación');
+          if (!isNoUsersError) {
+            setWarningMessage(`Capacitación guardada, pero hubo un problema desinscribiendo guardias: ${errorMessage}`);
+            setShowWarningModal(true);
+          }
         }
       }
 

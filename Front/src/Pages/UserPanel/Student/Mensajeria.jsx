@@ -11,6 +11,20 @@ import { useUser } from "../../../context/UserContext";
 import { MailPlus } from "lucide-react";
 import SideBar from "../../../Components/Student/SideBar";
 
+const normalizeTrainingId = (value) => {
+  if (!value) return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    if (value._id) return value._id;
+    if (value.$oid) return value.$oid;
+    if (typeof value.toString === 'function') {
+      const str = value.toString();
+      return str.startsWith('ObjectId(') ? str.slice(9, -1) : str;
+    }
+  }
+  return String(value);
+};
+
 export default function Mensajeria() {
   const { idTraining } = useParams();
   const location = useLocation();
@@ -32,21 +46,24 @@ export default function Mensajeria() {
     }
   }, [location]);
 
+  // Realtime ahora está manejado globalmente por UserContext con Socket.IO,
+  // por lo que esta pantalla no necesita su propio polling.
+
+  const activeTrainingId = useMemo(() => (idTraining ? String(idTraining) : null), [idTraining]);
+
   const counts = useMemo(() => {
     const items = userData?.messages?.items || [];
-    const matchTraining = (m) => {
-      const t = m?.trainingId;
-      const tid = (t && (t._id || t)) || undefined;
-      if (!tid) return true;
-      return tid === idTraining;
-    };
-    const scoped = items.filter(matchTraining);
+    const scoped = items.filter((m) => {
+      if (!activeTrainingId) return true;
+      const messageTid = normalizeTrainingId(m?.trainingId);
+      return !messageTid || messageTid === activeTrainingId;
+    });
     return {
       inbox: scoped.filter((m) => m.folder === "inbox").length,
       sent: scoped.filter((m) => m.folder === "sent").length,
       trash: scoped.filter((m) => m.folder === "trash").length,
     };
-  }, [userData, idTraining]);
+  }, [userData, activeTrainingId]);
 
   return (
     <>
@@ -129,9 +146,9 @@ export default function Mensajeria() {
               </div>
 
               <div className="mt-4">
-                {tab === "entrada" && <BuzonEntrada hideCompose trainingId={idTraining} sortBy={sortBy} />}
-                {tab === "enviados" && <BuzonEnviados hideCompose trainingId={idTraining} sortBy={sortBy} />}
-                {tab === "eliminados" && <BuzonEliminados trainingId={idTraining} sortBy={sortBy} />}
+                {tab === "entrada" && <BuzonEntrada hideCompose trainingId={activeTrainingId} sortBy={sortBy} />}
+                {tab === "enviados" && <BuzonEnviados hideCompose trainingId={activeTrainingId} sortBy={sortBy} />}
+                {tab === "eliminados" && <BuzonEliminados trainingId={activeTrainingId} sortBy={sortBy} />}
               </div>
             </div>
           </main>
@@ -166,7 +183,7 @@ export default function Mensajeria() {
           setComposeOpen(false);
           setPrefilledRecipient(null);
         }}
-        trainingId={idTraining}
+  trainingId={activeTrainingId}
         prefilledRecipient={prefilledRecipient}
         onSend={async (payload) => {
           try {

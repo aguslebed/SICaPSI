@@ -1,4 +1,5 @@
 import AppError from '../middlewares/AppError.js';
+import { emitToUser } from '../realtime/socket.js';
 
 
 
@@ -18,6 +19,12 @@ export function makeEnrollmentController({ enrollmentService }) {
           try {
             const result = await enrollmentService.enrollUserToTraining(userId, trainingId);
             results.push({ userId, status: "success", message: result.message });
+            try {
+              const tid = result?.training?._id?.toString?.() || trainingId;
+              emitToUser(userId, 'user:data:refresh', { reason: 'training:assigned', trainingId: tid });
+            } catch (socketError) {
+              console.debug('Socket emit failed (training assigned to student):', socketError?.message || socketError);
+            }
           } catch (err) {
             results.push({ userId, status: "error", message: err.message });
           }
@@ -43,6 +50,12 @@ export function makeEnrollmentController({ enrollmentService }) {
           try {
             const result = await enrollmentService.unenrollUserToTraining(userId, trainingId);
             results.push({ userId, status: "success", message: result.message });
+            try {
+              const tid = result?.training?._id?.toString?.() || trainingId;
+              emitToUser(userId, 'user:data:refresh', { reason: 'training:unassigned', trainingId: tid });
+            } catch (socketError) {
+              console.debug('Socket emit failed (training unassigned from student):', socketError?.message || socketError);
+            }
           } catch (err) {
             results.push({ userId, status: "error", message: err.message });
           }
@@ -92,6 +105,12 @@ export function makeEnrollmentController({ enrollmentService }) {
         try {
           const result = await enrollmentService.enrollTrainerToTraining(userId, trainingId);
           results.push({ userId, status: "success", message: result.message });
+          try {
+            const tid = result?.training?._id?.toString?.() || trainingId;
+            emitToUser(userId, 'user:data:refresh', { reason: 'training:assigned', trainingId: tid });
+          } catch (socketError) {
+            console.debug('Socket emit failed (training assigned to trainer):', socketError?.message || socketError);
+          }
         } catch (err) {
           results.push({ userId, status: "error", message: err.message });
         }

@@ -1,4 +1,5 @@
 import AppError from '../middlewares/AppError.js';
+import { emitToRole, emitToUser } from '../realtime/socket.js';
 
 
 
@@ -111,6 +112,25 @@ export function makeTrainingController({ trainingService, trainingValidator }) {
         }
         
         const updatedTraining = await trainingService.updateTraining(id, trainingData);
+
+        if (isStatusUpdate && updatedTraining) {
+          try {
+            const trainingId = updatedTraining?._id?.toString?.() || id;
+            const payload = {
+              trainingId,
+              title: updatedTraining?.title,
+              isActive: updatedTraining?.isActive,
+              pendingApproval: updatedTraining?.pendingApproval,
+              rejectionReason: updatedTraining?.rejectionReason || '',
+              updatedAt: updatedTraining?.updatedAt || new Date(),
+              triggeredBy: req.user?.userId || null
+            };
+            emitToRole('Administrador', 'training:status-changed', payload);
+            emitToRole('Directivo', 'training:status-changed', payload);
+          } catch (socketError) {
+            console.debug('Socket emit failed training status change:', socketError?.message || socketError);
+          }
+        }
         res.status(200).json(updatedTraining);
       } catch (err) {
         next(err);
@@ -120,7 +140,37 @@ export function makeTrainingController({ trainingService, trainingValidator }) {
     async deleteTraining(req, res, next) {
       try {
         const { id } = req.params;
-        await trainingService.deleteTraining(id);
+        const deletionResult = await trainingService.deleteTraining(id);
+
+        const payload = {
+          trainingId: id,
+          title: deletionResult?.trainingTitle || null,
+          deletedAt: new Date().toISOString(),
+          triggeredBy: req.user?.userId || req.user?._id || null
+        };
+
+        try {
+          emitToRole('Administrador', 'training:deleted', payload);
+          emitToRole('Directivo', 'training:deleted', payload);
+          emitToRole('Capacitador', 'training:deleted', payload);
+        } catch (emitRoleError) {
+          console.debug('Socket emit failed training deletion (roles):', emitRoleError?.message || emitRoleError);
+        }
+
+        const affectedUserIds = Array.isArray(deletionResult?.affectedUserIds)
+          ? deletionResult.affectedUserIds
+          : [];
+        if (affectedUserIds.length > 0) {
+          try {
+            affectedUserIds.forEach((uid) => {
+              if (!uid) return;
+              emitToUser(uid, 'user:data:refresh', { reason: 'training:deleted', trainingId: id });
+            });
+          } catch (emitUserError) {
+            console.debug('Socket emit failed training deletion (users):', emitUserError?.message || emitUserError);
+          }
+        }
+
         res.status(200).json({ message: "Capacitación eliminada exitosamente" });
       } catch (err) {
         next(err);

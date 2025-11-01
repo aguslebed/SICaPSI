@@ -26,4 +26,20 @@ router.post("/login", controller.login);
 router.post("/logout", controller.logout);
 router.get("/check-auth", authMiddleware, controller.checkAuth);
 
+// Token para autenticación de Socket.IO (dev-friendly, evita depender de cookies SameSite)
+router.get("/socket-token", authMiddleware, (req, res) => {
+  try {
+    const user = req.user;
+    const token = jwtTokenService.sign({
+      userId: user.userId,
+      email: user.email,
+      role: user.role || 'user',
+      kind: 'socket'
+    }, { expiresIn: '2h' });
+    res.json({ token });
+  } catch (e) {
+    res.status(500).json({ message: 'No se pudo emitir socket-token' });
+  }
+});
+
 export default router;

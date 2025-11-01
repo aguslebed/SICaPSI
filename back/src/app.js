@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 import express from "express";
+import http from "http";
 import cors from "cors";
 import authRoutes from "./routes/authRoutes.js";
 import { connectDB } from "./config/db.js";
@@ -16,6 +17,7 @@ import enrollmentRoutes from "./routes/enrollmentRoutes.js";
 import levelRoutes from "./routes/levelRoutes.js";
 import { startTrainingScheduler } from "./utils/trainingScheduler.js";
 import progressRoutes from "./routes/progressRoutes.js";
+import { initRealtime } from "./realtime/socket.js";
 
 
 // __dirname equivalent for ES Modules
@@ -40,6 +42,7 @@ class AppConfig {
   constructor() {
     this.app = express();
     this.PORT = process.env.PORT || 4000;
+    this.server = http.createServer(this.app);
   }
 
   /**
@@ -113,12 +116,17 @@ class AppConfig {
       this.configureRoutes();
       this.configureErrorHandling();
 
+      // Inicializar realtime (WebSocket) y compartir instancia en la app
+      const io = initRealtime(this.server);
+      this.app.set('io', io);
+
       // Iniciar scheduler de capacitaciones
       startTrainingScheduler();
 
       // Iniciar servidor
-      this.app.listen(this.PORT, "0.0.0.0", () => {
+      this.server.listen(this.PORT, "0.0.0.0", () => {
         console.log(`🚀 Servidor corriendo en http://localhost:${this.PORT}`);
+        console.log(`📡 WebSocket listo (Socket.IO)`);
       });
     } catch (error) {
       console.error("❌ Error al iniciar servidor:", error);

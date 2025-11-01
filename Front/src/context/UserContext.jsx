@@ -1,6 +1,7 @@
 
 import { createContext, useState, useContext, useEffect, useRef, useMemo, useCallback } from "react";
-import { getMe } from "../API/Request";
+import { io } from "socket.io-client";
+import { getMe, getSocketToken } from "../API/Request";
 
 const UserContext = createContext();
 
@@ -27,9 +28,11 @@ export function UserProvider({ children }) {
 
   // Polling: refrescar datos del usuario periódicamente para detectar nuevos mensajes
   const pollRef = useRef(null);
+  const socketRef = useRef(null);
   useEffect(() => {
+    const authUserId = userData?.user?._id || userData?._id;
     // Solo hacemos polling cuando hay un usuario autenticado con _id válido
-    if (!userData || !userData._id) return;
+    if (!authUserId) return;
 
     let mounted = true;
     const POLL_INTERVAL = 20000; // 20 segundos
@@ -38,15 +41,15 @@ export function UserProvider({ children }) {
       try {
         const fresh = await getMe();
         if (!mounted) return;
-        // Actualizar solo si hay cambios (evita reescrituras constantes)
-        try {
-          const prev = JSON.stringify(userData);
-          const next = JSON.stringify(fresh);
-          if (prev !== next) setUserDataState(fresh);
-        } catch (e) {
-          // si falla la comparación, actualizamos para ser conservadores
-          setUserDataState(fresh);
-        }
+        setUserDataState((prev) => {
+          try {
+            const prevStr = JSON.stringify(prev);
+            const nextStr = JSON.stringify(fresh);
+            return prevStr === nextStr ? prev : fresh;
+          } catch {
+            return fresh;
+          }
+        });
       } catch (e) {
         // Si hay error de autenticación, limpiar los datos de usuario
         if (e.message?.includes('No autenticado') || e.message?.includes('Usuario no encontrado')) {
@@ -78,7 +81,105 @@ export function UserProvider({ children }) {
       if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [userData?.__proto__ === Object.prototype ? userData?._id : userData?._id]);
+  }, [userData?.user?._id, userData?._id]);
+
+  // Realtime via Socket.IO: conecta una vez autenticado y escucha eventos de actualización
+  useEffect(() => {
+    const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
+    const authUserId = userData?.user?._id || userData?._id;
+
+    if (!authUserId) {
+      // Si se cerró sesión, desconectar socket (si existiera)
+      if (socketRef.current) {
+        try { socketRef.current.disconnect(); } catch {}
+        socketRef.current = null;
+      }
+      return;
+    }
+
+    // Evitar conexiones duplicadas
+    if (socketRef.current?.connected) return;
+
+    // Obtener token de socket vía cookie (servidor) y luego autenticar el socket
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = await getSocketToken();
+        if (cancelled) return;
+
+        const socket = io(BASE, {
+          transports: ["websocket"],
+          reconnection: true,
+          reconnectionAttempts: Infinity,
+          reconnectionDelay: 1000,
+          reconnectionDelayMax: 5000,
+          auth: { token }
+        });
+        socketRef.current = socket;
+
+        const handleRefresh = async () => {
+          try {
+            const fresh = await getMe();
+            setUserDataState((prev) => {
+              try {
+                const prevStr = JSON.stringify(prev);
+                const nextStr = JSON.stringify(fresh);
+                return prevStr === nextStr ? prev : fresh;
+              } catch {
+                return fresh;
+              }
+            });
+          } catch (e) {
+            // Si falla, el polling global eventualmente recuperará
+            // console.debug('getMe() falló tras evento realtime:', e?.message || e);
+          }
+        };
+
+        socket.on('connect', () => {
+          // Opcional: sincronizar al conectar
+          handleRefresh();
+        });
+        socket.on('disconnect', () => {
+          // noop; socket.io intentará reconectar
+        });
+        socket.on('user:data:refresh', () => {
+          handleRefresh();
+        });
+        socket.on('training:status-changed', (payload) => {
+          handleRefresh();
+          if (typeof window !== 'undefined' && window.dispatchEvent) {
+            window.dispatchEvent(new CustomEvent('realtime:training-status-changed', { detail: payload }));
+          }
+        });
+        socket.on('training:deleted', (payload) => {
+          handleRefresh();
+          if (typeof window !== 'undefined' && window.dispatchEvent) {
+            window.dispatchEvent(new CustomEvent('realtime:training-deleted', { detail: payload }));
+          }
+        });
+      } catch (e) {
+        // Fallará si la cookie no está o no hay sesión; el polling se mantiene como respaldo
+        // console.debug('No se pudo iniciar socket realtime:', e?.message || e);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      const socket = socketRef.current;
+      try {
+        if (socket) {
+          socket.off('user:data:refresh');
+          socket.off('training:status-changed');
+          socket.off('training:deleted');
+          socket.off('connect');
+          socket.off('disconnect');
+          socket.disconnect();
+        }
+      } catch {}
+      socketRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userData?.user?._id, userData?._id]);
 
   // Función para cerrar sesión y limpiar userData (memoizada)
   const logoutUser = useCallback(() => {

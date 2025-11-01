@@ -106,6 +106,8 @@ export default function ValidarContenido() {
     return `${author.firstName} ${author.lastName}`;
   };
 
+  const renderHtml = (value) => ({ __html: value || '' });
+
   return (
     <>
       <NavBar />
@@ -143,8 +145,8 @@ export default function ValidarContenido() {
               ) : (
               contenidos.map((contenido, idx) => (
                 <div key={contenido._id} className="registros-row" style={{ display: 'flex', alignItems: 'center', padding: '1rem 0.5rem', borderBottom: idx === contenidos.length - 1 ? 'none' : '1px solid #e0e0e0' }}>
-                  <div style={{ flex: 2, paddingLeft: '1rem' }}>{contenido.title}</div>
-                  <div style={{ flex: 2 }}>{contenido.subtitle || contenido.description}</div>
+                  <div style={{ flex: 2, paddingLeft: '1rem' }} dangerouslySetInnerHTML={renderHtml(contenido.title)} />
+                  <div style={{ flex: 2 }} dangerouslySetInnerHTML={renderHtml(contenido.subtitle || contenido.description)} />
                   <div style={{ flex: 2 }}>{getAuthorName(contenido.createdBy)}</div>
                   <div style={{ flex: 1 }}>{formatDate(contenido.createdAt)}</div>
                   <div style={{ flex: 1 }}>
@@ -265,15 +267,15 @@ export default function ValidarContenido() {
               </div>
               {/* Título */}
               <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '1.5rem', marginBottom: '0.5rem', marginTop: '0.5rem' }}>
-                {selectedContenido.title}
+                <span dangerouslySetInnerHTML={renderHtml(selectedContenido.title)} />
               </div>
               {/* Subtítulo/Descripción corta */}
               <div style={{ textAlign: 'center', fontStyle: 'italic', color: '#757575', fontSize: '1.1rem', marginBottom: '1rem' }}>
-                {selectedContenido.subtitle || selectedContenido.shortDescription}
+                <span dangerouslySetInnerHTML={renderHtml(selectedContenido.subtitle || selectedContenido.shortDescription)} />
               </div>
               {/* Descripción larga */}
               <div style={{ textAlign: 'center', color: '#333', fontSize: '1rem', marginBottom: '1.5rem' }}>
-                {selectedContenido.description}
+                <span dangerouslySetInnerHTML={renderHtml(selectedContenido.description)} />
               </div>
               {/* Botones de acción */}
               {selectedContenido.pendingApproval && (

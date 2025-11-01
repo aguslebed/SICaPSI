@@ -2,22 +2,43 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useUser } from "../../context/UserContext";
 import ModalWrapper from "../Modals/ModalWrapper";
 import MessageDetail from "./MessageDetail";
-import { restoreMessage, deleteMessagePermanent, bulkRestoreMessages, bulkDeleteMessagesPermanent, getMe, sendMessage } from "../../API/Request";
+import { bulkRestoreMessages, bulkDeleteMessagesPermanent, getMe, sendMessage } from "../../API/Request";
 import ComposeModal from "./ComposeModal";
 import ConfirmActionModal from "../Modals/ConfirmActionModal";
 import LoadingOverlay from "../Shared/LoadingOverlay";
 import ErrorModal from "../Modals/ErrorModal";
 import SucessModal from "../Modals/SucessModal";
+import { Search } from "lucide-react";
+
+const normalizeTrainingId = (value) => {
+  if (!value) return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    if (value._id) return value._id;
+    if (value.$oid) return value.$oid;
+    if (typeof value.toString === 'function') {
+      const str = value.toString();
+      return str.startsWith('ObjectId(') ? str.slice(9, -1) : str;
+    }
+  }
+  return String(value);
+};
 
 export default function BuzonEliminados({ trainingId, sortBy = 'fecha' }) {
   const { userData, setUserData } = useUser();
 
   // Mensajes eliminados (carpeta 'trash')
+  const normalizedTrainingId = useMemo(() => (trainingId ? String(trainingId) : null), [trainingId]);
+
   const trash = useMemo(
     () => (userData?.messages?.items || [])
       .filter((m) => m.folder === "trash")
-      .filter((m) => { const t = m?.trainingId; const tid = (t && (t._id || t)) || undefined; return !tid || tid === trainingId; }),
-    [userData, trainingId]
+      .filter((m) => {
+        if (!normalizedTrainingId) return true;
+        const messageTid = normalizeTrainingId(m?.trainingId);
+        return !messageTid || messageTid === normalizedTrainingId;
+      }),
+    [userData, normalizedTrainingId]
   );
 
   const [messages, setMessages] = useState(trash);
@@ -32,6 +53,7 @@ export default function BuzonEliminados({ trainingId, sortBy = 'fecha' }) {
   const [confirmAction, setConfirmAction] = useState({ open: false, type: null, ids: [] });
   const [composeOpen, setComposeOpen] = useState(false);
   const [replyInitial, setReplyInitial] = useState(null);
+  const [query, setQuery] = useState('');
   // Paginación
   const pageSize = 10;
   const totalItems = messages.length;
@@ -54,20 +76,33 @@ export default function BuzonEliminados({ trainingId, sortBy = 'fecha' }) {
     }
     // Orden por fecha desc o por remitente (origen) si se requiere
     let list = trash;
+    const q = query.trim().toLowerCase();
+    if (q) {
+      list = list.filter((m) => {
+        const senderName = `${m.sender?.firstName || ''} ${m.sender?.lastName || ''}`.toLowerCase();
+        const senderEmail = (m.sender?.email || '').toLowerCase();
+        const subject = (m.subject || '').toLowerCase();
+        const body = (m.message || '').toLowerCase();
+        return senderName.includes(q) || senderEmail.includes(q) || subject.includes(q) || body.includes(q);
+      });
+    }
     if (sortBy === 'remitente') {
       list = [...list].sort((a, b) => {
         const an = `${a.sender?.lastName || ''} ${a.sender?.firstName || ''}`.toLowerCase();
         const bn = `${b.sender?.lastName || ''} ${b.sender?.firstName || ''}`.toLowerCase();
         return an.localeCompare(bn);
       });
+    } else if (sortBy === 'unread') {
+      // En papelera no se distingue lectura; ordenar por fecha
+      list = [...list].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     } else {
       list = [...list].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
     setMessages(list);
-  }, [trash, sortBy]);
+  }, [trash, sortBy, query]);
 
   // Reset a la primera página cuando cambia el orden
-  useEffect(() => { setCurrentPage(1); }, [sortBy]);
+  useEffect(() => { setCurrentPage(1); }, [sortBy, query]);
 
   // Clamp current page si cambia el tamaño de la lista
   useEffect(() => {
@@ -102,7 +137,21 @@ export default function BuzonEliminados({ trainingId, sortBy = 'fecha' }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <h3 className="text-xl font-semibold">🗑️ Mensajes eliminados</h3>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h3 className="text-xl font-semibold">🗑️ Mensajes eliminados</h3>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <input
+            type="text"
+            placeholder="Buscar"
+            className="border px-3 py-2 rounded flex-1 min-w-0"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <button type="button" className="cursor-pointer px-3 py-2 border rounded text-blue-600 hover:bg-blue-50">
+            <Search size={18} />
+          </button>
+        </div>
+      </div>
 
       <div className="text-sm text-gray-700 flex items-center flex-wrap gap-2">
         <button

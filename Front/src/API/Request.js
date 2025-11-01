@@ -124,6 +124,17 @@ export async function getMe() {
   return data;
 }
 
+// Obtener token para autenticar Socket.IO sin depender de cookies SameSite
+export async function getSocketToken() {
+  try {
+    const { data } = await api.get('/auth/socket-token');
+    return data?.token;
+  } catch (error) {
+    console.error('❌ Error obteniendo socket-token:', error);
+    throw new Error('No se pudo obtener token de socket');
+  }
+}
+
 // Actualiza datos del usuario por ID
 export async function updateUser(userId, patch) {
   try {

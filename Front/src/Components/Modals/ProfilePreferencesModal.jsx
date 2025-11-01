@@ -46,6 +46,7 @@ const ProfilePreferencesModal = ({ open, onClose }) => {
   const [pwdSaving, setPwdSaving] = useState(false);
   const [cropModalOpen, setCropModalOpen] = useState(false);
   const [selectedImageSrc, setSelectedImageSrc] = useState(null);
+  const [pendingImageFile, setPendingImageFile] = useState(null);
 
   const setField = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
 
@@ -76,6 +77,13 @@ const ProfilePreferencesModal = ({ open, onClose }) => {
     setSaving(true);
     setError('');
     setSuccess('');
+
+    const imageToUpload = pendingImageFile;
+    const shouldUploadImage = Boolean(imageToUpload);
+    if (shouldUploadImage) {
+      setUploading(true);
+    }
+
     try {
       // Patch para el backend solo de campos existentes en el modelo User
       // Ver `back/src/formatters/UserResponseFormatter.js` para los campos válidos
@@ -93,6 +101,10 @@ const ProfilePreferencesModal = ({ open, onClose }) => {
 
       await updateUser(userId, patch);
 
+      if (shouldUploadImage) {
+        await uploadProfileImage(userId, imageToUpload);
+      }
+
       // Actualizar contexto con datos frescos del backend
       const fresh = await getMe();
       setUserData(fresh);
@@ -106,11 +118,15 @@ const ProfilePreferencesModal = ({ open, onClose }) => {
       };
       sessionStorage.setItem('user_prefs', JSON.stringify(prefs));
 
-      setSuccess('Datos actualizados');
+      setPendingImageFile(null);
+      setSuccess(shouldUploadImage ? 'Datos e imagen actualizados' : 'Datos actualizados');
     } catch (err) {
       setError(err.message || 'Error al guardar');
     } finally {
       setSaving(false);
+      if (shouldUploadImage) {
+        setUploading(false);
+      }
     }
   };
 
@@ -137,28 +153,23 @@ const ProfilePreferencesModal = ({ open, onClose }) => {
 
   const handleCropComplete = async (croppedBlob) => {
     if (!croppedBlob || !userId) return;
-    
-    setUploading(true);
+
     setError('');
     setSuccess('');
-    
+
     try {
-      // Create a File from the blob
       const croppedFile = new File([croppedBlob], 'profile.jpg', { type: 'image/jpeg' });
-      
-      // Optimistic preview
+
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+
       const localUrl = URL.createObjectURL(croppedBlob);
       setPreviewUrl(localUrl);
-      
-      // Upload to server
-      await uploadProfileImage(userId, croppedFile);
-      const fresh = await getMe();
-      setUserData(fresh);
-      setSuccess('Imagen actualizada');
+      setPendingImageFile(croppedFile);
+      setSuccess('Guardá los cambios para aplicar la nueva imagen');
     } catch (err) {
-      setError(err.message || 'Error al subir imagen');
-    } finally {
-      setUploading(false);
+      setError(err.message || 'Error al preparar la imagen');
     }
   };
 

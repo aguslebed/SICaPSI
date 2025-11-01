@@ -13,7 +13,17 @@ export function makeMessageController({ messageService, messageFormatter }) {
         if (!subject || !body || (!to && !recipientId)) throw new AppError('Campos requeridos: to o recipientId, subject, body', 400);
         if (!trainingId) throw new AppError('trainingId requerido', 400);
         const created = await messageService.send({ senderId, recipientEmail: to, recipientId, subject, message: body, attachments, trainingId });
-        res.status(201).json(messageFormatter.format(created));
+        const formatted = messageFormatter.format(created);
+        // Emitir evento realtime a remitente y destinatario
+        try {
+          const io = req.app?.get('io');
+          const recipientUserId = formatted?.recipient?._id?.toString?.() || formatted?.recipient;
+          if (io) {
+            if (recipientUserId) io.to(`user:${recipientUserId}`).emit('user:data:refresh', { reason: 'message:received', trainingId });
+            if (senderId) io.to(`user:${senderId}`).emit('user:data:refresh', { reason: 'message:sent', trainingId });
+          }
+        } catch (e) { /* no romper respuesta por errores de socket */ }
+        res.status(201).json(formatted);
       } catch (err) { next(err); }
     },
 
@@ -24,7 +34,12 @@ export function makeMessageController({ messageService, messageFormatter }) {
         const { id } = req.params;
         const { isRead } = req.body || {};
         const updated = await messageService.setRead({ messageId: id, userId, isRead: !!isRead });
-        res.json(messageFormatter.format(updated));
+        const formatted = messageFormatter.format(updated);
+        try {
+          const io = req.app?.get('io');
+          if (io) io.to(`user:${userId}`).emit('user:data:refresh', { reason: 'message:read', messageId: id });
+        } catch {}
+        res.json(formatted);
       } catch (err) { next(err); }
     },
 
@@ -34,7 +49,12 @@ export function makeMessageController({ messageService, messageFormatter }) {
         if (!userId) throw new AppError('No autorizado', 401);
         const { id } = req.params;
         const updated = await messageService.moveToTrash({ messageId: id, userId });
-        res.json(messageFormatter.format(updated));
+        const formatted = messageFormatter.format(updated);
+        try {
+          const io = req.app?.get('io');
+          if (io) io.to(`user:${userId}`).emit('user:data:refresh', { reason: 'message:trash', messageId: id });
+        } catch {}
+        res.json(formatted);
       } catch (err) { next(err); }
     },
 
@@ -44,7 +64,12 @@ export function makeMessageController({ messageService, messageFormatter }) {
         if (!userId) throw new AppError('No autorizado', 401);
         const { id } = req.params;
         const updated = await messageService.restore({ messageId: id, userId });
-        res.json(messageFormatter.format(updated));
+        const formatted = messageFormatter.format(updated);
+        try {
+          const io = req.app?.get('io');
+          if (io) io.to(`user:${userId}`).emit('user:data:refresh', { reason: 'message:restore', messageId: id });
+        } catch {}
+        res.json(formatted);
       } catch (err) { next(err); }
     },
 
@@ -54,6 +79,10 @@ export function makeMessageController({ messageService, messageFormatter }) {
         if (!userId) throw new AppError('No autorizado', 401);
         const { id } = req.params;
         const result = await messageService.deletePermanent({ messageId: id, userId });
+        try {
+          const io = req.app?.get('io');
+          if (io) io.to(`user:${userId}`).emit('user:data:refresh', { reason: 'message:delete', messageId: id });
+        } catch {}
         res.json(result);
       } catch (err) { next(err); }
     },
