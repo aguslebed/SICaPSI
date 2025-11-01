@@ -2,15 +2,47 @@ import React, {useEffect, useState} from "react";
 import { useParams } from "react-router-dom";
 import { useUser } from "../../../context/UserContext";
 import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
-import { resolveImageUrl, getMe } from "../../../API/Request";
+import { resolveImageUrl, getMe, getTrainingProgress } from "../../../API/Request";
 import { normalizeRichTextValue, getPlainTextFromRichText } from "../../../Components/Modals/CreateTrainingModal/RichTextInput";
 
 const TrainingIndex = () => {
   const { idTraining } = useParams();
   const { userData, setUserData } = useUser();
-  if (!userData || !Array.isArray(userData.training)) {
+  const [trainingProgress, setTrainingProgress] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadTrainingProgress = async () => {
+      if (!userData || !idTraining) {
+        setLoading(false);
+        return;
+      }
+
+      const userId = userData?.user?._id || userData?._id;
+      if (!userId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const progressResponse = await getTrainingProgress(idTraining, userId);
+        const progressData = progressResponse.data || progressResponse;
+        setTrainingProgress(progressData.progressPercent || 0);
+      } catch (error) {
+        console.error(`Error obteniendo progreso del curso ${idTraining}:`, error);
+        setTrainingProgress(0);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTrainingProgress();
+  }, [idTraining, userData]);
+
+  if (!userData || !Array.isArray(userData.training) || loading) {
     return <LoadingOverlay label="Cargando datos de capacitación..." />;
   }
+  
   const training = userData.training.find(c => c._id === idTraining);
   if (!training) return <p className="text-center mt-20">Capacitación no encontrada</p>;
 
@@ -33,14 +65,16 @@ const TrainingIndex = () => {
             </div>
             {/* Barra de progress */}
             {userData.user.role === "Alumno" && (
-              <div className="w-full bg-gray-200 h-6">
-              <div
-                className="bg-green-500 h-6 text-center text-sm font-semibold text-white"
-                style={{ width: `${training.progressPercentage}%` }}
-              >
-                {training.progressPercentage}%
+              <div className="w-full bg-gray-200 h-6 relative">
+                <div className="absolute w-full h-6 text-center text-sm font-semibold text-gray-700 flex items-center justify-center">
+                  {trainingProgress}%
+                </div>
+                <div
+                  className="bg-green-500 h-6 text-center text-sm font-semibold text-white flex items-center justify-center"
+                  style={{ width: `${trainingProgress}%` }}
+                >
+                </div>
               </div>
-            </div>
             )}
             
             {/* Descripción */}
