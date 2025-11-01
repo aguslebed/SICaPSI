@@ -1,6 +1,7 @@
 import React from 'react';
 
 export default function AssignTeacher({ teachers, loadingTeachers, assignedTeacher, setAssignedTeacher }) {
+  console.log(teachers)
   return (
   <div className="p-2 bg-white">
       {loadingTeachers ? (
@@ -24,11 +25,13 @@ export default function AssignTeacher({ teachers, loadingTeachers, assignedTeach
                   className="w-full border border-gray-300 rounded-sm px-2 py-1 text-sm placeholder:text-sm focus:ring-2 focus:ring-green-50 focus:border-transparent transition-shadow cursor-pointer bg-white" 
                 >
                   <option value="">-- Seleccione un profesor --</option>
-                  {teachers.map((teacher) => (
-                    <option key={teacher._id} value={teacher._id}>
-                      {teacher.firstName} {teacher.lastName} - {teacher.email}
-                    </option>
-                  ))}
+                  {teachers
+                    .filter(teacher => teacher.status != 'disabled')
+                    .map((teacher) => (
+                      <option key={teacher._id} value={teacher._id}>
+                        {teacher.firstName} {teacher.lastName} - {teacher.email}
+                      </option>
+                    ))}
                 </select>
                 <p className="text-sm text-gray-500 mt-1">
                   {teachers.length === 0 
