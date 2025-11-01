@@ -26,6 +26,8 @@ export async function login(email, password) {
     // 2. Obtener datos completos del usuario autenticado
     const { data } = await api.get("/users/connect/me"); 
 
+    // Nota: la restricción por estado ahora se valida en el backend durante /auth/login
+
     // 3. Actualizar último login
     if (data.user?._id) {
       try {
@@ -40,6 +42,11 @@ export async function login(email, password) {
     return data;
   } catch (error) {
     console.error("❌ Error en login:", error);
+
+    // Preservar mensajes lanzados manualmente dentro del try (p. ej., estado de usuario no disponible)
+    if (!error.response && !error.request && error?.message) {
+      throw new Error(error.message);
+    }
 
     if (error.response) {
       const status = error.response.status;

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { APIRegistro } from "../../API/Request";
 import ModalMensajeRegistro from "../../Components/Modals/RegisterModal";
@@ -117,24 +117,67 @@ function Register() {
     }
   };
 
+  // Utilidades de validación y límites convencionales
+  const nameRegex = /[^A-Za-zÁÉÍÓÚáéíóúÑñÜü' -]/g; // para limpiar caracteres no permitidos
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  const addressAllowed = /[^A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9 .,#º°-]/g; // caracteres comunes de dirección
+
+  const maxBirthDate = useMemo(() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 16); // mínimo 16 años
+    return d.toISOString().split("T")[0];
+  }, []);
+  const minBirthDate = "1900-01-01";
+
+  const docConfig = useMemo(() => {
+    switch (documentType) {
+      case "DNI":
+        return { type: "numeric", max: 8, pattern: /^\d{7,8}$/, help: "7 a 8 dígitos" };
+      case "CUIL/CUIT":
+        return { type: "numeric", max: 11, pattern: /^\d{11}$/, help: "11 dígitos" };
+      case "Pasaporte":
+        return { type: "alnum", max: 9, pattern: /^[A-Z0-9]{6,9}$/, help: "6 a 9 caracteres alfanuméricos" };
+      default:
+        return { type: "any", max: 12, pattern: /.*/, help: "" };
+    }
+  }, [documentType]);
+
+  const sanitizeNumeric = (val, maxLen) => val.replace(/\D/g, "").slice(0, maxLen);
+  const sanitizeName = (val) => val.replace(nameRegex, "").replace(/\s{2,}/g, " ").trimStart().slice(0, 50);
+  const sanitizeAddress = (val) => val.replace(addressAllowed, "").replace(/\s{2,}/g, " ").slice(0, 60);
+  const sanitizeApartment = (val) => val.replace(/[^A-Za-z0-9 -]/g, "").slice(0, 10);
+  const sanitizePassport = (val, maxLen) => val.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, maxLen);
+
+  const validateBeforeSubmit = () => {
+    const errors = [];
+    if (!firstName || firstName.trim().length < 2) errors.push("Nombre inválido. Debe contener solo letras y mínimo 2 caracteres.");
+    if (!lastName || lastName.trim().length < 2) errors.push("Apellido inválido. Debe contener solo letras y mínimo 2 caracteres.");
+    if (!documentType) errors.push("Seleccione el tipo de documento.");
+    if (documentType === "DNI" && !/^\d{7,8}$/.test(documentNumber)) errors.push("DNI inválido. Debe tener 7 u 8 dígitos.");
+    if (documentType === "CUIL/CUIT" && !/^\d{11}$/.test(documentNumber)) errors.push("CUIL/CUIT inválido. Debe tener 11 dígitos.");
+    if (documentType === "Pasaporte" && !/^[A-Z0-9]{6,9}$/.test(documentNumber)) errors.push("Pasaporte inválido. Debe ser alfanumérico (6 a 9).");
+    if (!birthDate || birthDate < minBirthDate || birthDate > maxBirthDate) errors.push("Fecha de nacimiento inválida (mínimo 16 años).");
+    if (!emailRegex.test(email)) errors.push("Correo electrónico inválido.");
+    if (!/^\d{4,5}$/.test(postalCode)) errors.push("Código postal inválido (4 a 5 dígitos).");
+    if (!address || address.length < 3) errors.push("Dirección inválida (mínimo 3 caracteres).");
+    if (!/^\d{1,6}$/.test(addressNumber)) errors.push("Número de dirección inválido (solo dígitos, hasta 6).");
+    if (!province) errors.push("Seleccione una provincia.");
+    if (!ciudad) errors.push("Seleccione una ciudad.");
+    if (!/^\d{2,4}$/.test(areaCode)) errors.push("Código de área inválido (2 a 4 dígitos).");
+    if (!/^\d{6,10}$/.test(phone)) errors.push("Teléfono inválido (6 a 10 dígitos).");
+    if (!password || password.length < 8 || password.length > 64) {
+      errors.push("La contraseña debe tener entre 8 y 64 caracteres.");
+    }
+    if (password !== rePassword) errors.push("Las contraseñas no coinciden.");
+    if (!isAdminCreateRoute && !aceptaTerminos) errors.push("Debe aceptar los términos y condiciones.");
+    return errors;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Validar usando los estados
-    if (!firstName || !lastName || !documentType || !documentNumber || !birthDate 
-     || !email || !postalCode || !address || !addressNumber || !province || !ciudad || !areaCode || !phone || !password 
-     || !rePassword) {
-      setValidationMessage("Debe completar todos los campos");
-      setShowValidationModal(true);
-      return;
-    }
-    if (password !== rePassword) {
-      setValidationMessage("Las contraseñas no coinciden");
-      setShowValidationModal(true);
-      return;
-    }
-    if (!isAdminCreateRoute && !aceptaTerminos) {
-      setValidationMessage("Debe aceptar los términos y condiciones");
+    const errors = validateBeforeSubmit();
+    if (errors.length) {
+      setValidationMessage(errors[0]); // mostramos el primer error para guiar paso a paso
       setShowValidationModal(true);
       return;
     }
@@ -258,27 +301,62 @@ function Register() {
                 placeholder="Nombre"
                 className="border rounded-md px-2.5 py-1.5 w-full text-sm"
                 value={firstName}
-                onChange={e => setfirstName(e.target.value)}
+                onChange={e => setfirstName(sanitizeName(e.target.value))}
+                minLength={2}
+                maxLength={50}
+                required
+                inputMode="text"
+                autoComplete="given-name"
+                title="Solo letras, mínimo 2 y máximo 50 caracteres"
               />
               <input
                 type="text"
                 placeholder="Apellido"
                 className="border rounded-md px-2.5 py-1.5 w-full text-sm"
                 value={lastName}
-                onChange={e => setlastName(e.target.value)}
+                onChange={e => setlastName(sanitizeName(e.target.value))}
+                minLength={2}
+                maxLength={50}
+                required
+                inputMode="text"
+                autoComplete="family-name"
+                title="Solo letras, mínimo 2 y máximo 50 caracteres"
               />
             </div>
 
             {/* DNI y Fecha de Nacimiento */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-              <select className="border rounded-md px-2.5 py-1.5 w-full cursor-pointer text-sm" value={documentType} onChange={e => setdocumentType(e.target.value)}>
+              <select className="border rounded-md px-2.5 py-1.5 w-full cursor-pointer text-sm" value={documentType} onChange={e => setdocumentType(e.target.value)} required>
                 <option value="">Tipo de documento</option>
                 <option value="DNI">DNI</option>
                 <option value="CUIL/CUIT">CUIL/CUIT</option>
                 <option value="Pasaporte">Pasaporte</option>
               </select>
-              <input type="text" placeholder="Número" className="border rounded-md px-2.5 py-1.5 w-full text-sm" value={documentNumber} onChange={e => setdocumentNumber(e.target.value)} />
-              <input type="date" className="border rounded-md px-2.5 py-1.5 w-full text-sm" value={birthDate} onChange={e => setbirthDate(e.target.value)} />
+              <input
+                type="text"
+                placeholder="Número"
+                className="border rounded-md px-2.5 py-1.5 w-full text-sm"
+                value={documentNumber}
+                onChange={e => {
+                  const v = e.target.value;
+                  if (docConfig.type === "numeric") setdocumentNumber(sanitizeNumeric(v, docConfig.max));
+                  else if (docConfig.type === "alnum") setdocumentNumber(sanitizePassport(v, docConfig.max));
+                  else setdocumentNumber(v.slice(0, docConfig.max));
+                }}
+                maxLength={docConfig.max}
+                required
+                inputMode={docConfig.type === "numeric" ? "numeric" : "text"}
+                title={docConfig.help || "Número de documento"}
+              />
+              <input
+                type="date"
+                className="border rounded-md px-2.5 py-1.5 w-full text-sm"
+                value={birthDate}
+                onChange={e => setbirthDate(e.target.value)}
+                min={minBirthDate}
+                max={maxBirthDate}
+                required
+              />
             </div>
 
             {/* Email y Código Postal */}
@@ -288,14 +366,24 @@ function Register() {
                 placeholder="e-mail"
                 className="border rounded-md px-2.5 py-1.5 w-full text-sm"
                 value={email}
-                onChange={e => setEmail(e.target.value)}
+                onChange={e => setEmail(e.target.value.trim())}
+                maxLength={254}
+                required
+                autoComplete="email"
+                inputMode="email"
+                title="Debe ser un correo válido"
               />
               <input
                 type="text"
                 placeholder="Código Postal"
                 className="border rounded-md px-2.5 py-1.5 w-full text-sm"
                 value={postalCode}
-                onChange={e => setpostalCode(e.target.value)}
+                onChange={e => setpostalCode(sanitizeNumeric(e.target.value, 5))}
+                inputMode="numeric"
+                maxLength={5}
+                minLength={4}
+                required
+                title="4 a 5 dígitos"
               />
             </div>
 
@@ -306,21 +394,32 @@ function Register() {
                 placeholder="Dirección"
                 className="border rounded-md px-2.5 py-1.5 col-span-1 text-sm"
                 value={address}
-                onChange={e => setaddress(e.target.value)}
+                onChange={e => setaddress(sanitizeAddress(e.target.value))}
+                minLength={3}
+                maxLength={60}
+                required
+                autoComplete="address-line1"
+                title="Ingrese una dirección válida (máx. 60 caracteres)"
               />
               <input
                 type="text"
                 placeholder="Número"
                 className="border rounded-md px-2.5 py-1.5 col-span-1 text-sm"
                 value={addressNumber}
-                onChange={e => setaddressNumber(e.target.value)}
+                onChange={e => setaddressNumber(sanitizeNumeric(e.target.value, 6))}
+                inputMode="numeric"
+                maxLength={6}
+                required
+                title="Solo dígitos (hasta 6)"
               />
               <input
                 type="text"
                 placeholder="Departamento"
                 className="border rounded-md px-2.5 py-1.5 col-span-1 text-sm"
                 value={apartment}
-                onChange={e => setapartment(e.target.value)}
+                onChange={e => setapartment(sanitizeApartment(e.target.value))}
+                maxLength={10}
+                title="Opcional. Solo letras, números, espacio y guión"
               />
             </div>
 
@@ -330,6 +429,7 @@ function Register() {
                 className="border rounded-md px-2.5 py-1.5 w-full max-h-48 overflow-y-auto cursor-pointer text-sm"
                 value={province}
                 onChange={handleprovinceChange}
+                required
               >
                 <option value="">Provincia</option>
                 {provincesArchivos.map(p => (
@@ -341,6 +441,7 @@ function Register() {
                 value={ciudad}
                 onChange={e => setCiudad(e.target.value)}
                 disabled={!province}
+                required
               >
                 <option value="">Ciudad</option>
                 {ciudades.map(c => (
@@ -356,14 +457,24 @@ function Register() {
                 placeholder="Código de área"
                 className="border rounded-md px-2.5 py-1.5 w-full text-sm"
                 value={areaCode}
-                onChange={e => setareaCode(e.target.value)}
+                onChange={e => setareaCode(sanitizeNumeric(e.target.value, 4))}
+                inputMode="numeric"
+                maxLength={4}
+                minLength={2}
+                required
+                title="2 a 4 dígitos"
               />
               <input
                 type="text"
                 placeholder="Número de teléfono"
                 className="border rounded-md px-2.5 py-1.5 w-full text-sm"
                 value={phone}
-                onChange={e => setphone(e.target.value)}
+                onChange={e => setphone(sanitizeNumeric(e.target.value, 10))}
+                inputMode="numeric"
+                maxLength={10}
+                minLength={6}
+                required
+                title="6 a 10 dígitos"
               />
             </div>
 
@@ -374,14 +485,23 @@ function Register() {
                 placeholder="Contraseña"
                 className="border rounded-md px-2.5 py-1.5 w-full text-sm"
                 value={password}
-                onChange={e => setPassword(e.target.value)}
+                onChange={e => setPassword(e.target.value.slice(0, 64))}
+                minLength={8}
+                maxLength={64}
+                required
+                autoComplete="new-password"
+                title="8 a 64 caracteres"
               />
               <input
                 type="password"
                 placeholder="Repetir contraseña"
                 className="border rounded-md px-2.5 py-1.5 w-full text-sm"
                 value={rePassword}
-                onChange={e => setrePassword(e.target.value)}
+                onChange={e => setrePassword(e.target.value.slice(0, 64))}
+                minLength={8}
+                maxLength={64}
+                required
+                autoComplete="new-password"
               />
             </div>
 

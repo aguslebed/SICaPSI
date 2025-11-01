@@ -42,8 +42,8 @@ function Login() {
 
     try {
       setIsLoading(true);
-  const data = await login(email, password);
-  setUserData(data);
+      const data = await login(email, password);
+      setUserData(data);
 
       // Indicar que se debe mostrar el modal
       sessionStorage.setItem("showWelcomeModal", "true");
@@ -55,9 +55,10 @@ function Login() {
       } else {
         navigate('/userPanel');
       }
-    } catch {
-      // Mostrar modal de error para credenciales inválidas
-      setErrorMessage("Email o contraseña Inválidos");
+    } catch (err) {
+      // Mostrar modal de error con el mensaje específico si existe
+      const msg = err?.message || "Email o contraseña Inválidos";
+      setErrorMessage(msg);
       setShowErrorModal(true);
     } finally {
       setIsLoading(false);

@@ -23,6 +23,18 @@ export const makeAuthController = ({ authService, loginValidator, tokenService }
         throw new AppError("Credenciales inválidas", 401, "AUTH_401");
       }
 
+      // 3.1) Estado de usuario: solo permite acceso si está disponible
+      const status = user?.status;
+      if (status && status !== 'available') {
+        let message = 'Tu cuenta no está habilitada.';
+        if (status === 'pendiente') {
+          message = 'Tu cuenta está pendiente de aprobación. Por favor, espera a que un administrador acepte tu solicitud.';
+        } else if (status === 'disabled') {
+          message = 'Tu cuenta está deshabilitada. Comunícate con el administrador del sistema.';
+        }
+        throw new AppError(message, 403, 'AUTH_FORBIDDEN_STATUS');
+      }
+
       // 4) Genera token JWT con payload completo
       const token = tokenService.sign({
         userId: user._id || user.id,
