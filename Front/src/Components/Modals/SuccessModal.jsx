@@ -3,14 +3,16 @@ import ModalWrapper from "./ModalWrapper";
 /**
  * Modal para mostrar el éxito al guardar una capacitación
  * Props:
- * - show (boolean): Controla la visibilidad del modal
+ * - show/open (boolean): Controla la visibilidad del modal
  * - onClose (function): Callback cuando se cierra el modal (también cierra el modal de edición)
+ * - title (string): Título personalizado (opcional)
  * - message (string): Mensaje personalizado (opcional)
  * - isEditing (boolean): Indica si se está editando o creando
  * - pendingApproval (boolean): Indica si la capacitación está pendiente de aprobación
  */
-const SuccessModal = ({ show, onClose, message, isEditing = false, pendingApproval = false }) => {
-  if (!show) return null;
+const SuccessModal = ({ show, open, onClose, title, message, isEditing = false, pendingApproval = false }) => {
+  const isOpen = show || open;
+  if (!isOpen) return null;
 
   // Si hay un mensaje personalizado, usar modo simple
   if (message) {
@@ -22,7 +24,7 @@ const SuccessModal = ({ show, onClose, message, isEditing = false, pendingApprov
             <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
-            <h3 className="text-lg font-bold text-white">¡Éxito!</h3>
+            <h3 className="text-lg font-bold text-white">{title || '¡Éxito!'}</h3>
           </div>
 
           {/* Cuerpo con mensaje */}

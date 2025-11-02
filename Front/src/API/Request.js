@@ -999,3 +999,20 @@ export async function submitTrainingFeedback(trainingId, feedback) {
     }
   }
 }
+
+// Obtener toda la retroalimentación (solo admin/directivo)
+export async function getAllFeedback() {
+  try {
+    const { data } = await api.get('/feedback/all');
+    return data;
+  } catch (error) {
+    console.error('❌ Error obteniendo retroalimentación:', error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al obtener retroalimentación');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}

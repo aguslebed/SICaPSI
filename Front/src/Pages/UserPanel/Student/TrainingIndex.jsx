@@ -139,7 +139,7 @@ const TrainingIndex = () => {
       <SuccessModal
         open={showSuccessModal}
         title="¡Retroalimentación Enviada!"
-        message="Gracias por compartir tu experiencia. Tu retroalimentación es muy valiosa para nosotros."
+        message="Gracias por compartir tu experiencia."
         onClose={() => setShowSuccessModal(false)}
       />
     </>

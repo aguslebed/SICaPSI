@@ -41,6 +41,7 @@ const DirectivoGestion = lazy(() => import('./Pages/DirectivoPanel/GestionDirect
 const ValidarContenido = lazy(() => import('./Pages/DirectivoPanel/ValidarContenido'));
 const Estadisticas = lazy(() => import('./Pages/DirectivoPanel/Estadisticas'));
 const Registros = lazy(() => import('./Pages/DirectivoPanel/Registros'));
+const Feedback = lazy(() => import('./Pages/DirectivoPanel/Feedback'));
 
 async function authLoader({ request }) {
   try {
@@ -139,7 +140,8 @@ export const router = createBrowserRouter([
       { path: 'gestionDirectivo', element: <DirectivoGestion /> },
       { path: 'validarContenido', element: <ValidarContenido /> },
       { path: 'estadisticas', element: <Estadisticas /> },
-      { path: 'registros', element: <Registros /> }
+      { path: 'registros', element: <Registros /> },
+      { path: 'feedback', element: <Feedback /> }
     ]
   },
   {

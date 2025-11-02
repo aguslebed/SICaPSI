@@ -1,5 +1,39 @@
 import AppError from '../middlewares/AppError.js';
 import TrainingFeedbackModel from '../models/TrainingFeedback.js';
+import UserModel from '../models/User.js';
+import mongoose from 'mongoose';
+
+// Helper function to resolve teacher name from assignedTeacher field
+async function resolveTeacherName(assignedTeacher) {
+  if (!assignedTeacher) return 'No asignado';
+  
+  // Check if it's a valid ObjectId
+  if (mongoose.Types.ObjectId.isValid(assignedTeacher)) {
+    try {
+      const teacher = await UserModel.findById(assignedTeacher).select('firstName lastName');
+      if (teacher) {
+        return `${teacher.firstName} ${teacher.lastName}`;
+      }
+    } catch (error) {
+      console.error('Error resolving teacher by ID:', error);
+    }
+  }
+  
+  // Check if it's an email
+  if (assignedTeacher.includes('@')) {
+    try {
+      const teacher = await UserModel.findOne({ email: assignedTeacher }).select('firstName lastName');
+      if (teacher) {
+        return `${teacher.firstName} ${teacher.lastName}`;
+      }
+    } catch (error) {
+      console.error('Error resolving teacher by email:', error);
+    }
+  }
+  
+  // If it's already a name string, return it
+  return assignedTeacher;
+}
 
 export function makeFeedbackController() {
   return {
@@ -32,7 +66,7 @@ export function makeFeedbackController() {
         });
 
         const populatedFeedback = await TrainingFeedbackModel.findById(newFeedback._id)
-          .populate('user', 'name email')
+          .populate('user', 'firstName lastName email')
           .populate('training', 'title');
 
         res.status(201).json({
@@ -53,7 +87,7 @@ export function makeFeedbackController() {
         }
 
         const feedbacks = await TrainingFeedbackModel.find({ training: trainingId })
-          .populate('user', 'name email')
+          .populate('user', 'firstName lastName email')
           .sort({ createdAt: -1 });
 
         res.status(200).json({
@@ -67,12 +101,23 @@ export function makeFeedbackController() {
     async getAllFeedback(req, res, next) {
       try {
         const feedbacks = await TrainingFeedbackModel.find()
-          .populate('user', 'name email')
-          .populate('training', 'title')
+          .populate('user', 'firstName lastName email')
+          .populate('training', 'title assignedTeacher')
           .sort({ createdAt: -1 });
 
+        // Resolve teacher names for all feedbacks
+        const feedbacksWithTeacherNames = await Promise.all(
+          feedbacks.map(async (feedback) => {
+            const feedbackObj = feedback.toObject();
+            if (feedbackObj.training?.assignedTeacher) {
+              feedbackObj.training.teacherName = await resolveTeacherName(feedbackObj.training.assignedTeacher);
+            }
+            return feedbackObj;
+          })
+        );
+
         res.status(200).json({
-          feedbacks
+          feedbacks: feedbacksWithTeacherNames
         });
       } catch (err) {
         next(err);
