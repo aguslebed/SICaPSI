@@ -4,6 +4,7 @@ import { ChevronDown, CheckCircle, Lock, BookOpen, PlayCircle } from "lucide-rea
 import { useUser } from "../../../context/UserContext";
 import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
 import { normalizeRichTextValue, getPlainTextFromRichText } from "../../../Components/Modals/CreateTrainingModal/RichTextInput";
+import StudentFeedbackButton from "./StudentFeedbackButton";
 
 const TrainingLevels = () => {
   const [openLevel, setOpenLevel] = useState(null);
@@ -94,6 +95,7 @@ const TrainingLevels = () => {
           </main>
         </div>
       </div>
+      <StudentFeedbackButton trainingId={idTraining} training={curso} />
     </>
   );
 };

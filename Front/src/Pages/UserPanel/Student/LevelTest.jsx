@@ -6,6 +6,7 @@ import { resolveImageUrl, checkLevelApproved, getAllTrainingsProgress } from '..
 import { normalizeRichTextValue, getPlainTextFromRichText } from "../../../Components/Modals/CreateTrainingModal/RichTextInput";
 import { useEffect } from "react";
 import LevelResultModal from "../../../Components/Modals/LevelResultModal";
+import StudentFeedbackButton from "./StudentFeedbackButton";
 
 const LevelTest = () => {
   // Botón base: mantenemos cursor-pointer y legibilidad, pero adaptativo
@@ -254,6 +255,7 @@ const LevelTest = () => {
           </div>
         </>
       )}
+      <StudentFeedbackButton trainingId={idTraining} training={training} />
     </>
   );
 };

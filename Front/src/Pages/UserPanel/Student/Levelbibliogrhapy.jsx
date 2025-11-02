@@ -4,6 +4,7 @@ import { FileText, ExternalLink } from "lucide-react";
 import { useUser } from "../../../context/UserContext";
 import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
 import { normalizeRichTextValue, getPlainTextFromRichText } from "../../../Components/Modals/CreateTrainingModal/RichTextInput";
+import StudentFeedbackButton from "./StudentFeedbackButton";
 
 const Levelbibliogrhapy = () => {
   const { idTraining, nivelId } = useParams();
@@ -142,6 +143,7 @@ const Levelbibliogrhapy = () => {
           </main>
         </div>
       </div>
+      <StudentFeedbackButton trainingId={idTraining} />
     </>
   );
 };

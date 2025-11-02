@@ -4,6 +4,7 @@ import { useUser } from "../../../context/UserContext";
 import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
 import { resolveImageUrl } from "../../../API/Request";
 import { normalizeRichTextValue, getPlainTextFromRichText } from "../../../Components/Modals/CreateTrainingModal/RichTextInput";
+import StudentFeedbackButton from "./StudentFeedbackButton";
 
 const LevelTraining = () => {
   const { idTraining, nivelId } = useParams();
@@ -122,8 +123,9 @@ const LevelTraining = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-4xl bg-white rounded-2xl shadow-lg border border-gray-200 p-8 space-y-6">
+    <>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-10">
+        <div className="w-full max-w-4xl bg-white rounded-2xl shadow-lg border border-gray-200 p-8 space-y-6">
         {/* Título */}
         <header className="text-center space-y-2">
           <h1 className="text-3xl font-extrabold text-blue-700 break-words" dangerouslySetInnerHTML={{ __html: normalizeRichTextValue(training.title || nivel.title) || 'Clase Magistral' }} />
@@ -159,8 +161,10 @@ const LevelTraining = () => {
             ⏱️ Duración: {training.duration} minutos
           </p>
         )}
+        </div>
       </div>
-    </div>
+      <StudentFeedbackButton trainingId={idTraining} training={curso} />
+    </>
   );
 };
 

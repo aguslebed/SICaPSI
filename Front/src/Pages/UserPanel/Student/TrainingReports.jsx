@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { useUser } from "../../../context/UserContext";
 import { getUserTrainingStatistics, getOptimalPath } from "../../../API/Request";
 import { X, CheckCircle2, XCircle, TrendingUp, Award } from "lucide-react";
+import StudentFeedbackButton from "./StudentFeedbackButton";
 
 const TrainingReports = () => {
   const [caminoModal, setCaminoModal] = useState(null); // { levelStats, optimalPath, levelName }
@@ -284,6 +285,7 @@ const TrainingReports = () => {
           </main>
         </div>
       </div>
+      <StudentFeedbackButton trainingId={idTraining} />
     </>
   );
 };

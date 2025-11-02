@@ -10,6 +10,7 @@ import { sendMessage, getMe } from "../../../API/Request";
 import { useUser } from "../../../context/UserContext";
 import { MailPlus } from "lucide-react";
 import SideBar from "../../../Components/Student/SideBar";
+import StudentFeedbackButton from "./StudentFeedbackButton";
 
 const normalizeTrainingId = (value) => {
   if (!value) return null;
@@ -201,6 +202,7 @@ export default function Mensajeria() {
       {successMessage && (
         <SucessModal titulo={'Mensaje enviado'} mensaje={successMessage} onClose={() => setSuccessMessage(null)} />
       )}
+      <StudentFeedbackButton trainingId={idTraining} />
     </>
   );
 }
