@@ -119,6 +119,8 @@ export function makeUserController({ userService, trainingService, messageServic
           const recipientId = m?.recipient?._id?.toString?.() ?? m?.recipient?.toString?.();
           return !m.isRead && recipientId === uidStr;
         }).length;
+        const roleLower = (user?.role || '').toLowerCase();
+        const isFirstLogin = !user?.lastLogin && roleLower === 'alumno';
         res.json({
           user: userFormatted,
           training: trainingFormatted,
@@ -129,7 +131,9 @@ export function makeUserController({ userService, trainingService, messageServic
           },
           metadata: {
             ultimaActualizacion: new Date(),
-            version: '1.0.0'
+            version: '1.0.0',
+            isFirstLogin,
+            lastLogin: user?.lastLogin ?? null
           }
         });
       } catch (err) { next(err); }

@@ -3,8 +3,44 @@ import ModalWrapper from "../Modals/ModalWrapper";
 import { listUsers, uploadMessageAttachments } from "../../API/Request";
 import { X, Paperclip, Send, Smile } from 'lucide-react';
 import EmojiPicker from './EmojiPicker';
+import { useUser } from '../../context/UserContext';
+
+const ROLE_KEY_TO_VALUE = {
+  administrator: 'administrador',
+  trainer: 'capacitador',
+  manager: 'directivo',
+  student: 'alumno'
+};
+
+const ROLE_FILTER_OPTIONS = [
+  { key: 'todos', label: 'Todos' },
+  { key: 'administrator', label: 'Administradores' },
+  { key: 'trainer', label: 'Capacitador' },
+  { key: 'manager', label: 'Directivo' },
+  { key: 'student', label: 'Alumno' },
+];
 
 export default function ComposeModal({ open, onClose, onSend, onSuccess, initialTo, initialSubject, initialBody, trainingId, prefilledRecipient }) {
+  const { userData } = useUser();
+  const senderRole = userData?.user?.role;
+  const senderRoleLower = (senderRole || '').toLowerCase();
+  const allowedRoles = useMemo(() => {
+    if (senderRoleLower === 'alumno') {
+      return new Set(['alumno', 'capacitador']);
+    }
+    if (senderRoleLower === 'capacitador') {
+      return new Set(['alumno']);
+    }
+    return null;
+  }, [senderRoleLower]);
+  const roleFilterOptions = useMemo(() => {
+    return ROLE_FILTER_OPTIONS.filter(opt => {
+      if (opt.key === 'todos') return true;
+      if (!allowedRoles) return true;
+      const mapped = ROLE_KEY_TO_VALUE[opt.key];
+      return mapped ? allowedRoles.has(mapped) : false;
+    });
+  }, [allowedRoles]);
   const [toInput, setToInput] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
@@ -23,6 +59,16 @@ export default function ComposeModal({ open, onClose, onSend, onSuccess, initial
   const bodyRef = useRef(null);
   const emojiRef = useRef(null);
   const userListRef = useRef(null);
+
+  useEffect(() => {
+    if (!allowedRoles) return;
+    if (selectedRoleFilter && selectedRoleFilter !== 'todos') {
+      const mapped = ROLE_KEY_TO_VALUE[selectedRoleFilter] || selectedRoleFilter.toLowerCase();
+      if (!allowedRoles.has(mapped)) {
+        setSelectedRoleFilter(null);
+      }
+    }
+  }, [allowedRoles, selectedRoleFilter]);
 
   useEffect(() => {
     (async () => {
@@ -80,19 +126,20 @@ export default function ComposeModal({ open, onClose, onSend, onSuccess, initial
 
   const filteredUsers = useMemo(() => {
     const q = (recipientQuery || '').toLowerCase();
+    const resolveRole = (user) => (user.role || user.roles || user.roleName || user.type || user.role_label || '').toString().toLowerCase();
     let list = users;
+    if (allowedRoles) {
+      list = list.filter(u => allowedRoles.has(resolveRole(u)));
+    }
     if (selectedRoleFilter && selectedRoleFilter !== 'todos') {
-      const key = selectedRoleFilter.toLowerCase();
-      list = list.filter(u => {
-        const r = (u.role || u.roles || u.roleName || u.type || u.role_label || '').toString().toLowerCase();
-        return r.includes(key);
-      });
+      const mapped = ROLE_KEY_TO_VALUE[selectedRoleFilter] || selectedRoleFilter.toLowerCase();
+      list = list.filter(u => resolveRole(u) === mapped);
     }
     if (!q) return list.slice(0, 100);
     return list.filter(u => {
       return (u.email || '').toLowerCase().includes(q) || (`${u.firstName || ''} ${u.lastName || ''}`.toLowerCase().includes(q));
     }).slice(0, 200);
-  }, [recipientQuery, users, selectedRoleFilter]);
+  }, [recipientQuery, users, selectedRoleFilter, allowedRoles]);
 
   const handleSend = useCallback(async () => {
     setInlineError('');
@@ -268,13 +315,7 @@ export default function ComposeModal({ open, onClose, onSend, onSuccess, initial
                   <div className="p-3 border-b bg-gray-50">
                     <div className="flex items-center gap-3 flex-wrap">
                       <span className="text-sm text-gray-700 font-medium">Grupos:</span>
-                      {[
-                        { key: 'todos', label: 'Todos' },
-                        { key: 'administrator', label: 'Administradores' },
-                        { key: 'trainer', label: 'Capacitador' },
-                        { key: 'manager', label: 'Directivo' },
-                        { key: 'student', label: 'Alumno' },
-                      ].map(opt => (
+                      {roleFilterOptions.map(opt => (
                         <button
                           key={opt.key}
                           type="button"

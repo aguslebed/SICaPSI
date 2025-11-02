@@ -105,3 +105,11 @@ export function createUnauthorizedError() {
 export function createDeleteFromTrashError() {
   return "Solo se pueden eliminar definitivamente los mensajes en papelera";
 }
+
+/**
+ * Crea mensaje de error para restricciones de envío
+ * @returns {string} Mensaje de error
+ */
+export function createMessagingPermissionError() {
+  return "No tienes permiso para enviar mensaje a este destinatario";
+}

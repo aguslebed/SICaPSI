@@ -60,9 +60,6 @@ function Login() {
       const data = await login(email, password);
       setUserData(data);
 
-      // Indicar que se debe mostrar el modal
-      sessionStorage.setItem("showWelcomeModal", "true");
-
       // Redirigir según rol
       const role = data?.user?.role;
       if (role === 'Administrador') {

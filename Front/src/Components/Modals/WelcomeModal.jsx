@@ -1,24 +1,31 @@
 import { useState, useEffect } from 'react';
+import { useUser } from '../../context/UserContext';
 
 const WelcomeModal = () => {
+  const { userData, setUserData } = useUser();
   const [isOpen, setIsOpen] = useState(false);
+  const role = (userData?.user?.role || '').toLowerCase();
+  const shouldShow = role === 'alumno' && !!userData?.metadata?.isFirstLogin;
 
-  // Verificar al cargar si debemos mostrar el modal
   useEffect(() => {
-    const shouldShowModal = sessionStorage.getItem("showWelcomeModal");
-    console.log(shouldShowModal)
-    if (shouldShowModal === "true") {
-      setIsOpen(true);
-    }
-  }, []);
+    setIsOpen(shouldShow);
+  }, [shouldShow]);
 
   const handleClose = () => {
-    // Cambiar el estado a false y eliminar la bandera
     setIsOpen(false);
-    sessionStorage.removeItem("showWelcomeModal");
+    if (shouldShow && userData) {
+      try {
+        setUserData({
+          ...userData,
+          metadata: {
+            ...userData?.metadata,
+            isFirstLogin: false
+          }
+        });
+      } catch {}
+    }
   };
 
-  // No renderizar nada si el modal no está abierto
   if (!isOpen) return null;
 
   return (

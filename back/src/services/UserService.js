@@ -4,8 +4,6 @@ import UserRepository from '../repositories/UserRepository.js';
 import TrainingRepository from '../repositories/TrainingRepository.js';
 import {
   emailExists,
-  isTeacher,
-  extractUniqueIds,
   unifyUsersByIdMultiple,
   objectIdsToStrings,
   filterTrainingScope,
@@ -88,26 +86,63 @@ export class UserService extends IUserService {
     // Usar funciones puras para transformar datos
     const assigned = objectIdsToStrings(sender.assignedTraining);
     const trainingScope = filterTrainingScope(assigned, trainingId);
+    if (!trainingScope.length) {
+      return [];
+    }
 
-    // Profesores: createdBy de trainings dentro del scope (usar modelo directo para query compleja)
-    const trainings = await this.Training.find({ _id: { $in: trainingScope } }).select('createdBy').lean();
-    const teacherIds = extractUniqueIds(trainings.map(t => ({ _id: t.createdBy })));
+    const selectFields = 'firstName lastName email role profileImage assignedTraining';
+    const senderRole = (sender.role || '').toLowerCase();
+    const filterOutAdmins = (user) => (user?.role || '').toLowerCase() !== 'administrador';
+    const allowedForStudent = (user) => {
+      const role = (user?.role || '').toLowerCase();
+      return role === 'alumno' || role === 'capacitador';
+    };
 
-    // Compañeros: usar repositorio para buscar
+    // Estudiantes con trainings en común
     const classmates = await this.userRepo.findByRoleWithCommonTrainings(
       senderId,
       'Alumno',
       trainingScope,
-      'firstName lastName email role assignedTraining'
+      selectFields
     );
 
-    // Profesores: usar repositorio para buscar por IDs
-    const teachers = teacherIds.length
-      ? await this.userRepo.findByIds(teacherIds, 'firstName lastName email role')
+    if (senderRole === 'capacitador') {
+      // Capacitadores solo pueden enviar a alumnos de sus capacitaciones
+      return classmates.filter(filterOutAdmins);
+    }
+
+    // Capacitadores asignados a las mismas capacitaciones (para alumnos y otros roles)
+    const trainers = await this.userRepo.findByRoleWithCommonTrainings(
+      senderId,
+      'Capacitador',
+      trainingScope,
+      selectFields
+    );
+
+    // Incluir, como respaldo, cualquier creador de la capacitación que también sea capacitador
+    const createdByFallback = await this.Training.find({ _id: { $in: trainingScope } })
+      .select('createdBy')
+      .lean();
+
+    const senderIdStr = senderId.toString();
+    const fallbackTeacherIds = createdByFallback
+      .map(t => t?.createdBy?.toString?.())
+      .filter(id => id && id !== senderIdStr);
+
+    const fallbackTeachers = fallbackTeacherIds.length
+      ? await this.userRepo.findByIds(fallbackTeacherIds, selectFields)
       : [];
 
-    // Unificar con función pura
-    return unifyUsersByIdMultiple(teachers, classmates);
+    const filteredFallbackTeachers = fallbackTeachers.filter(u => (u?.role || '').toLowerCase() === 'capacitador');
+
+    const combined = unifyUsersByIdMultiple(trainers, filteredFallbackTeachers, classmates);
+
+    if (senderRole === 'alumno') {
+      return combined.filter(user => filterOutAdmins(user) && allowedForStudent(user));
+    }
+
+    // Otros roles mantienen la misma lista combinada
+    return combined;
   }
 
   async update(id, patch) {
