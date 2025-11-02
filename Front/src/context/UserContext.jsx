@@ -12,6 +12,36 @@ export function UserProvider({ children }) {
     return stored ? JSON.parse(stored) : null;
   });
 
+  // Mantener sesiones sincronizadas entre pestañas; si otra pestaña cambia userData, replicamos aquí
+  useEffect(() => {
+    const handleStorage = (event) => {
+      if (event.key !== "userData") return;
+      if (event.newValue === event.oldValue) return;
+
+      if (!event.newValue) {
+        setUserDataState(null);
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(event.newValue);
+        setUserDataState((prev) => {
+          try {
+            const prevStr = JSON.stringify(prev);
+            const nextStr = JSON.stringify(parsed);
+            return prevStr === nextStr ? prev : parsed;
+          } catch {
+            return parsed;
+          }
+        });
+      } catch {
+        setUserDataState(null);
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
   // Guarda el userData en localStorage cada vez que cambia
   useEffect(() => {
     if (userData) {
