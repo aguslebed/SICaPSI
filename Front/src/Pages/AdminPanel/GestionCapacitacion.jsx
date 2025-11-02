@@ -8,7 +8,7 @@ import ErrorListModal from '../../Components/Modals/ErrorListModal';
 import WarningModal from '../../Components/Modals/WarningModal';
 import ConfirmActionModal from '../../Components/Modals/ConfirmActionModal';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { getAllActiveTrainings, getAllTrainings, createTraining, updateTraining, addLevelsToTraining, updateLevelsInTraining, deleteTraining, getTrainingById, enrollStudentsToTraining, enrollTrainerToTraining, deleteTrainingFile, uploadTrainingFile, moveTempFiles, replaceTrainingFile, getTrainerByTrainingId, getUsersEnrolledInTraining, unenrollStudentsFromTraining } from '../../API/Request';
+import { getAllActiveTrainings, getAllTrainings, createTraining, updateTraining, addLevelsToTraining, updateLevelsInTraining, deleteTraining, getTrainingById, enrollStudentsToTraining, enrollTrainerToTraining, unenrollTrainerFromTraining, deleteTrainingFile, uploadTrainingFile, moveTempFiles, replaceTrainingFile, getTrainerByTrainingId, getUsersEnrolledInTraining, unenrollStudentsFromTraining } from '../../API/Request';
 import LoadingOverlay from '../../Components/Shared/LoadingOverlay';
 import './AdminPanel.css';
 
@@ -59,27 +59,84 @@ export default function GestionCapacitacion() {
 
   // Helper: obtiene el profesor para cada capacitación que no tenga `trainer` poblado
   const fetchAndAttachTrainers = useCallback(async (trainingsList) => {
-    if (!Array.isArray(trainingsList) || trainingsList.length === 0) return trainingsList;
+    if (!Array.isArray(trainingsList) || trainingsList.length === 0) {
+      if (Object.keys(trainersMap).length > 0) {
+        setTrainersMap({});
+      }
+      return trainingsList;
+    }
 
-    const mapUpdates = {};
+    const nextMap = {};
 
-    const jobs = trainingsList.map(async (t) => {
+    const jobs = trainingsList.map(async (training) => {
+      const trainingId = training?._id;
+      if (!trainingId) return;
+
+      const identifiers = new Set();
+      const addIdentifier = (value) => {
+        if (!value) return;
+        const str = value.toString().trim();
+        if (str) identifiers.add(str.toLowerCase());
+      };
+
+      const rawAssigned = training.assignedTeacher;
+      if (typeof rawAssigned === 'string') {
+        addIdentifier(rawAssigned);
+      } else if (rawAssigned && typeof rawAssigned === 'object') {
+        if (rawAssigned._id) addIdentifier(rawAssigned._id);
+        if (rawAssigned.id) addIdentifier(rawAssigned.id);
+        if (rawAssigned.email) addIdentifier(rawAssigned.email);
+      }
+
+      if (identifiers.size === 0) {
+        return;
+      }
+
+      const cachedTrainer = trainersMap[trainingId];
+      const cachedId = cachedTrainer && cachedTrainer._id ? cachedTrainer._id.toString?.() : '';
+      const cachedEmail = cachedTrainer && cachedTrainer.email ? cachedTrainer.email.toString?.() : '';
+      const cachedMatches = (
+        (cachedId && identifiers.has(cachedId.trim().toLowerCase())) ||
+        (cachedEmail && identifiers.has(cachedEmail.trim().toLowerCase()))
+      );
+
+      if (cachedMatches) {
+        nextMap[trainingId] = cachedTrainer;
+        return;
+      }
+
       try {
-        // Skip si ya está cacheado
-        if (trainersMap[t._id]) return;
-
-        const trainer = await getTrainerByTrainingId(t._id);
-        
-        if (trainer) mapUpdates[t._id] = trainer;
+        const trainer = await getTrainerByTrainingId(trainingId);
+        if (trainer) {
+          nextMap[trainingId] = trainer;
+        }
       } catch (err) {
-        console.warn('fetchAndAttachTrainers: no se pudo cargar trainer para', t._id, err?.message || err);
+        console.warn('fetchAndAttachTrainers: no se pudo cargar trainer para', trainingId, err?.message || err);
+        if (cachedTrainer) {
+          nextMap[trainingId] = cachedTrainer;
+        }
       }
     });
 
     await Promise.all(jobs);
 
-    if (Object.keys(mapUpdates).length > 0) {
-      setTrainersMap(prev => ({ ...prev, ...mapUpdates }));
+    const prevKeys = Object.keys(trainersMap);
+    const nextKeys = Object.keys(nextMap);
+    const mapsDiffer =
+      prevKeys.length !== nextKeys.length ||
+      nextKeys.some((key) => {
+        const prevTrainer = trainersMap[key];
+        const nextTrainer = nextMap[key];
+        if (!prevTrainer || !nextTrainer) return prevTrainer !== nextTrainer;
+        const prevId = prevTrainer._id ? prevTrainer._id.toString?.() : '';
+        const nextId = nextTrainer._id ? nextTrainer._id.toString?.() : '';
+        const prevEmail = prevTrainer.email || '';
+        const nextEmail = nextTrainer.email || '';
+        return prevId !== nextId || prevEmail !== nextEmail;
+      });
+
+    if (mapsDiffer) {
+      setTrainersMap(nextMap);
     }
 
     return trainingsList;
@@ -195,7 +252,8 @@ export default function GestionCapacitacion() {
       isEditing = false,
       trainingId,
       pendingUploads = null,
-      omissionMessages = []
+      omissionMessages = [],
+      previousAssignedTeacher = ''
     } = additionalData;
     // Ya no necesitamos filesToDeleteFromLevels ni oldImageToDelete
 
@@ -346,10 +404,32 @@ export default function GestionCapacitacion() {
         }
       }
 
-      // Inscribir profesor si está asignado
-      if (trainingData.assignedTeacher && trainingData.assignedTeacher.trim()) {
+      const previousTeacherId = typeof previousAssignedTeacher === 'string'
+        ? previousAssignedTeacher.trim()
+        : '';
+      const currentTeacherId = typeof trainingData.assignedTeacher === 'string'
+        ? trainingData.assignedTeacher.trim()
+        : '';
+
+      if (isEditing && previousTeacherId && previousTeacherId !== currentTeacherId) {
         try {
-          await enrollTrainerToTraining(finalTrainingId, trainingData.assignedTeacher);
+          await unenrollTrainerFromTraining(finalTrainingId, previousTeacherId);
+        } catch (unenrollError) {
+          console.warn('Error desinscribiendo profesor:', unenrollError);
+          const message = unenrollError?.message || '';
+          const isNotEnrolledMessage = message.toLowerCase().includes('no está inscrito');
+          if (!isNotEnrolledMessage) {
+            setWarningMessage(`Capacitación guardada, pero hubo un problema al quitar al profesor: ${message}`);
+            setShowWarningModal(true);
+          }
+        }
+      }
+
+      const shouldAssignTrainer = currentTeacherId && (!isEditing || previousTeacherId !== currentTeacherId);
+
+      if (shouldAssignTrainer) {
+        try {
+          await enrollTrainerToTraining(finalTrainingId, currentTeacherId);
         } catch (enrollError) {
           console.warn('Error inscribiendo profesor:', enrollError);
           setWarningMessage(`Capacitación guardada, pero hubo un problema inscribiendo al profesor: ${enrollError.message}`);

@@ -147,7 +147,16 @@ export function UserProvider({ children }) {
         });
         socketRef.current = socket;
 
-        const handleRefresh = async () => {
+        const emitRealtimeEvent = (eventName, detail) => {
+          if (typeof window === 'undefined' || !window.dispatchEvent) return;
+          try {
+            window.dispatchEvent(new CustomEvent(eventName, { detail }));
+          } catch {
+            // No bloquear flujo si falla la emisión del evento
+          }
+        };
+
+        const handleRefresh = async (payload = null, meta = {}) => {
           try {
             const fresh = await getMe();
             setUserDataState((prev) => {
@@ -159,6 +168,7 @@ export function UserProvider({ children }) {
                 return fresh;
               }
             });
+            emitRealtimeEvent('realtime:user-data-refreshed', { payload, meta, userData: fresh });
           } catch (e) {
             // Si falla, el polling global eventualmente recuperará
             // console.debug('getMe() falló tras evento realtime:', e?.message || e);
@@ -166,26 +176,24 @@ export function UserProvider({ children }) {
         };
 
         socket.on('connect', () => {
-          // Opcional: sincronizar al conectar
-          handleRefresh();
+          emitRealtimeEvent('realtime:socket-connected', { userId: authUserId });
+          handleRefresh(null, { source: 'socket', type: 'connect' });
         });
         socket.on('disconnect', () => {
+          emitRealtimeEvent('realtime:socket-disconnected', { userId: authUserId });
           // noop; socket.io intentará reconectar
         });
-        socket.on('user:data:refresh', () => {
-          handleRefresh();
+        socket.on('user:data:refresh', (payload) => {
+          emitRealtimeEvent('realtime:user-data-refresh', payload);
+          handleRefresh(payload, { source: 'socket', type: 'user:data:refresh' });
         });
         socket.on('training:status-changed', (payload) => {
-          handleRefresh();
-          if (typeof window !== 'undefined' && window.dispatchEvent) {
-            window.dispatchEvent(new CustomEvent('realtime:training-status-changed', { detail: payload }));
-          }
+          emitRealtimeEvent('realtime:training-status-changed', payload);
+          handleRefresh(payload, { source: 'socket', type: 'training:status-changed' });
         });
         socket.on('training:deleted', (payload) => {
-          handleRefresh();
-          if (typeof window !== 'undefined' && window.dispatchEvent) {
-            window.dispatchEvent(new CustomEvent('realtime:training-deleted', { detail: payload }));
-          }
+          emitRealtimeEvent('realtime:training-deleted', payload);
+          handleRefresh(payload, { source: 'socket', type: 'training:deleted' });
         });
       } catch (e) {
         // Fallará si la cookie no está o no hay sesión; el polling se mantiene como respaldo

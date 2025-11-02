@@ -5,6 +5,49 @@ import { getPendingContent, resolveImageUrl, updateTraining } from '../../API/Re
 import { FiEye } from 'react-icons/fi';
 import './DirectivoPanel.css';
 
+const modalOverlayStyle = {
+  position: 'fixed',
+  inset: 0,
+  background: 'rgba(0,0,0,0.18)',
+  zIndex: 10000,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '1rem'
+};
+
+const modalContentStyle = {
+  background: 'white',
+  borderRadius: '16px',
+  width: 'min(100%, 640px)',
+  maxWidth: '640px',
+  maxHeight: '90vh',
+  overflowY: 'auto',
+  padding: '1.5rem',
+  boxShadow: '0 2px 16px rgba(0,0,0,0.12)',
+  position: 'relative',
+  display: 'flex',
+  flexDirection: 'column'
+};
+
+const mediaWrapperStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: '1rem',
+  marginBottom: '1.2rem',
+  marginTop: '2.2rem'
+};
+
+const mediaCommonStyle = {
+  width: '100%',
+  maxWidth: '360px',
+  height: 'auto',
+  borderRadius: '12px',
+  background: '#eee',
+  objectFit: 'cover'
+};
+
 export default function ValidarContenido() {
   const [loading, setLoading] = useState(false);
   const [contenidos, setContenidos] = useState([]);
@@ -175,8 +218,12 @@ export default function ValidarContenido() {
         </div>
         {/* Modal de previsualización o rechazo */}
         {showRejectModal ? (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.18)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ background: 'white', borderRadius: '16px', maxWidth: 480, width: '95%', padding: '2rem 2rem 1.5rem 2rem', boxShadow: '0 2px 16px rgba(0,0,0,0.12)', position: 'relative', textAlign: 'center' }}>
+          <div style={modalOverlayStyle}>
+            <div style={{
+              ...modalContentStyle,
+              maxWidth: '480px',
+              textAlign: 'center'
+            }}>
               <h2 style={{ color: '#f44336', fontWeight: 'bold', fontSize: '1.3rem', marginBottom: '0.5rem' }}>Clase rechazada</h2>
               <div style={{ color: '#757575', fontSize: '1rem', marginBottom: '1.2rem' }}>Contenido · Asignación de clase rechazada</div>
               <textarea
@@ -225,22 +272,39 @@ export default function ValidarContenido() {
             </div>
           </div>
         ) : selectedContenido && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.18)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ background: 'white', borderRadius: '16px', maxWidth: 500, width: '95%', padding: '2rem 2rem 1.5rem 2rem', boxShadow: '0 2px 16px rgba(0,0,0,0.12)', position: 'relative' }}>
+          <div style={modalOverlayStyle}>
+            <div style={modalContentStyle}>
               {/* Botón Volver */}
               <button
                 onClick={() => setSelectedContenido(null)}
-                style={{ position: 'absolute', top: 18, left: 18, background: '#e3f2fd', color: '#1976d2', border: 'none', borderRadius: '8px', padding: '0.4rem 1.2rem', fontWeight: 'bold', fontSize: '1rem', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: '90px' }}
+                style={{
+                  position: 'sticky',
+                  top: 0,
+                  alignSelf: 'flex-start',
+                  background: '#e3f2fd',
+                  color: '#1976d2',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '0.4rem 1.2rem',
+                  fontWeight: 'bold',
+                  fontSize: '1rem',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  marginBottom: '1rem'
+                }}
               >
                 Volver
               </button>
               {/* Imagen/video de la capacitación */}
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.2rem', marginTop: '2.2rem' }}>
+              <div style={mediaWrapperStyle}>
                 {selectedContenido.image && (
                   <img
                     src={resolveImageUrl(selectedContenido.image)}
                     alt={selectedContenido.title}
-                    style={{ width: '320px', height: '180px', borderRadius: '12px', objectFit: 'cover', background: '#eee' }}
+                    style={mediaCommonStyle}
                     onError={e => { e.target.onerror = null; e.target.src = '/images/default-image.png'; }}
                   />
                 )}
@@ -248,7 +312,7 @@ export default function ValidarContenido() {
                   <video
                     src={selectedContenido.videoUrl}
                     controls
-                    style={{ width: '320px', height: '180px', borderRadius: '12px', background: '#eee', objectFit: 'cover' }}
+                    style={{ ...mediaCommonStyle, maxHeight: '240px' }}
                   />
                 )}
               </div>
