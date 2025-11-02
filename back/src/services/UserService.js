@@ -267,6 +267,20 @@ export class UserService extends IUserService {
     const user = await this.userRepo.findById(id);
     if (!user) return null;
     
+    // Si el usuario tiene capacitaciones asignadas, quitarlas de las capacitaciones
+    if (user.assignedTraining && user.assignedTraining.length > 0 && this.Training) {
+      try {
+        await this.Training.updateMany(
+          { _id: { $in: user.assignedTraining } },
+          { $pull: { assignedTraining: id } }
+        );
+        console.log(`✅ Referencias del usuario ${id} eliminadas de ${user.assignedTraining.length} capacitación(es)`);
+      } catch (error) {
+        console.warn('⚠️ Error limpiando referencias de capacitaciones:', error);
+        // Continuar con la eliminación aunque falle la limpieza
+      }
+    }
+    
     // Usar repositorio para eliminar
     return await this.userRepo.deleteById(id);
   }
