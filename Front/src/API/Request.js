@@ -1,6 +1,9 @@
 import axios from "axios";
+const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
+const API_BASE = isDevelopment 
+  ? (import.meta.env.VITE_API_URL_DEV || "http://localhost:4000")
+  : (import.meta.env.VITE_API_URL_PROD || "https://ppsiii.work.gd/api");
 
 const api = axios.create({
   baseURL: API_BASE,
