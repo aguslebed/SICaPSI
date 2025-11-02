@@ -62,7 +62,7 @@ export default function FeedbackMessageModal({ open, feedback, onClose }) {
           <div>
             <h4 className="font-semibold text-gray-800 mb-2">Mensaje:</h4>
             <div className="bg-white border border-gray-200 rounded-lg p-4 min-h-[120px]">
-              <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+              <p className="text-gray-700 whitespace-pre-wrap leading-relaxed break-words">
                 {feedback.feedback}
               </p>
             </div>
