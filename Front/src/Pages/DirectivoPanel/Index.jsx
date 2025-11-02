@@ -10,6 +10,7 @@ import { getAllActiveTrainings, fetchAdmisionUsuarios, getAllUsers } from '../..
 import LoadingOverlay from "../../Components/Shared/LoadingOverlay";
 import { BiBarChart } from "react-icons/bi"; // Ícono de gráfico de barras
 import { IoDocumentTextOutline } from "react-icons/io5"; // Ícono de documento más similar
+import { MdFeedback } from "react-icons/md"; // Ícono de retroalimentación
 import './DirectivoPanel.css';
 
 export default function DirectivoPanel() {
@@ -64,6 +65,19 @@ export default function DirectivoPanel() {
           navigate('/directivoPanel/gestionDirectivo');
         } catch (error) {
           console.error("Error navegando a GestionDirectivo:", error);
+        }
+      },
+    },
+    {
+      title: "Retroalimentación",
+      link: "/directivoPanel/feedback",
+      isImage: false,
+      icon: MdFeedback,
+      onClick: async () => {
+        try {
+          navigate('/directivoPanel/feedback');
+        } catch (error) {
+          console.error("Error navegando a Retroalimentación:", error);
         }
       },
     },

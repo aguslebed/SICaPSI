@@ -2,14 +2,18 @@ import React, {useEffect, useState} from "react";
 import { useParams } from "react-router-dom";
 import { useUser } from "../../../context/UserContext";
 import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
-import { resolveImageUrl, getMe, getTrainingProgress } from "../../../API/Request";
+import { resolveImageUrl, getMe, getTrainingProgress, submitTrainingFeedback } from "../../../API/Request";
 import { normalizeRichTextValue, getPlainTextFromRichText } from "../../../Components/Modals/CreateTrainingModal/RichTextInput";
+import TrainingFeedbackModal from "../../../Components/Modals/TrainingFeedbackModal";
+import SuccessModal from "../../../Components/Modals/SuccessModal";
 
 const TrainingIndex = () => {
   const { idTraining } = useParams();
   const { userData, setUserData } = useUser();
   const [trainingProgress, setTrainingProgress] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   useEffect(() => {
     const loadTrainingProgress = async () => {
@@ -49,7 +53,17 @@ const TrainingIndex = () => {
   const sanitizedDescription = normalizeRichTextValue(training.description || "");
   const hasDescription = getPlainTextFromRichText(sanitizedDescription).trim().length > 0;
 
- 
+  const handleFeedbackSubmit = async (feedback) => {
+    try {
+      await submitTrainingFeedback(idTraining, feedback);
+      setShowFeedbackModal(false);
+      setShowSuccessModal(true);
+    } catch (error) {
+      console.error('Error al enviar retroalimentación:', error);
+      alert('Error al enviar la retroalimentación. Por favor, intenta nuevamente.');
+    }
+  };
+
   return (
     <>
       <div className="">
@@ -92,7 +106,42 @@ const TrainingIndex = () => {
             </div>
           </div>
         </div>
+
+        {/* Botón de retroalimentación - discreto en la esquina inferior derecha */}
+        {userData.user.role === "Alumno" && (
+          <div className="fixed bottom-6 right-6 z-50">
+            <button
+              onClick={() => setShowFeedbackModal(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition-all hover:scale-110 flex items-center gap-2"
+              title="Enviar retroalimentación"
+            >
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                className="h-5 w-5" 
+                viewBox="0 0 20 20" 
+                fill="currentColor"
+              >
+                <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z" />
+                <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Modals */}
+      <TrainingFeedbackModal
+        open={showFeedbackModal}
+        training={training}
+        onClose={() => setShowFeedbackModal(false)}
+        onSubmit={handleFeedbackSubmit}
+      />
+      <SuccessModal
+        open={showSuccessModal}
+        title="¡Retroalimentación Enviada!"
+        message="Gracias por compartir tu experiencia."
+        onClose={() => setShowSuccessModal(false)}
+      />
     </>
   );
 };
