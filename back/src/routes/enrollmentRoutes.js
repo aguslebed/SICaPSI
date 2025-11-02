@@ -29,6 +29,7 @@ router.patch("/unenrollStudent", controller.unenrollStudent)
 router.get("/getUsersEnrolledInTraining", controller.getUsersEnrolledInTraining)
 router.get("/getUsersNotEnrolledInTraining", controller.getUsersNotEnrolledInTraining)
 router.post("/enrollTrainer", controller.enrollTrainer)
+router.patch("/unenrollTrainer", controller.unenrollTrainer)
 router.get("/getTrainenrsNotEnrolledInTraining", controller.getTrainenrsNotEnrolledInTraining)
 
 export default router;

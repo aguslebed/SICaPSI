@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { BsFileBarGraphFill } from 'react-icons/bs';
 import { FaComments } from 'react-icons/fa';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -18,25 +18,91 @@ export default function Students() {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [showProgressModal, setShowProgressModal] = useState(false);
 
+  const isMountedRef = useRef(true);
+
   useEffect(() => {
-    let mounted = true;
-    async function fetchStudents() {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const fetchStudents = useCallback(async ({ silent = false } = {}) => {
+    if (!idTraining) {
+      if (!silent && isMountedRef.current) {
+        setLoading(false);
+      }
+      return;
+    }
+
+    if (!silent) {
       setLoading(true);
       setError(null);
-      try {
-        const data = await getUsersEnrolledInTraining(idTraining);
-        if (!mounted) return;
-        setStudents(Array.isArray(data) ? data : (data?.items || []));
-      } catch (e) {
-        if (!mounted) return;
-        setError(e.message || 'Error cargando alumnos');
-      } finally {
-        if (mounted) setLoading(false);
+    }
+
+    try {
+      const data = await getUsersEnrolledInTraining(idTraining);
+      if (!isMountedRef.current) return;
+      const normalized = Array.isArray(data) ? data : (data?.items || []);
+      setStudents(normalized);
+      setError(null);
+    } catch (e) {
+      if (!isMountedRef.current) return;
+      setError(e.message || 'Error cargando alumnos');
+    } finally {
+      if (!silent && isMountedRef.current) {
+        setLoading(false);
       }
     }
-    fetchStudents();
-    return () => { mounted = false; };
   }, [idTraining]);
+
+  useEffect(() => {
+    fetchStudents();
+  }, [fetchStudents]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const relevantReasons = new Set(['training:assigned', 'training:unassigned', 'training:deleted']);
+    const relevantMetaTypes = new Set(['training:status-changed', 'training:deleted']);
+
+    const handleUserDataEvent = (event) => {
+      const detail = event?.detail || {};
+      const payload = detail?.payload ?? detail;
+      const meta = detail?.meta;
+      const reason = payload?.reason;
+      const metaType = meta?.type;
+      const trainingIdFromPayload = payload?.trainingId ?? meta?.trainingId;
+
+      const reasonMatches = reason ? relevantReasons.has(reason) : false;
+      const metaMatches = metaType ? relevantMetaTypes.has(metaType) : false;
+
+      if (!reasonMatches && !metaMatches) return;
+      if (trainingIdFromPayload && String(trainingIdFromPayload) !== String(idTraining)) return;
+
+      fetchStudents({ silent: true });
+    };
+
+    const handleTrainingEvent = (event) => {
+      const detail = event?.detail || {};
+      const trainingIdFromEvent = detail?.trainingId;
+      if (trainingIdFromEvent && String(trainingIdFromEvent) !== String(idTraining)) return;
+
+      fetchStudents({ silent: true });
+    };
+
+    window.addEventListener('realtime:user-data-refresh', handleUserDataEvent);
+    window.addEventListener('realtime:user-data-refreshed', handleUserDataEvent);
+    window.addEventListener('realtime:training-status-changed', handleTrainingEvent);
+    window.addEventListener('realtime:training-deleted', handleTrainingEvent);
+
+    return () => {
+      window.removeEventListener('realtime:user-data-refresh', handleUserDataEvent);
+      window.removeEventListener('realtime:user-data-refreshed', handleUserDataEvent);
+      window.removeEventListener('realtime:training-status-changed', handleTrainingEvent);
+      window.removeEventListener('realtime:training-deleted', handleTrainingEvent);
+    };
+  }, [fetchStudents, idTraining]);
 
   const filteredStudents = useMemo(() => {
     if (!appliedSearch || !appliedSearch.trim()) return students;

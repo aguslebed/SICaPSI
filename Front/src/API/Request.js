@@ -935,6 +935,26 @@ export async function enrollTrainerToTraining(trainingId, teacherId) {
   }
 }
 
+// Desinscribir profesor de una capacitación
+export async function unenrollTrainerFromTraining(trainingId, teacherId) {
+  try {
+    const { data } = await api.patch('/enrollment/unenrollTrainer', {
+      trainingId,
+      userIds: [teacherId]
+    });
+    return data;
+  } catch (error) {
+    console.error('❌ Error desinscribiendo profesor:', error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al desinscribir profesor');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
 // --- PROGRESS / LEVEL APPROVAL ---
 // Checks whether a level is approved given the user's level object (with results)
 export async function checkLevelApproved(trainingId, userId,levelId, levelWithResults) {

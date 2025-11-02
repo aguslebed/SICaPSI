@@ -199,8 +199,14 @@ function Register() {
         areaCode,
         phone,
         password,
-        // Solo los administradores en la ruta de creación de usuario pueden establecer el rol explícitamente
-        ...(isAdminCreateRoute && selectedRole ? { role: selectedRole } : {})
+        // Cuando un administrador crea el usuario, queda habilitado automáticamente
+        ...(isAdminCreateRoute
+          ? {
+              status: 'available',
+              createdByAdmin: true,
+              ...(selectedRole ? { role: selectedRole } : {})
+            }
+          : {})
       };
       await APIRegistro(usuario);
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { login } from "../../API/Request";
 import { Link } from "react-router-dom";
 import { useUser } from "../../context/UserContext";
@@ -14,8 +14,23 @@ function Login() {
   const [validationMessage, setValidationMessage] = useState("");
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const { setUserData } = useUser(); 
+  const { userData, setUserData } = useUser(); 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!userData) return;
+    const role = userData?.user?.role;
+    if (!role) return;
+    if (role === 'Administrador') {
+      navigate('/adminPanel', { replace: true });
+    } else if (role === 'Directivo') {
+      navigate('/directivoPanel', { replace: true });
+    } else if (role === 'Capacitador') {
+      navigate('/trainer', { replace: true });
+    } else {
+      navigate('/userPanel', { replace: true });
+    }
+  }, [userData, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -45,13 +60,14 @@ function Login() {
       const data = await login(email, password);
       setUserData(data);
 
-      // Indicar que se debe mostrar el modal
-      sessionStorage.setItem("showWelcomeModal", "true");
-
       // Redirigir según rol
       const role = data?.user?.role;
       if (role === 'Administrador') {
         navigate('/adminPanel');
+      } else if (role === 'Directivo') {
+        navigate('/directivoPanel');
+      } else if (role === 'Capacitador') {
+        navigate('/trainer');
       } else {
         navigate('/userPanel');
       }

@@ -11,6 +11,8 @@ const NavBar = () => {
   const location = useLocation();
   const { logoutUser } = useUser();
   const { userData, setUserData } = useUser();
+  const role = (userData?.user?.role || '').toLowerCase();
+  const showNotifications = role !== 'administrador' && role !== 'directivo';
   const [openProfile, setOpenProfile] = useState(false); 
   const items = useMemo(() => userData?.messages?.items || [], [userData]);
   const trainings = useMemo(() => userData?.training || userData?.assignedTraining || [], [userData]);
@@ -123,6 +125,7 @@ const NavBar = () => {
           
           <div className="flex items-center gap-3 sm:gap-5">
             {/* Notificaciones (campana) */}
+            {showNotifications && (
             <Menu as="div" className="relative">
               <Menu.Button
                 type="button"
@@ -194,6 +197,7 @@ const NavBar = () => {
                 )} 
               </Menu.Items>
             </Menu>
+            )}
 
             {/* Usuario / Dropdown */}
             <Menu as="div" className="relative">

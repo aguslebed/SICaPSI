@@ -14,8 +14,10 @@ import {
   createRecipientNotFoundError,
   createMessageNotFoundError,
   createUnauthorizedError,
-  createDeleteFromTrashError
+  createDeleteFromTrashError,
+  createMessagingPermissionError
 } from '../utils/MessageValidator.js';
+import { objectIdsToStrings, createSenderNotFoundError } from '../utils/UserValidator.js';
 
 export class MessageService extends IMessageService {
   /**
@@ -91,6 +93,29 @@ export class MessageService extends IMessageService {
     }
     
     if (!recipient) throw new Error(createRecipientNotFoundError());
+
+    const sender = await this.userRepo.findById(senderId, 'role assignedTraining');
+    if (!sender) throw new Error(createSenderNotFoundError());
+
+    const trainingIdStr = trainingId?.toString?.() || (trainingId != null ? String(trainingId) : null);
+    const senderRole = (sender.role || '').toLowerCase();
+    const recipientRole = (recipient.role || '').toLowerCase();
+    const senderTrainings = objectIdsToStrings(sender.assignedTraining);
+    const recipientTrainings = objectIdsToStrings(recipient.assignedTraining);
+    const shareTraining = trainingIdStr
+      ? senderTrainings.includes(trainingIdStr) && recipientTrainings.includes(trainingIdStr)
+      : false;
+
+    let allowed = true;
+    if (senderRole === 'alumno') {
+      allowed = shareTraining && (recipientRole === 'alumno' || recipientRole === 'capacitador');
+    } else if (senderRole === 'capacitador') {
+      allowed = shareTraining && recipientRole === 'alumno';
+    }
+
+    if (!allowed) {
+      throw new Error(createMessagingPermissionError());
+    }
 
     const payload = {
       sender: senderId,

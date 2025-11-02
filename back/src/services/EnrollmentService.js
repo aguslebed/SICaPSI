@@ -153,6 +153,29 @@ export class EnrollmentService extends IEnrollmentService {
     return { message: createEnrollmentSuccessMessage(), training };
   }
 
+  async unenrollTrainerFromTraining(userId, trainingId) {
+    const user = await this.userRepo.findByIdDocument(userId);
+
+    if (!user) throw new Error(createUserNotFoundError());
+
+    const trainingExists = await this.trainingRepo.exists(trainingId);
+    if (!trainingExists) throw new Error(createTrainingNotFoundError());
+
+    if (!isTrainer(user.role)) {
+      throw new Error(createInvalidRoleError());
+    }
+
+    if (isNotEnrolled(user.assignedTraining, trainingId)) {
+      throw new Error(createNotEnrolledError());
+    }
+
+    user.assignedTraining = removeTrainingFromList(user.assignedTraining, trainingId);
+    await user.save();
+
+    const training = await this.trainingRepo.findById(trainingId);
+    return { message: createUnenrollmentSuccessMessage(), training };
+  }
+
 
   //Devuelve todos los capacitadores que NO estan anotados en una capacitacion en especifico
   async getTrainersNotEnrolledInTraining(trainingId) {

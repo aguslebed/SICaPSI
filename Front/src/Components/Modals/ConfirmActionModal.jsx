@@ -18,7 +18,15 @@ export default function ConfirmActionModal({ open, title = 'Confirmar acción', 
 
           <div className="flex-1 text-left">
             <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-            <p className="mt-2 text-sm text-gray-600 leading-relaxed">{message}</p>
+            <p
+              className="mt-2 text-sm text-gray-600 leading-relaxed"
+              // Expect message HTML to be sanitized upstream when provided as string
+              {...(typeof message === 'string'
+                ? { dangerouslySetInnerHTML: { __html: message } }
+                : {})}
+            >
+              {typeof message === 'string' ? null : message}
+            </p>
           </div>
         </div>
 

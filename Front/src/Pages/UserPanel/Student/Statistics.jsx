@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { getTotalTrainingProgress, getAllLevelsInTraining, getLevelStatistics } from '../../../API/Request';
 import { useUser } from '../../../context/UserContext';
-import { BarChart2, Users, BookOpen, TrendingUp, Award, ChevronDown, ChevronUp, Target, Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { normalizeRichTextValue } from '../../../Components/Modals/CreateTrainingModal/RichTextInput';
+import { Users, BookOpen, TrendingUp, Award, ChevronDown, ChevronUp, Target, Clock, CheckCircle2, XCircle } from 'lucide-react';
 
 export default function Statistics() {
     const { idTraining } = useParams();
@@ -14,50 +15,58 @@ export default function Statistics() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Obtener la capacitación actual del contexto
-    const training = userData?.training?.find(c => c._id === idTraining);
+    const isMountedRef = useRef(true);
 
     useEffect(() => {
-        if (idTraining && userData?.user?._id) {
-            fetchStatistics();
-        }
-    }, [idTraining, userData?.user?._id]);
+        isMountedRef.current = true;
+        return () => {
+            isMountedRef.current = false;
+        };
+    }, []);
 
-    const fetchStatistics = async () => {
-        setLoading(true);
+    // Obtener la capacitación actual del contexto
+    const training = userData?.training?.find(c => c._id === idTraining);
+    const trainingTitleHtml = normalizeRichTextValue(training?.title || '') || 'Capacitación actual';
+
+    const fetchStatistics = useCallback(async ({ silent = false } = {}) => {
+        if (!idTraining || !userData?.user?._id) {
+            if (!silent && isMountedRef.current) {
+                setLoading(false);
+            }
+            return;
+        }
+
+        if (!silent) {
+            setLoading(true);
+        }
         setError(null);
+
         try {
             console.log('📊 Fetching statistics for trainingId:', idTraining);
-            
-            // Obtener datos de progreso de la capacitación actual
             const response = await getTotalTrainingProgress(idTraining, userData.user._id);
             const data = response?.data || response || {};
+            if (!isMountedRef.current) return;
             setProgressData(data);
             console.log('✅ Progress data loaded:', data);
 
-            // Intentar obtener niveles del training actual desde userData
             const trainingLevels = training?.levels || [];
-            
+
             if (Array.isArray(trainingLevels) && trainingLevels.length > 0) {
                 console.log('✅ Levels loaded from training context:', trainingLevels);
+                if (!isMountedRef.current) return;
                 setLevels(trainingLevels);
             } else {
-                // Fallback: intentar obtener niveles desde el backend
                 console.log('📚 Fetching levels from backend for trainingId:', idTraining);
                 try {
                     const levelsResponse = await getAllLevelsInTraining(idTraining);
-                    console.log('📦 Levels response:', levelsResponse);
-                    
-                    // Manejar diferentes formatos de respuesta
-                    const levelsData = Array.isArray(levelsResponse) 
-                        ? levelsResponse 
+                    const levelsData = Array.isArray(levelsResponse)
+                        ? levelsResponse
                         : (levelsResponse?.levels || levelsResponse?.data || []);
-                    
-                    console.log('✅ Levels data:', levelsData);
-                    setLevels(levelsData);
+                    if (!isMountedRef.current) return;
+                    setLevels(Array.isArray(levelsData) ? levelsData : []);
                 } catch (levelsError) {
                     console.warn('⚠️ No se pudieron cargar niveles desde backend:', levelsError.message);
-                    // No fallar completamente si no se pueden cargar los niveles
+                    if (!isMountedRef.current) return;
                     setLevels([]);
                 }
             }
@@ -67,11 +76,64 @@ export default function Statistics() {
                 message: err.message,
                 stack: err.stack
             });
+            if (!isMountedRef.current) return;
             setError(err.message || 'Error al cargar estadísticas');
         } finally {
-            setLoading(false);
+            if (!silent && isMountedRef.current) {
+                setLoading(false);
+            }
         }
-    };
+    }, [idTraining, training, userData?.user?._id]);
+
+    useEffect(() => {
+        if (idTraining && userData?.user?._id) {
+            fetchStatistics();
+        }
+    }, [idTraining, userData?.user?._id, fetchStatistics]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+
+        const relevantReasons = new Set(['training:assigned', 'training:unassigned', 'training:deleted', 'progress:updated']);
+        const relevantMetaTypes = new Set(['training:status-changed', 'training:deleted']);
+
+        const handleUserDataEvent = (event) => {
+            const detail = event?.detail || {};
+            const payload = detail?.payload ?? detail;
+            const meta = detail?.meta;
+            const reason = payload?.reason;
+            const metaType = meta?.type;
+            const trainingIdFromPayload = payload?.trainingId ?? meta?.trainingId;
+
+            const reasonMatches = reason ? relevantReasons.has(reason) : false;
+            const metaMatches = metaType ? relevantMetaTypes.has(metaType) : false;
+
+            if (!reasonMatches && !metaMatches) return;
+            if (trainingIdFromPayload && String(trainingIdFromPayload) !== String(idTraining)) return;
+
+            fetchStatistics({ silent: true });
+        };
+
+        const handleTrainingEvent = (event) => {
+            const detail = event?.detail || {};
+            const trainingIdFromEvent = detail?.trainingId;
+            if (trainingIdFromEvent && String(trainingIdFromEvent) !== String(idTraining)) return;
+
+            fetchStatistics({ silent: true });
+        };
+
+        window.addEventListener('realtime:user-data-refresh', handleUserDataEvent);
+        window.addEventListener('realtime:user-data-refreshed', handleUserDataEvent);
+        window.addEventListener('realtime:training-status-changed', handleTrainingEvent);
+        window.addEventListener('realtime:training-deleted', handleTrainingEvent);
+
+        return () => {
+            window.removeEventListener('realtime:user-data-refresh', handleUserDataEvent);
+            window.removeEventListener('realtime:user-data-refreshed', handleUserDataEvent);
+            window.removeEventListener('realtime:training-status-changed', handleTrainingEvent);
+            window.removeEventListener('realtime:training-deleted', handleTrainingEvent);
+        };
+    }, [fetchStatistics, idTraining]);
 
     const toggleLevel = async (levelId) => {
         setExpandedLevels(prev => ({
@@ -142,9 +204,7 @@ export default function Statistics() {
                 <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
                     Estadísticas de la Capacitación (A desarrollar)
                 </h1>
-                <p className="text-gray-600 mt-2">
-                    {training.title || 'Capacitación actual'}
-                </p>
+                <p className="text-gray-600 mt-2 break-words" dangerouslySetInnerHTML={{ __html: trainingTitleHtml }} />
             </div>
 
             {/* Tarjetas de resumen */}
@@ -304,6 +364,7 @@ function InfoCard({ label, value, description }) {
 // Componente acordeón para estadísticas de nivel
 function LevelStatisticsAccordion({ level, stats, isExpanded, onToggle }) {
     const isLoading = isExpanded && !stats;
+    const levelTitleHtml = normalizeRichTextValue(level?.title || '') || 'Sin título';
 
     return (
         <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -316,7 +377,8 @@ function LevelStatisticsAccordion({ level, stats, isExpanded, onToggle }) {
                     <BookOpen className="text-blue-600" size={24} />
                     <div className="text-left">
                         <h3 className="font-semibold text-gray-900">
-                            Nivel {level.levelNumber}: {level.title || 'Sin título'}
+                            Nivel {level.levelNumber}:{' '}
+                            <span className="break-words" dangerouslySetInnerHTML={{ __html: levelTitleHtml }} />
                         </h3>
                         {stats && (
                             <p className="text-sm text-gray-600 mt-1">

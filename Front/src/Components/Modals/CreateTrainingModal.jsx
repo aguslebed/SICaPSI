@@ -12,6 +12,62 @@ import SuccessModal from './SuccessModal';
 import WarningModal from './WarningModal';
 import LoadingOverlay from '../Shared/LoadingOverlay';
 
+const esDateFormatter = new Intl.DateTimeFormat('es-ES', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric'
+});
+
+const parseDateValue = (value) => {
+  if (!value) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    if (trimmed.includes('/')) {
+      const parts = trimmed.split('/').map(part => part.trim());
+      if (parts.length === 3) {
+        const [day, month, year] = parts;
+        const isoCandidate = `${year.padStart(4, '0')}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T00:00:00`;
+        const parsed = new Date(isoCandidate);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+      }
+      return null;
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      const [year, month, day] = trimmed.split('-');
+      const isoCandidate = `${year}-${month}-${day}T00:00:00`;
+      const parsed = new Date(isoCandidate);
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    const parsed = new Date(trimmed);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  return null;
+};
+
+const normalizeDateForComparison = (value) => {
+  const parsed = parseDateValue(value);
+  return parsed ? parsed.toISOString().slice(0, 10) : '';
+};
+
+const formatDateForDisplay = (value) => {
+  const parsed = parseDateValue(value);
+  return parsed ? esDateFormatter.format(parsed) : '';
+};
+
 export default function CreateTrainingModal({ open, onClose, onSave, editingTraining }) {
   const { user } = useContext(UserContext);
   const isEditing = Boolean(editingTraining);
@@ -117,13 +173,18 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
     }
 
     // Comparar con el estado de referencia
+    const currentStartIso = normalizeDateForComparison(startDate);
+    const referenceStartIso = normalizeDateForComparison(referenceState.startDate);
+    const currentEndIso = normalizeDateForComparison(endDate);
+    const referenceEndIso = normalizeDateForComparison(referenceState.endDate);
+
     const hasChanges = (
       title !== (referenceState.title || '') ||
       subtitle !== (referenceState.subtitle || '') ||
       description !== normalizeRichTextValue(referenceState.description || '') ||
       image !== (referenceState.image || '') ||
-      (startDate !== (referenceState.startDate ? referenceState.startDate.split('T')[0] : '')) ||
-      (endDate !== (referenceState.endDate ? referenceState.endDate.split('T')[0] : '')) ||
+      currentStartIso !== referenceStartIso ||
+      currentEndIso !== referenceEndIso ||
       assignedTeacher !== (referenceState.assignedTeacher || '') ||
       JSON.stringify(selectedStudents.sort()) !== JSON.stringify((referenceState.enrolledStudents || []).sort()) ||
       JSON.stringify(levels) !== JSON.stringify(referenceState.levels || [])
@@ -471,11 +532,11 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
     setTitle(editingTraining.title || '');
     setSubtitle(editingTraining.subtitle || '');
     setDescription(normalizeRichTextValue(editingTraining.description || ''));
-      setImage(editingTraining.image || '');
-      setIsActive(editingTraining.isActive === true); // Solo true si está explícitamente en true, sino false
-      setAssignedTeacher(editingTraining.assignedTeacher || '');
-      setStartDate(editingTraining.startDate ? editingTraining.startDate.split('T')[0] : '');
-      setEndDate(editingTraining.endDate ? editingTraining.endDate.split('T')[0] : '');
+  setImage(editingTraining.image || '');
+  setIsActive(editingTraining.isActive === true); // Solo true si está explícitamente en true, sino false
+  setAssignedTeacher(editingTraining.assignedTeacher || '');
+  setStartDate(formatDateForDisplay(editingTraining.startDate));
+  setEndDate(formatDateForDisplay(editingTraining.endDate));
       setPendingImageFile(null); // Limpiar archivo pendiente al cargar para edición
       setPendingLevelFiles({}); // Limpiar archivos pendientes de niveles
       
@@ -966,8 +1027,17 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
   return false;
     }
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const start = parseDateValue(startDate);
+    const end = parseDateValue(endDate);
+
+    if (!start || !end) {
+      setErrorMessages(['Formato de fecha inválido. Utilice el selector para elegir las fechas.']);
+      setErrorModalTitle('Fechas inválidas');
+      setErrorModalMessageText('Verifique las fechas ingresadas e intente nuevamente.');
+      setShowErrorModal(true);
+      return false;
+    }
+
     if (end <= start) {
       setErrorMessages(['La fecha de fin debe ser posterior a la fecha de inicio']);
       setErrorModalTitle('No se puede guardar la capacitación');
@@ -1128,8 +1198,8 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
       totalLevels: sanitizedLevels.length,
       progressPercentage: 0,
       assignedTeacher: assignedTeacher.trim(),
-      startDate,
-      endDate
+      startDate: start ? start.toISOString() : '',
+      endDate: end ? end.toISOString() : ''
     };
 
     if (!isEditing) {
@@ -1146,11 +1216,19 @@ export default function CreateTrainingModal({ open, onClose, onSave, editingTrai
       }
     }
 
+    const previousAssignedTeacherRaw = isEditing
+      ? (lastSavedState?.assignedTeacher ?? editingTraining?.assignedTeacher ?? '')
+      : '';
+    const previousAssignedTeacher = typeof previousAssignedTeacherRaw === 'string'
+      ? previousAssignedTeacherRaw.trim()
+      : '';
+
     const additionalData = {
       selectedStudents,
       isEditing,
       trainingId: editingTraining?._id,
-      pendingUploads: isEditing ? null : pendingUploads
+      pendingUploads: isEditing ? null : pendingUploads,
+      previousAssignedTeacher
       // Ya no necesitamos pasar filesToDeleteFromLevels ni oldImageToDelete
     };
 
