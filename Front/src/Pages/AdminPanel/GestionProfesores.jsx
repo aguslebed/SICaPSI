@@ -23,7 +23,8 @@ const INITIAL_EDIT_MODAL_STATE = {
   teacher: null,
   selectedTrainingId: '',
   occupant: null,
-  isSubmitting: false
+  isSubmitting: false,
+  trainingsToRemove: [] // IDs de capacitaciones marcadas para eliminar
 };
 
 
@@ -89,6 +90,15 @@ export default function GestionProfesores() {
   const trainerCacheRef = useRef({});
   const [editModal, setEditModal] = useState(INITIAL_EDIT_MODAL_STATE);
   const [editModalError, setEditModalError] = useState(null);
+  
+  // Estado para modal de confirmación de eliminación de capacitación (YA NO SE USA)
+  // const [removeTrainingModal, setRemoveTrainingModal] = useState({
+  //   open: false,
+  //   teacherId: null,
+  //   teacherName: '',
+  //   trainingId: null,
+  //   trainingTitle: ''
+  // });
 
   const mapTeacherRow = useCallback((rawTeacher) => {
     const trainings = Array.isArray(rawTeacher?.assignedTraining)
@@ -198,13 +208,10 @@ export default function GestionProfesores() {
     if (!trainingOptions.length && !trainingsCatalogLoading) {
       loadTrainingsCatalog();
     }
-    const primaryTrainingId = teacherRow.trainings && teacherRow.trainings.length > 0
-      ? teacherRow.trainings[0].id || ''
-      : '';
     setEditModal({
       open: true,
       teacher: teacherRow,
-      selectedTrainingId: primaryTrainingId,
+      selectedTrainingId: '',
       occupant: null,
       isSubmitting: false
     });
@@ -261,36 +268,44 @@ export default function GestionProfesores() {
     const teacherName = editModal.teacher.fullName || editModal.teacher.email || 'el profesor';
     const selectedId = editModal.selectedTrainingId;
     const selectedTraining = trainingOptions.find((option) => option.id === selectedId);
+    const trainingsToRemove = editModal.trainingsToRemove || [];
     const items = [];
     const pushItem = (message, intent = 'info') => {
       items.push({ message, intent });
     };
 
-    if (!selectedId) {
-      if (teacherTrainings.length === 0) {
-        pushItem(`El profesor ${teacherName} continuará sin capacitaciones asignadas.`);
-      } else {
-        teacherTrainings.forEach((training) => {
+    // Mostrar capacitaciones a quitar
+    if (trainingsToRemove.length > 0) {
+      trainingsToRemove.forEach((trainingId) => {
+        const training = teacherTrainings.find((t) => t.id === trainingId);
+        if (training) {
           pushItem(`Se quitará la capacitación "${training.title}" del profesor ${teacherName}.`, 'remove');
-        });
-      }
-      return items;
+        }
+      });
     }
 
-    const selectedTitle = selectedTraining?.title || 'Capacitación seleccionada';
-    pushItem(`Se asignará la capacitación "${selectedTitle}" al profesor ${teacherName}.`, 'assign');
+    // Mostrar capacitación a agregar
+    if (selectedId) {
+      const isAlreadyAssigned = teacherTrainings.some((training) => training.id === selectedId);
+      
+      if (isAlreadyAssigned) {
+        const selectedTitle = selectedTraining?.title || 'Capacitación seleccionada';
+        pushItem(`El profesor ${teacherName} ya tiene asignada la capacitación "${selectedTitle}".`, 'info');
+      } else {
+        const selectedTitle = selectedTraining?.title || 'Capacitación seleccionada';
+        pushItem(`Se agregará la capacitación "${selectedTitle}" al profesor ${teacherName}.`, 'assign');
 
-    teacherTrainings.forEach((training) => {
-      if (training.id && training.id !== selectedId) {
-        pushItem(`Se quitará la capacitación "${training.title}" del profesor ${teacherName}.`, 'remove');
+        const occupant = editModal.occupant;
+        const occupantId = occupant && (occupant._id || occupant.id);
+        if (occupantId && occupantId !== editModal.teacher.id) {
+          const occupantName = [occupant.firstName, occupant.lastName].filter(Boolean).join(' ').trim() || occupant.email || 'otro profesor';
+          pushItem(`La capacitación "${selectedTitle}" se quitará del profesor ${occupantName}.`, 'remove');
+        }
       }
-    });
+    }
 
-    const occupant = editModal.occupant;
-    const occupantId = occupant && (occupant._id || occupant.id);
-    if (occupantId && occupantId !== editModal.teacher.id) {
-      const occupantName = [occupant.firstName, occupant.lastName].filter(Boolean).join(' ').trim() || occupant.email || 'otro profesor';
-      pushItem(`La capacitación "${selectedTitle}" se quitará del profesor ${occupantName}.`, 'remove');
+    if (items.length === 0) {
+      pushItem(`Seleccioná una capacitación para agregar o marcá capacitaciones para quitar.`, 'info');
     }
 
     return items;
@@ -298,17 +313,19 @@ export default function GestionProfesores() {
 
   const hasTrainingChanges = useMemo(() => {
     if (!editModal.open || !editModal.teacher) return false;
+    const selectedId = editModal.selectedTrainingId;
+    const trainingsToRemove = editModal.trainingsToRemove || [];
+    
+    // Hay cambios si se seleccionó una nueva capacitación o si hay capacitaciones marcadas para quitar
+    if (trainingsToRemove.length > 0) return true;
+    if (!selectedId) return false;
+    
     const currentTrainingIds = Array.isArray(editModal.teacher.trainings)
       ? editModal.teacher.trainings.map((training) => training.id).filter(Boolean)
       : [];
-    const selectedId = editModal.selectedTrainingId;
-    if (!selectedId) {
-      return currentTrainingIds.length > 0;
-    }
-    if (currentTrainingIds.length === 0) {
-      return true;
-    }
-    return !(currentTrainingIds.length === 1 && currentTrainingIds[0] === selectedId);
+    
+    // Hay cambios si la capacitación seleccionada NO está ya asignada
+    return !currentTrainingIds.includes(selectedId);
   }, [editModal]);
 
   const handleEditModalSubmit = useCallback(async () => {
@@ -325,45 +342,51 @@ export default function GestionProfesores() {
     setEditModal((prev) => ({ ...prev, isSubmitting: true }));
 
     const teacherId = editModal.teacher.id;
-    const currentTrainingIds = Array.isArray(editModal.teacher.trainings)
-      ? editModal.teacher.trainings.map((training) => training.id).filter(Boolean)
-      : [];
     const selectedId = editModal.selectedTrainingId;
+    const trainingsToRemove = editModal.trainingsToRemove || [];
 
     try {
+      // 1. Quitar capacitaciones marcadas para eliminar
+      for (const trainingId of trainingsToRemove) {
+        await unenrollTrainerFromTraining(trainingId, teacherId);
+        trainerCacheRef.current = { ...trainerCacheRef.current, [trainingId]: null };
+      }
+
+      // 2. Agregar nueva capacitación (si se seleccionó una)
       if (selectedId) {
-        let occupant = editModal.occupant;
-        if (occupant === undefined) {
-          occupant = await fetchTrainerForTraining(selectedId);
-        }
-        const occupantId = occupant && (occupant._id || occupant.id);
-        if (occupantId && occupantId !== teacherId) {
-          try {
-            await unenrollTrainerFromTraining(selectedId, occupantId);
-            trainerCacheRef.current = { ...trainerCacheRef.current, [selectedId]: null };
-          } catch (error) {
-            console.warn('No se pudo quitar al profesor anterior de la capacitación seleccionada:', error);
+        const currentTrainingIds = Array.isArray(editModal.teacher.trainings)
+          ? editModal.teacher.trainings.map((training) => training.id).filter(Boolean)
+          : [];
+        
+        // Solo agregar si no está ya asignada
+        if (!currentTrainingIds.includes(selectedId)) {
+          // Quitar al profesor ocupante actual de la capacitación (si existe y es diferente)
+          let occupant = editModal.occupant;
+          if (occupant === undefined) {
+            occupant = await fetchTrainerForTraining(selectedId);
           }
-        }
-      }
-
-      for (const trainingId of currentTrainingIds) {
-        if (!selectedId || trainingId !== selectedId) {
-          await unenrollTrainerFromTraining(trainingId, teacherId);
-        }
-      }
-
-      if (selectedId && !currentTrainingIds.includes(selectedId)) {
-        await enrollTrainerToTraining(selectedId, teacherId);
-        trainerCacheRef.current = {
-          ...trainerCacheRef.current,
-          [selectedId]: {
-            _id: teacherId,
-            firstName: editModal.teacher.nombre,
-            lastName: editModal.teacher.apellido,
-            email: editModal.teacher.email
+          const occupantId = occupant && (occupant._id || occupant.id);
+          if (occupantId && occupantId !== teacherId) {
+            try {
+              await unenrollTrainerFromTraining(selectedId, occupantId);
+              trainerCacheRef.current = { ...trainerCacheRef.current, [selectedId]: null };
+            } catch (error) {
+              console.warn('No se pudo quitar al profesor anterior de la capacitación seleccionada:', error);
+            }
           }
-        };
+
+          // Agregar la capacitación al profesor
+          await enrollTrainerToTraining(selectedId, teacherId);
+          trainerCacheRef.current = {
+            ...trainerCacheRef.current,
+            [selectedId]: {
+              _id: teacherId,
+              firstName: editModal.teacher.nombre,
+              lastName: editModal.teacher.apellido,
+              email: editModal.teacher.email
+            }
+          };
+        }
       }
 
       const teacherName = editModal.teacher.fullName || editModal.teacher.email || 'el profesor';
@@ -371,15 +394,40 @@ export default function GestionProfesores() {
       closeEditModal();
       await refreshTeachers();
     } catch (error) {
-      console.error('Error actualizando capacitación del profesor:', error);
-      setEditModalError(error?.message || 'No se pudo actualizar la capacitación del profesor.');
+      console.error('Error actualizando capacitaciones del profesor:', error);
+      setEditModalError(error?.message || 'No se pudo actualizar las capacitaciones del profesor.');
       setEditModal((prev) => ({ ...prev, isSubmitting: false }));
     }
   }, [closeEditModal, editModal, fetchTrainerForTraining, hasTrainingChanges, refreshTeachers]);
 
+  const handleRemoveTraining = useCallback((teacher, training) => {
+    // Marcar la capacitación para eliminación (solo en el estado del modal)
+    setEditModal((prev) => {
+      const currentToRemove = prev.trainingsToRemove || [];
+      // Si ya está marcada, desmarcarla (toggle)
+      if (currentToRemove.includes(training.id)) {
+        return {
+          ...prev,
+          trainingsToRemove: currentToRemove.filter((id) => id !== training.id)
+        };
+      }
+      // Si no está marcada, marcarla
+      return {
+        ...prev,
+        trainingsToRemove: [...currentToRemove, training.id]
+      };
+    });
+  }, []);
+
+  const handleConfirmRemoveTraining = useCallback(async () => {
+    // Esta función ya no se usa, la eliminación se hace al confirmar todo el modal
+  }, []);
+
   const teacherTrainingsForModal = editModal.teacher && Array.isArray(editModal.teacher.trainings)
     ? editModal.teacher.trainings
     : [];
+  const trainingsToRemove = editModal.trainingsToRemove || [];
+  const visibleTrainings = teacherTrainingsForModal.filter((training) => !trainingsToRemove.includes(training.id));
   const selectedTrainingOption = editModal.selectedTrainingId
     ? trainingOptions.find((option) => option.id === editModal.selectedTrainingId) || null
     : null;
@@ -725,13 +773,67 @@ export default function GestionProfesores() {
               >
                 <div className="flex flex-col gap-4 p-5">
                   <div>
-                    <h2 className="text-lg font-semibold text-gray-900">Reasignar capacitación</h2>
+                    <h2 className="text-lg font-semibold text-gray-900">Gestionar capacitaciones</h2>
                     <p className="mt-1 text-sm text-gray-600">{editModal.teacher?.fullName || editModal.teacher?.email}</p>
                   </div>
 
+                  {visibleTrainings.length > 0 && (
+                    <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
+                      <p className="mb-2 text-xs font-semibold text-blue-900">Capacitaciones actuales:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {visibleTrainings.map((training, index) => (
+                          <span
+                            key={training.id || training.title || index}
+                            className="inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-3 py-1 text-xs font-medium text-white"
+                          >
+                            <span dangerouslySetInnerHTML={renderHtml(training.title)} />
+                            <button
+                              type="button"
+                              className="cursor-pointer rounded-full transition-colors hover:bg-blue-700"
+                              onClick={() => handleRemoveTraining(editModal.teacher, training)}
+                              title="Quitar capacitación"
+                            >
+                              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {trainingsToRemove.length > 0 && (
+                    <div className="rounded-md border border-red-200 bg-red-50 p-3">
+                      <p className="mb-2 text-xs font-semibold text-red-900">Capacitaciones a quitar:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {teacherTrainingsForModal
+                          .filter((training) => trainingsToRemove.includes(training.id))
+                          .map((training, index) => (
+                            <span
+                              key={training.id || training.title || index}
+                              className="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-3 py-1 text-xs font-medium text-white"
+                            >
+                              <span dangerouslySetInnerHTML={renderHtml(training.title)} />
+                              <button
+                                type="button"
+                                className="cursor-pointer rounded-full transition-colors hover:bg-red-700"
+                                onClick={() => handleRemoveTraining(editModal.teacher, training)}
+                                title="Deshacer"
+                              >
+                                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                              </button>
+                            </span>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex flex-col gap-2">
                     <label htmlFor="training-selection" className="text-sm font-medium text-gray-700">
-                      Capacitación
+                      Capacitación a agregar
                     </label>
                     <select
                       id="training-selection"
@@ -740,7 +842,7 @@ export default function GestionProfesores() {
                       onChange={handleTrainingSelectionChange}
                       disabled={editModal.isSubmitting || trainingsCatalogLoading}
                     >
-                      <option value="">Sin capacitación</option>
+                      <option value="">Seleccionar capacitación</option>
                       {trainingOptions.map((option) => (
                         <option key={option.id} value={option.id}>
                           {stripHtml(option.title)}
