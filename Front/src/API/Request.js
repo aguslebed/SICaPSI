@@ -978,3 +978,24 @@ export async function getPendingContent() {
     }
   }
 }
+
+// --- FEEDBACK ---
+// Enviar retroalimentación de una capacitación
+export async function submitTrainingFeedback(trainingId, feedback) {
+  try {
+    const { data } = await api.post('/feedback', {
+      trainingId,
+      feedback
+    });
+    return data;
+  } catch (error) {
+    console.error('❌ Error enviando retroalimentación:', error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al enviar retroalimentación');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}

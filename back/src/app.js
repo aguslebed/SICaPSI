@@ -17,6 +17,7 @@ import enrollmentRoutes from "./routes/enrollmentRoutes.js";
 import levelRoutes from "./routes/levelRoutes.js";
 import { startTrainingScheduler } from "./utils/trainingScheduler.js";
 import progressRoutes from "./routes/progressRoutes.js";
+import feedbackRoutes from "./routes/feedbackRoutes.js";
 import { initRealtime } from "./realtime/socket.js";
 
 
@@ -93,6 +94,7 @@ class AppConfig {
     this.app.use("/enrollment", enrollmentRoutes);
     this.app.use("/level", levelRoutes);
     this.app.use("/progress", progressRoutes);
+    this.app.use("/feedback", feedbackRoutes);
   } 
 
 
