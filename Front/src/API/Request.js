@@ -1039,3 +1039,52 @@ export async function getAllFeedback() {
     }
   }
 }
+
+// --- AUDIT / LOGS ---
+// Obtener registros de auditoría con filtros y paginación
+export async function getAuditLogs(params = {}) {
+  try {
+    const { data } = await api.get('/audit/logs', { params });
+    return data;
+  } catch (error) {
+    console.error('❌ Error obteniendo registros de auditoría:', error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al obtener registros');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}
+
+// Obtener acciones disponibles para filtros
+export async function getAuditActions() {
+  try {
+    const { data } = await api.get('/audit/actions');
+    return data;
+  } catch (error) {
+    console.warn('No se pudieron cargar acciones:', error);
+    return { data: [] };
+  }
+}
+
+// Exportar registros de auditoría a Excel
+export async function exportAuditExcel(params = {}) {
+  try {
+    const response = await api.get('/audit/export-excel', {
+      params,
+      responseType: 'blob'
+    });
+    return response.data;
+  } catch (error) {
+    console.error('❌ Error exportando registros a Excel:', error);
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al exportar registros');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error en la configuración de la petición');
+    }
+  }
+}

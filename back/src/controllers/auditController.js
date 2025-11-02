@@ -32,7 +32,8 @@ export function makeAuditController() {
           userRole: req.query.userRole,
           startDate: req.query.startDate,
           endDate: req.query.endDate,
-          search: req.query.search
+          search: req.query.search,
+          trainerName: req.query.trainerName
         };
 
         // Remover filtros vacíos

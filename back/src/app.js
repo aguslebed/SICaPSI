@@ -20,6 +20,7 @@ import progressRoutes from "./routes/progressRoutes.js";
 import feedbackRoutes from "./routes/feedbackRoutes.js";
 import auditRoutes from "./routes/auditRoutes.js";
 import { initRealtime } from "./realtime/socket.js";
+import { resolveAllowedOrigins } from "./utils/originHelper.js";
 
 
 // __dirname equivalent for ES Modules
@@ -51,8 +52,17 @@ class AppConfig {
    * Responsabilidad 1: Configurar middlewares base
    */
   configureMiddlewares() {
+    const allowedOrigins = resolveAllowedOrigins();
+    console.log('✅ Orígenes permitidos (CORS):', allowedOrigins);
+
     this.app.use(cors({
-      origin: process.env.FRONT_ORIGIN ||'http://localhost:5173',
+      origin: (origin, callback) => {
+        // Allow server-to-server or same-origin requests without Origin header
+        if (!origin) return callback(null, true);
+        const list = Array.isArray(allowedOrigins) ? allowedOrigins : [allowedOrigins];
+        if (list.includes(origin)) return callback(null, true);
+        return callback(new Error('Origin not allowed by CORS'));
+      },
       credentials: true
     }));
     this.app.use(express.json());

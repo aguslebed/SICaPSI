@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import NavBar from '../../Components/Student/NavBar';
 import LoadingOverlay from '../../Components/Shared/LoadingOverlay';
+import { getAuditLogs, getAuditActions, exportAuditExcel } from '../../API/Request';
 import './DirectivoPanel.css';
 import '../AdminPanel/AdminPanel.css';
 
@@ -87,13 +88,9 @@ export default function Registros() {
   // Cargar acciones disponibles
   const cargarAcciones = async () => {
     try {
-      const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
-      const response = await fetch(`${API_BASE}/audit/actions`, { credentials: 'include' });
-      if (response.ok) {
-        const data = await response.json();
-        const acciones = Array.isArray(data.data) ? data.data : [];
-        setAccionesDisponibles(acciones);
-      }
+      const data = await getAuditActions();
+      const acciones = Array.isArray(data.data) ? data.data : [];
+      setAccionesDisponibles(acciones);
     } catch (error) {
       console.warn('No se pudieron cargar acciones:', error);
     }
@@ -103,15 +100,13 @@ export default function Registros() {
   const cargarRegistros = async () => {
     try {
       setLoading(true);
-      const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
       
       console.log('🚀 Frontend: Iniciando carga de registros...');
-      console.log('🌐 Frontend: API_BASE:', API_BASE);
       
-      const params = new URLSearchParams({
+      const params = {
         page: pagina,
         limit: registrosPorPagina
-      });
+      };
       
       console.log('🔍 Frontend: Preparando búsqueda con filtros aplicados:', {
         filtroAccionAplicado,
@@ -119,14 +114,14 @@ export default function Registros() {
         filtroFechaAplicado
       });
       
-      if (filtroAccionAplicado) params.append('action', filtroAccionAplicado);
-      if (filtroCapacitadorAplicado) params.append('trainerName', filtroCapacitadorAplicado);
+      if (filtroAccionAplicado) params.action = filtroAccionAplicado;
+      if (filtroCapacitadorAplicado) params.trainerName = filtroCapacitadorAplicado;
       if (filtroFechaAplicado) {
         // Si ya es un objeto con inicio/fin, usar esos valores
         if (typeof filtroFechaAplicado === 'object' && filtroFechaAplicado.inicio) {
           console.log('📅 Frontend: Usando fechas pre-calculadas:', filtroFechaAplicado);
-          params.append('startDate', filtroFechaAplicado.inicio);
-          params.append('endDate', filtroFechaAplicado.fin);
+          params.startDate = filtroFechaAplicado.inicio;
+          params.endDate = filtroFechaAplicado.fin;
         } else {
           // Fallback para compatibilidad
           const fecha = new Date(filtroFechaAplicado);
@@ -140,41 +135,17 @@ export default function Registros() {
             fechaFin: fechaFin.toISOString()
           });
           
-          params.append('startDate', fechaInicio.toISOString());
-          params.append('endDate', fechaFin.toISOString());
+          params.startDate = fechaInicio.toISOString();
+          params.endDate = fechaFin.toISOString();
         }
       }
 
-      const response = await fetch(`${API_BASE}/audit/logs?${params}`, { 
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      const data = await getAuditLogs(params);
       
-      console.log('🌐 Frontend: Respuesta del servidor:', response.status);
-      
-      if (response.status === 401) {
-        console.error('❌ Frontend: No autorizado - verificar autenticación');
-        // Intentar recargar la página o redirigir al login
-        setRegistros([]);
-        setTotalPaginas(1);
-        setTotalRegistros(0);
-        return;
-      }
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('📊 Frontend: Datos recibidos:', data);
-        setRegistros(data.data || []);
-        setTotalPaginas(data.pagination?.pages || 1);
-        setTotalRegistros(data.pagination?.total || 0);
-      } else {
-        console.error('❌ Frontend: Error en la respuesta:', response.status);
-        setRegistros([]);
-        setTotalPaginas(1);
-        setTotalRegistros(0);
-      }
+      console.log('📊 Frontend: Datos recibidos:', data);
+      setRegistros(data.data || []);
+      setTotalPaginas(data.pagination?.pages || 1);
+      setTotalRegistros(data.pagination?.total || 0);
     } catch (error) {
       console.error('Error cargando registros:', error);
       setRegistros([]);
@@ -245,26 +216,25 @@ export default function Registros() {
     try {
       setLoading(true);
       console.log('📊 Frontend: Generando reporte Excel...');
-      const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
       
-      const params = new URLSearchParams();
+      const params = {};
       
       // Aplicar los mismos filtros que usa la búsqueda
       if (filtroAccionAplicado) {
-        params.append('action', filtroAccionAplicado);
+        params.action = filtroAccionAplicado;
         console.log('📊 Frontend: Filtro acción aplicado:', filtroAccionAplicado);
       }
       
       if (filtroCapacitadorAplicado) {
-        params.append('trainerName', filtroCapacitadorAplicado);
+        params.trainerName = filtroCapacitadorAplicado;
         console.log('📊 Frontend: Filtro capacitador aplicado:', filtroCapacitadorAplicado);
       }
       
       if (filtroFechaAplicado) {
         // Si ya es un objeto con inicio/fin, usar esos valores
         if (typeof filtroFechaAplicado === 'object' && filtroFechaAplicado.inicio) {
-          params.append('startDate', filtroFechaAplicado.inicio);
-          params.append('endDate', filtroFechaAplicado.fin);
+          params.startDate = filtroFechaAplicado.inicio;
+          params.endDate = filtroFechaAplicado.fin;
           console.log('📊 Frontend: Filtro fecha aplicado (objeto):', filtroFechaAplicado);
         } else {
           // Fallback para compatibilidad
@@ -272,8 +242,8 @@ export default function Registros() {
           const fechaInicio = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
           const fechaFin = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
           fechaFin.setUTCHours(23, 59, 59, 999);
-          params.append('startDate', fechaInicio.toISOString());
-          params.append('endDate', fechaFin.toISOString());
+          params.startDate = fechaInicio.toISOString();
+          params.endDate = fechaFin.toISOString();
           console.log('📊 Frontend: Filtro fecha aplicado (fallback):', {
             fechaOriginal: filtroFechaAplicado,
             fechaInicio: fechaInicio.toISOString(),
@@ -282,26 +252,18 @@ export default function Registros() {
         }
       }
 
-      console.log('📊 Frontend: Solicitando Excel con parámetros:', params.toString());
-      const response = await fetch(`${API_BASE}/audit/export-excel?${params}`, { 
-        credentials: 'include' 
-      });
+      console.log('📊 Frontend: Solicitando Excel con parámetros:', params);
+      const blob = await exportAuditExcel(params);
       
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `reporte-auditoria-${new Date().toISOString().split('T')[0]}.xlsx`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        console.log('✅ Frontend: Archivo Excel descargado exitosamente');
-      } else {
-        console.error('❌ Frontend: Error en respuesta del servidor:', response.status);
-        alert('Error generando el reporte Excel. Inténtelo nuevamente.');
-      }
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `reporte-auditoria-${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      console.log('✅ Frontend: Archivo Excel descargado exitosamente');
     } catch (error) {
       console.error('❌ Frontend: Error generando reporte Excel:', error);
       alert('Error generando el reporte Excel. Verifique su conexión.');
@@ -372,18 +334,45 @@ export default function Registros() {
               </div>
             )}
             
-            {!loading && registros.map((registro, idx) => (
-              <div key={registro._id || registro.id || idx} className="registros-row" style={{ display: 'flex', alignItems: 'center', padding: '1rem 0.5rem', borderBottom: idx === registros.length - 1 ? 'none' : '1px solid #e0e0e0' }}>
-                <div style={{ flex: 2, paddingLeft: '1rem' }}>
-                  {registro.userSnapshot?.firstName && registro.userSnapshot?.lastName 
-                    ? `${registro.userSnapshot.firstName} ${registro.userSnapshot.lastName}` 
-                    : registro.userSnapshot?.email || 'Usuario desconocido'}
+            {!loading && registros.map((registro, idx) => {
+              // Intentar obtener nombre del usuario desde diferentes fuentes
+              let nombreUsuario = 'Usuario desconocido';
+              let dniUsuario = '-';
+              
+              // Prioridad 1: Datos del usuario poblado (userId)
+              if (registro.user?.name && registro.user.name.trim() !== '') {
+                nombreUsuario = registro.user.name;
+              } 
+              // Prioridad 2: userSnapshot con firstName y lastName
+              else if (registro.userSnapshot?.firstName && registro.userSnapshot?.lastName) {
+                nombreUsuario = `${registro.userSnapshot.firstName} ${registro.userSnapshot.lastName}`;
+              }
+              // Prioridad 3: Email del usuario
+              else if (registro.user?.email) {
+                nombreUsuario = registro.user.email;
+              }
+              else if (registro.userSnapshot?.email) {
+                nombreUsuario = registro.userSnapshot.email;
+              }
+              
+              // DNI del usuario
+              if (registro.user?.documentNumber) {
+                dniUsuario = registro.user.documentNumber;
+              } else if (registro.userSnapshot?.documentNumber) {
+                dniUsuario = registro.userSnapshot.documentNumber;
+              }
+              
+              return (
+                <div key={registro._id || registro.id || idx} className="registros-row" style={{ display: 'flex', alignItems: 'center', padding: '1rem 0.5rem', borderBottom: idx === registros.length - 1 ? 'none' : '1px solid #e0e0e0' }}>
+                  <div style={{ flex: 2, paddingLeft: '1rem' }}>
+                    {nombreUsuario}
+                  </div>
+                  <div style={{ flex: 2 }}>{traducirAccion(registro.action) || registro.actionDescription || registro.action}</div>
+                  <div style={{ flex: 2 }}>{formatearFecha(registro.timestamp)}</div>
+                  <div style={{ flex: 1 }}>{dniUsuario}</div>
                 </div>
-                <div style={{ flex: 2 }}>{traducirAccion(registro.action) || registro.actionDescription || registro.action}</div>
-                <div style={{ flex: 2 }}>{formatearFecha(registro.timestamp)}</div>
-                <div style={{ flex: 1 }}>{registro.userSnapshot?.documentNumber || '-'}</div>
-              </div>
-            ))}
+              );
+            })}
             
             {!loading && registros.length === 0 && (
               <div style={{ padding: '2rem', textAlign: 'center', color: '#757575' }}>
