@@ -10,6 +10,9 @@ import  {makeTrainingController}  from "../controllers/trainingController.js";
 import makeAuthMiddleware from "../middlewares/authMiddleware.js";
 import { JwtTokenService } from "../services/JwtTokenService.js";
 
+// Audit middleware
+import { auditTrainingChange, createAuditMiddleware } from "../middlewares/auditMiddleware.js";
+
 //service
 import {TrainingService} from "../services/TrainingService.js"
 
@@ -120,7 +123,7 @@ const adminMiddleware = (req, res, next) => {
 };
 
 
-router.post("/createTraining", authMiddleware, controller.createTraining)
+router.post("/createTraining", authMiddleware, createAuditMiddleware('TRAINING_CREATED', 'TRAINING'), controller.createTraining)
 router.get("/getAllActiveTrainings", authMiddleware, controller.getAllActiveTrainings)
 router.get("/getAllTrainings", authMiddleware, controller.getAllTrainings)
 router.get("/pending-content", authMiddleware, adminMiddleware, controller.getPendingContent)
@@ -213,8 +216,8 @@ router.post("/replace-file", upload.single('file'), (req, res) => {
 
 router.get("/:id", authMiddleware, controller.getTrainingById)
 router.get("/:id/trainer", authMiddleware, controller.getTrainerByTrainingId)
-router.patch("/:id", authMiddleware, adminMiddleware, controller.updateTraining)
-router.delete("/:id", authMiddleware, adminMiddleware, controller.deleteTraining)
+router.patch("/:id", authMiddleware, adminMiddleware, auditTrainingChange, controller.updateTraining)
+router.delete("/:id", authMiddleware, adminMiddleware, createAuditMiddleware('TRAINING_DELETED', 'TRAINING'), controller.deleteTraining)
 
 // Upload endpoints
 router.post("/upload-image", authMiddleware, upload.single('image'), (req, res) => {

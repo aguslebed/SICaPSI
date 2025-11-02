@@ -2,6 +2,7 @@ import { Router } from "express";
 import { makeUserController } from "../controllers/userController.js";
 import { RegistrationValidator } from "../validators/RegistrationValidator.js";
 import makeAuthMiddleware from "../middlewares/authMiddleware.js";
+import { auditUserStatusChange, auditUserChange, createAuditMiddleware } from "../middlewares/auditMiddleware.js";
 import multer from "multer";
 import path from "path";
 import { fileURLToPath } from 'url';
@@ -68,14 +69,14 @@ const adminMiddleware = (req, res, next) => {
 };
 
 const router = Router();
-router.post("/register", RegistrationValidator, userController.create);
+router.post("/register", createAuditMiddleware('USER_CREATED', 'USER'), RegistrationValidator, userController.create);
 router.get("/", authMiddleware, userController.list);
 router.get("/recipients", authMiddleware, userController.listRecipients);
 router.get("/connect/me", authMiddleware, userController.getUserCompleteData);
 router.get("/:id", authMiddleware, userController.getById);
-router.patch("/:id", authMiddleware, userController.update); 
+router.patch("/:id", authMiddleware, auditUserChange('USER_UPDATED'), userController.update); 
 router.post("/:id/profile-image", authMiddleware, upload.single('image'), userController.uploadProfileImage); 
-router.post("/change-password", authMiddleware, userController.changePassword);
+router.post("/change-password", authMiddleware, createAuditMiddleware('PASSWORD_CHANGED', 'USER'), userController.changePassword);
 // Actualizar último login
 router.patch("/:id/last-login", authMiddleware, userController.updateLastLogin);
 
@@ -84,13 +85,13 @@ router.patch("/:id/last-login", authMiddleware, userController.updateLastLogin);
 // Todas requieren autenticación y permisos de administrador
 router.get("/admin/teachers", authMiddleware, adminMiddleware, userController.listTeachers);
 router.get("/admin/teachers/:id", authMiddleware, adminMiddleware, userController.getTeacherById);
-router.patch("/admin/teachers/:id/status", authMiddleware, adminMiddleware, userController.updateTeacherStatus);
+router.patch("/admin/teachers/:id/status", authMiddleware, adminMiddleware, auditUserStatusChange, userController.updateTeacherStatus);
 
 // Obtener guardias inscritos en una capacitación
 router.get("/training/:trainingId/enrolled", authMiddleware, userController.getEnrolledStudents);
 
 // Gestion de Usuario
-router.delete("/:id", authMiddleware, adminMiddleware, userController.deleteUser);
+router.delete("/:id", authMiddleware, adminMiddleware, auditUserChange('USER_DELETED'), userController.deleteUser);
 
 export default router;
   

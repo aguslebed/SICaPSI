@@ -43,6 +43,16 @@ export const makeAuthController = ({ authService, loginValidator, tokenService }
         sub: user._id
       });
 
+      // 4.1) Establecer usuario autenticado para auditoría
+      req.authenticatedUser = {
+        userId: user._id || user.id,
+        email: user.email,
+        role: user.role || 'user',
+        firstName: user.firstName,
+        lastName: user.lastName,
+        documentNumber: user.documentNumber
+      };
+
       // 5) Cookie segura con configuración adaptable
       const isProd = process.env.NODE_ENV === 'production';
       res.cookie('token', token, { 
