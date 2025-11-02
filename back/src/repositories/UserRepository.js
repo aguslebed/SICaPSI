@@ -121,6 +121,18 @@ class UserRepository {
   }
 
   /**
+   * Busca un usuario por número de documento
+   * @param {string} documentNumber - Número de documento
+   * @returns {Promise<Object|null>} Usuario encontrado o null
+   */
+  async findByDocumentNumber(documentNumber) {
+    if (!documentNumber) {
+      return null;
+    }
+    return User.findOne({ documentNumber });
+  }
+
+  /**
    * Crea un nuevo usuario
    * @param {Object} userData - Datos del usuario
    * @returns {Promise<Object>} Usuario creado

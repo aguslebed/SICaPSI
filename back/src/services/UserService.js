@@ -2,6 +2,7 @@
 import { IUserService } from '../interfaces/IUserService.js';
 import UserRepository from '../repositories/UserRepository.js';
 import TrainingRepository from '../repositories/TrainingRepository.js';
+import AppError from '../middlewares/AppError.js';
 import {
   emailExists,
   unifyUsersByIdMultiple,
@@ -39,12 +40,30 @@ export class UserService extends IUserService {
   }
 
   async create(data) {
+    // Reutilizamos helper para construir error consistente para duplicados
+    const buildDuplicateError = () => {
+      return new AppError(
+        'El usuario que intenta registrar ya se encuentra registrado.',
+        409,
+        'USER_ALREADY_REGISTERED'
+      );
+    };
+
     // Usar repositorio para verificar email duplicado
     const exists = await this.userRepo.findByEmailDocument(data.email);
-    
+
     // Validar con función pura
     if (emailExists(exists)) {
-      throw new Error(createEmailExistsError());
+      throw buildDuplicateError();
+    }
+
+    // Validar duplicado por número de documento
+    const documentExists = data.documentNumber
+      ? await this.userRepo.findByDocumentNumber(data.documentNumber)
+      : null;
+
+    if (documentExists) {
+      throw buildDuplicateError();
     }
     
     // Hash de contraseña si existe el campo
@@ -53,16 +72,28 @@ export class UserService extends IUserService {
       data.password = await bcrypt.default.hash(data.password, 10);
     }
     
+    const adminCreated = data.createdByAdmin === true || data.createdByAdmin === 'true' || data.createdByAdmin === 1 || data.createdByAdmin === '1';
+
     // Usar repositorio para crear
     const userData = {
       ...data,
       role: data.role || "Alumno", // Por defecto todos los nuevos usuarios son Alumno
+      status: adminCreated ? 'available' : (data.status || 'pendiente'),
       ultimoIngreso: data.ultimoIngreso ?? null,
       legajo: data.legajo ?? null,
       imagenPerfil: data.imagenPerfil ?? null
     };
+
+    delete userData.createdByAdmin;
     
-    return await this.userRepo.create(userData);
+    try {
+      return await this.userRepo.create(userData);
+    } catch (err) {
+      if (err?.code === 11000) {
+        throw buildDuplicateError();
+      }
+      throw err;
+    }
   }
 
   async list(query = {}) {
