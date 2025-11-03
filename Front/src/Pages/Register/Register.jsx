@@ -573,7 +573,7 @@ function Register() {
               <span className="text-xs text-gray-600">
                 ¿Ya tienes cuenta?{" "}
                 <a
-                  href="/"
+                  href="/login"
                   className="text-sky-600 hover:underline font-semibold text-xs"
                 >
                   Inicia sesión
