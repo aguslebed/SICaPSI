@@ -115,7 +115,13 @@ export function UserProvider({ children }) {
 
   // Realtime via Socket.IO: conecta una vez autenticado y escucha eventos de actualización
   useEffect(() => {
-    const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
+    // Detectar entorno según hostname (igual que Request.js)
+    const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    // Socket.IO se conecta a la raíz del dominio (no /api) porque nginx tiene /socket.io/ en la raíz
+    const SOCKET_BASE = isDevelopment 
+      ? "http://localhost:4000"
+      : "https://ppsiii.work.gd";
+    
     const authUserId = userData?.user?._id || userData?._id;
 
     if (!authUserId) {
@@ -137,7 +143,7 @@ export function UserProvider({ children }) {
         const token = await getSocketToken();
         if (cancelled) return;
 
-        const socket = io(BASE, {
+        const socket = io(SOCKET_BASE, {
           transports: ["websocket"],
           reconnection: true,
           reconnectionAttempts: Infinity,
