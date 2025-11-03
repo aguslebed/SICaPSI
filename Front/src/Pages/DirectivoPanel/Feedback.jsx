@@ -92,12 +92,12 @@ export default function Feedback() {
 
           {/* Filtro por curso */}
           <div className="mb-4 bg-white rounded-lg shadow p-4">
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <div className="flex flex-col gap-3 md:flex-row md:gap-4 md:items-center">
               <label className="text-sm font-medium text-gray-700">Filtrar por curso:</label>
               <select 
                 value={selectedCourse} 
                 onChange={e => setSelectedCourse(e.target.value)}
-                className="admin-filter-input"
+                className="admin-filter-input w-full md:w-auto"
                 style={{ minWidth: '250px' }}
               >
                 <option value="all">Todos los cursos</option>
@@ -115,72 +115,123 @@ export default function Feedback() {
               <p className="text-gray-500 text-lg">No hay retroalimentación disponible</p>
             </div>
           ) : (
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Capacitación
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Alumno
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Fecha
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Profesor Asignado
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Mensaje
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredFeedbacks.map((feedback) => {
-                      const trainingTitle = feedback.training?.title 
-                        ? getPlainTextFromRichText(feedback.training.title)
-                        : 'Sin título';
-                      
-                      return (
-                        <tr key={feedback._id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900 max-w-xs truncate">
-                              {trainingTitle}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {feedback.user?.firstName && feedback.user?.lastName 
-                                ? `${feedback.user.firstName} ${feedback.user.lastName}` 
-                                : 'Usuario desconocido'}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {feedback.user?.email || ''}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {formatDate(feedback.createdAt)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {feedback.training?.teacherName || feedback.training?.assignedTeacher || 'No asignado'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            <button
-                              onClick={() => handleViewMessage(feedback)}
-                              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors cursor-pointer"
-                            >
-                              Ver Mensaje
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+            <>
+              {/* Tabla Desktop */}
+              <div className="hidden md:block bg-white rounded-lg shadow overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Capacitación
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Alumno
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Fecha
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Profesor Asignado
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Mensaje
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredFeedbacks.map((feedback) => {
+                        const trainingTitle = feedback.training?.title 
+                          ? getPlainTextFromRichText(feedback.training.title)
+                          : 'Sin título';
+                        
+                        return (
+                          <tr key={feedback._id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900 max-w-xs truncate">
+                                {trainingTitle}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">
+                                {feedback.user?.firstName && feedback.user?.lastName 
+                                  ? `${feedback.user.firstName} ${feedback.user.lastName}` 
+                                  : 'Usuario desconocido'}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {feedback.user?.email || ''}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {formatDate(feedback.createdAt)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {feedback.training?.teacherName || feedback.training?.assignedTeacher || 'No asignado'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              <button
+                                onClick={() => handleViewMessage(feedback)}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors cursor-pointer"
+                              >
+                                Ver Mensaje
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+              
+              {/* Cards Mobile */}
+              <div className="md:hidden space-y-3">
+                {filteredFeedbacks.map((feedback) => {
+                  const trainingTitle = feedback.training?.title 
+                    ? getPlainTextFromRichText(feedback.training.title)
+                    : 'Sin título';
+                  
+                  return (
+                    <div key={feedback._id} className="bg-white rounded-lg shadow p-4">
+                      <div className="mb-3 pb-3 border-b border-gray-200">
+                        <div className="text-xs text-gray-500 mb-1">Capacitación</div>
+                        <div className="font-bold text-sm">{trainingTitle}</div>
+                      </div>
+                      
+                      <div className="mb-3">
+                        <div className="text-xs text-gray-500 mb-1">Alumno</div>
+                        <div className="text-sm font-medium">
+                          {feedback.user?.firstName && feedback.user?.lastName 
+                            ? `${feedback.user.firstName} ${feedback.user.lastName}` 
+                            : 'Usuario desconocido'}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {feedback.user?.email || ''}
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">Fecha</div>
+                          <div className="text-xs">{formatDate(feedback.createdAt)}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">Profesor</div>
+                          <div className="text-xs">{feedback.training?.teacherName || feedback.training?.assignedTeacher || 'No asignado'}</div>
+                        </div>
+                      </div>
+                      
+                      <button
+                        onClick={() => handleViewMessage(feedback)}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-md transition-colors cursor-pointer font-medium text-sm"
+                      >
+                        Ver Mensaje
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </div>
       </main>

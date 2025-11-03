@@ -4,7 +4,7 @@
  */
 import AuditLog from '../models/AuditLog.js';
 import User from '../models/User.js';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 export class AuditService {
   
@@ -641,40 +641,41 @@ export class AuditService {
         'ID de Registro': log._id.toString()
       }));
 
-      // Crear workbook y worksheet
-      const workbook = XLSX.utils.book_new();
-      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      // Crear workbook y worksheet usando exceljs
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Reporte de Auditoría');
 
-      // Configurar anchos de columna
-      const columnWidths = [
-        { wch: 20 }, // Fecha y Hora
-        { wch: 25 }, // Acción Realizada
-        { wch: 25 }, // Usuario
-        { wch: 30 }, // Email del Usuario
-        { wch: 15 }, // Rol
-        { wch: 10 }, // Resultado
-        { wch: 15 }, // Dirección IP
-        { wch: 20 }, // Navegador
-        { wch: 40 }, // Descripción
-        { wch: 30 }, // Capacitación Afectada
-        { wch: 30 }, // Datos Anteriores
-        { wch: 30 }, // Datos Nuevos
-        { wch: 30 }, // Información Adicional
-        { wch: 25 }  // ID de Registro
+      // Si no hay datos, devolver un workbook con solo encabezados
+      const headers = excelData.length > 0 ? Object.keys(excelData[0]) : [
+        'Fecha y Hora','Acción Realizada','Usuario','Email del Usuario','Rol','Resultado',
+        'Dirección IP','Navegador','Descripción','Capacitación Afectada','Datos Anteriores',
+        'Datos Nuevos','Información Adicional','ID de Registro'
       ];
-      worksheet['!cols'] = columnWidths;
 
-      // Agregar hoja al workbook
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Reporte de Auditoría');
+      // Configurar columnas con anchos aproximados (en caracteres)
+      const columnWidths = [20,25,25,30,15,10,15,20,40,30,30,30,30,25];
+      worksheet.columns = headers.map((h, idx) => ({ header: h, key: h, width: columnWidths[idx] || 20 }));
 
-      // Generar buffer del archivo Excel
-      const excelBuffer = XLSX.write(workbook, { 
-        type: 'buffer', 
-        bookType: 'xlsx' 
-      });
+      // Agregar filas
+      for (const rowObj of excelData) {
+        // Mantener el orden de headers
+        const row = headers.map(h => {
+          const v = rowObj[h];
+          // Asegurar que los valores primitivos o strings sean escritos correctamente
+          if (v === null || v === undefined) return '';
+          if (typeof v === 'object') return JSON.stringify(v);
+          return v;
+        });
+        worksheet.addRow(row);
+      }
 
-      console.log('✅ Excel report generated successfully');
-      return excelBuffer;
+      // Opcional: aplicar estilo mínimo al header (negrita)
+      worksheet.getRow(1).font = { bold: true };
+
+      // Generar buffer del archivo Excel (xlsx)
+      const excelBuffer = await workbook.xlsx.writeBuffer();
+      console.log('✅ Excel report generated successfully (exceljs)');
+      return Buffer.from(excelBuffer);
 
     } catch (error) {
       console.error('❌ Error generating Excel report:', error);

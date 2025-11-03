@@ -80,9 +80,9 @@ export default function GestionDirectivo() {
           <hr className="admin-divider" />
 
           <section className="admin-card">
-          <div className="admin-filters" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div className="admin-filters flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-col gap-3 w-full md:flex-row md:gap-4 md:items-center md:w-auto">
+                <div style={{ display: 'flex', gap: '0.5rem', flex: 1 }}>
                   <input
                     type="text"
                     value={search}
@@ -90,7 +90,7 @@ export default function GestionDirectivo() {
                     onKeyDown={e => { if (e.key === 'Enter') setAppliedSearch(search); }}
                     placeholder="Buscar..."
                     className="admin-search-input"
-                    style={{ minWidth: '200px' }}
+                    style={{ minWidth: 0, flex: 1 }}
                   />
                   <button className="admin-search-btn" onClick={() => setAppliedSearch(search)} title="Buscar">🔎</button>
                 </div>
@@ -98,8 +98,8 @@ export default function GestionDirectivo() {
                 <select 
                   value={selectedRole} 
                   onChange={e => setSelectedRole(e.target.value)}
-                  className="admin-filter-input"
-                  style={{ minWidth: '150px' }}
+                  className="admin-filter-input w-full md:w-auto"
+                  style={{ minWidth: 0 }}
                 >
                   <option value="all">Filtrar por rol</option>
                   <option value="alumno">Alumno</option>
@@ -109,8 +109,8 @@ export default function GestionDirectivo() {
               </div>
             </div>
 
-            {/* Tabla */}
-            <div className="admin-table-wrapper" style={{ marginTop: '1.5rem' }}>
+            {/* Tabla - Desktop */}
+            <div className="hidden md:block admin-table-wrapper" style={{ marginTop: '1.5rem' }}>
               <table className="admin-table">
                 <thead>
                   <tr>
@@ -133,7 +133,7 @@ export default function GestionDirectivo() {
                     <tr key={r.id}>
                       <td data-label="Nombre">{r.nombre}</td>
                       <td data-label="Apellido">{r.apellido}</td>
-                      <td data-label="ROI">{r.dni}</td>
+                      <td data-label="DNI">{r.dni}</td>
                       <td data-label="Rol">{r.role}</td>
                       <td data-label="Provincia">Buenos Aires</td>
                       <td data-label="Email">{r.email}</td>
@@ -142,7 +142,47 @@ export default function GestionDirectivo() {
                   ))}
                 </tbody>
               </table>
-
+            </div>
+            
+            {/* Cards - Mobile */}
+            <div className="md:hidden" style={{ marginTop: '1rem' }}>
+              {pageRows.length === 0 && (
+                <div style={{ padding: '2rem', textAlign: 'center', color: '#757575', background: 'white', borderRadius: '8px' }}>
+                  Sin resultados
+                </div>
+              )}
+              {pageRows.map(r => (
+                <div key={r.id} style={{ background: 'white', borderRadius: '8px', padding: '1rem', marginBottom: '0.75rem', boxShadow: '0 2px 4px rgba(0,0,0,0.08)' }}>
+                  <div style={{ marginBottom: '0.5rem', paddingBottom: '0.5rem', borderBottom: '1px solid #e0e0e0' }}>
+                    <div style={{ fontSize: '0.75rem', color: '#757575', marginBottom: '0.25rem' }}>Nombre completo</div>
+                    <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>{r.nombre} {r.apellido}</div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: '#757575', marginBottom: '0.25rem' }}>DNI</div>
+                      <div style={{ fontSize: '0.9rem' }}>{r.dni}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: '#757575', marginBottom: '0.25rem' }}>Rol</div>
+                      <div style={{ fontSize: '0.9rem' }}>{r.role}</div>
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: '0.5rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: '#757575', marginBottom: '0.25rem' }}>Email</div>
+                    <div style={{ fontSize: '0.85rem', wordBreak: 'break-word' }}>{r.email}</div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: '#757575', marginBottom: '0.25rem' }}>Provincia</div>
+                      <div style={{ fontSize: '0.85rem' }}>Buenos Aires</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: '#757575', marginBottom: '0.25rem' }}>Fecha de creación</div>
+                      <div style={{ fontSize: '0.85rem' }}>{r.creado ? new Date(r.creado).toLocaleDateString() : '-'}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
               <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#666' }}>
                 Mostrando {((page - 1) * size) + 1} a {Math.min(page * size, total)} de {total} registros

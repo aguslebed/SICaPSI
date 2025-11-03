@@ -1,7 +1,8 @@
 // Controlador desacoplado que orquesta servicios y formatters
-import AppError from '../middlewares/AppError.js';
+import AppError from "../middlewares/AppError.js";
+import { buildUploadPath } from "../utils/uploadsHelper.js";
 
-export function makeUserController({ userService, trainingService, messageService, userFormatter, trainingFormatter, messageFormatter }) {
+const makeUserController = ({ userService, trainingService, messageService, userFormatter, trainingFormatter, messageFormatter }) => {
   return {
 
     async create(req, res, next) {
@@ -61,8 +62,8 @@ export function makeUserController({ userService, trainingService, messageServic
         if (!userId) throw new AppError('ID de usuario requerido', 400);
         if (!req.file) throw new AppError('Archivo de imagen requerido', 400);
 
-        // Build public URL path
-        const filePath = `/uploads/${req.file.filename}`;
+        // Build public URL path usando el helper
+        const filePath = buildUploadPath(req.file.filename);
         const user = await userService.update(userId, { profileImage: filePath });
         res.status(200).json({ user: userFormatter.toPublic(user), profileImage: filePath });
       } catch (err) { next(err); }

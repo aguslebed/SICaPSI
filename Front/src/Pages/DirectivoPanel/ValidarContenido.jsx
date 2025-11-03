@@ -13,17 +13,17 @@ const modalOverlayStyle = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  padding: '1rem'
+  padding: '0.5rem'
 };
 
 const modalContentStyle = {
   background: 'white',
   borderRadius: '16px',
-  width: 'min(100%, 640px)',
+  width: '100%',
   maxWidth: '640px',
   maxHeight: '90vh',
   overflowY: 'auto',
-  padding: '1.5rem',
+  padding: '1rem',
   boxShadow: '0 2px 16px rgba(0,0,0,0.12)',
   position: 'relative',
   display: 'flex',
@@ -174,7 +174,9 @@ export default function ValidarContenido() {
       <main className="admin-container">
         <div className="admin-content-wrapper">
           <h1 className="admin-title">Contenidos</h1>
-          <div style={{ background: '#1976d2', borderRadius: 0, color: 'white', display: 'flex', padding: '0.7rem 0.5rem', marginBottom: '-1px' }}>
+          
+          {/* Header desktop */}
+          <div className="hidden md:flex" style={{ background: '#1976d2', borderRadius: 0, color: 'white', padding: '0.7rem 0.5rem', marginBottom: '-1px' }}>
             <div style={{ flex: 2, textAlign: 'left', paddingLeft: '1rem' }}>Título</div>
             <div style={{ flex: 2, textAlign: 'left' }}>Subtítulo / Descripción</div>
             <div style={{ flex: 2, textAlign: 'left' }}>Creado por</div>
@@ -182,34 +184,79 @@ export default function ValidarContenido() {
             <div style={{ flex: 1, textAlign: 'left' }}>Estado</div>
             <div style={{ flex: 1, textAlign: 'left' }}>Acciones</div>
           </div>
+          
           <div className="admin-table-wrapper registros-table" style={{ background: 'white', borderRadius: '0 0 8px 8px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', minHeight: '60px' }}>
             {contenidos.length === 0 ? (
               <div style={{ padding: '2rem', textAlign: 'center', color: '#757575' }}>No hay contenidos pendientes de validación</div>
               ) : (
               contenidos.map((contenido, idx) => (
-                <div key={contenido._id} className="registros-row" style={{ display: 'flex', alignItems: 'center', padding: '1rem 0.5rem', borderBottom: idx === contenidos.length - 1 ? 'none' : '1px solid #e0e0e0' }}>
-                  <div style={{ flex: 2, paddingLeft: '1rem' }} dangerouslySetInnerHTML={renderHtml(contenido.title)} />
-                  <div style={{ flex: 2 }} dangerouslySetInnerHTML={renderHtml(contenido.subtitle || contenido.description)} />
-                  <div style={{ flex: 2 }}>{getAuthorName(contenido.createdBy)}</div>
-                  <div style={{ flex: 1 }}>{formatDate(contenido.createdAt)}</div>
-                  <div style={{ flex: 1 }}>
+                <div key={contenido._id}>
+                  {/* Desktop row */}
+                  <div className="hidden md:flex registros-row" style={{ alignItems: 'center', padding: '1rem 0.5rem', borderBottom: idx === contenidos.length - 1 ? 'none' : '1px solid #e0e0e0' }}>
+                    <div style={{ flex: 2, paddingLeft: '1rem' }} dangerouslySetInnerHTML={renderHtml(contenido.title)} />
+                    <div style={{ flex: 2 }} dangerouslySetInnerHTML={renderHtml(contenido.subtitle || contenido.description)} />
+                    <div style={{ flex: 2 }}>{getAuthorName(contenido.createdBy)}</div>
+                    <div style={{ flex: 1 }}>{formatDate(contenido.createdAt)}</div>
+                    <div style={{ flex: 1 }}>
+                        <span style={{ 
+                          background: contenido.pendingApproval ? '#ffa726' : (contenido.isActive ? '#1976d2' : '#757575'),
+                          color: 'white',
+                          padding: '4px 12px',
+                          borderRadius: '12px',
+                          fontWeight: 'bold',
+                          fontSize: '0.85rem'
+                        }}>
+                          {contenido.pendingApproval ? 'Pendiente' : (contenido.isActive ? 'Activo' : 'Inactivo')}
+                        </span>
+                    </div>
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <button
+                        onClick={() => setSelectedContenido(contenido)}
+                        style={{ background: 'none', border: 'none', color: '#1976d2', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        <FiEye style={{ fontSize: '1.2rem' }} /> Previsualizar
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Mobile card */}
+                  <div className="md:hidden" style={{ padding: '1rem', borderBottom: idx === contenidos.length - 1 ? 'none' : '1px solid #e0e0e0' }}>
+                    <div style={{ marginBottom: '0.75rem' }}>
+                      <div style={{ fontSize: '0.75rem', color: '#757575', marginBottom: '0.25rem' }}>Título</div>
+                      <div style={{ fontWeight: 'bold', fontSize: '1rem' }} dangerouslySetInnerHTML={renderHtml(contenido.title)} />
+                    </div>
+                    <div style={{ marginBottom: '0.75rem' }}>
+                      <div style={{ fontSize: '0.75rem', color: '#757575', marginBottom: '0.25rem' }}>Descripción</div>
+                      <div style={{ fontSize: '0.9rem' }} dangerouslySetInnerHTML={renderHtml(contenido.subtitle || contenido.description)} />
+                    </div>
+                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '0.75rem', color: '#757575', marginBottom: '0.25rem' }}>Creado por</div>
+                        <div style={{ fontSize: '0.9rem' }}>{getAuthorName(contenido.createdBy)}</div>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '0.75rem', color: '#757575', marginBottom: '0.25rem' }}>Fecha</div>
+                        <div style={{ fontSize: '0.9rem' }}>{formatDate(contenido.createdAt)}</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
                       <span style={{ 
                         background: contenido.pendingApproval ? '#ffa726' : (contenido.isActive ? '#1976d2' : '#757575'),
                         color: 'white',
                         padding: '4px 12px',
                         borderRadius: '12px',
-                        fontWeight: 'bold'
+                        fontWeight: 'bold',
+                        fontSize: '0.85rem'
                       }}>
                         {contenido.pendingApproval ? 'Pendiente' : (contenido.isActive ? 'Activo' : 'Inactivo')}
                       </span>
-                  </div>
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <button
-                      onClick={() => setSelectedContenido(contenido)}
-                      style={{ background: 'none', border: 'none', color: '#1976d2', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}
-                    >
-                      <FiEye style={{ fontSize: '1.2rem' }} /> Previsualizar
-                    </button>
+                      <button
+                        onClick={() => setSelectedContenido(contenido)}
+                        style={{ background: '#1976d2', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1rem', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem' }}
+                      >
+                        <FiEye style={{ fontSize: '1.1rem' }} /> Ver
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))
@@ -230,12 +277,13 @@ export default function ValidarContenido() {
                 value={rejectReason}
                 onChange={e => setRejectReason(e.target.value)}
                 placeholder="Ingrese el motivo del rechazo..."
-                style={{ width: '100%', minHeight: '80px', borderRadius: '8px', border: '1px solid #e0e0e0', padding: '0.7rem', fontSize: '1rem', marginBottom: '1.5rem', resize: 'none' }}
+                style={{ width: '100%', minHeight: '80px', borderRadius: '8px', border: '1px solid #e0e0e0', padding: '0.7rem', fontSize: '0.95rem', marginBottom: '1.5rem', resize: 'none' }}
               />
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }} className="sm:flex-row sm:justify-center sm:gap-1.5rem">
                 <button
                   onClick={() => { setShowRejectModal(false); setRejectReason(''); }}
-                  style={{ background: '#f5f5f5', color: '#333', border: 'none', borderRadius: '24px', padding: '0.7rem 2.2rem', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer' }}
+                  style={{ background: '#f5f5f5', color: '#333', border: 'none', borderRadius: '24px', padding: '0.7rem 2rem', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer', width: '100%' }}
+                  className="sm:w-auto"
                 >
                   Cancelar
                 </button>
@@ -264,7 +312,8 @@ export default function ValidarContenido() {
                       setLoading(false);
                     }
                   }}
-                  style={{ background: '#4caf50', color: 'white', border: 'none', borderRadius: '24px', padding: '0.7rem 2.2rem', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer' }}
+                  style={{ background: '#4caf50', color: 'white', border: 'none', borderRadius: '24px', padding: '0.7rem 2rem', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer', width: '100%' }}
+                  className="sm:w-auto"
                 >
                   Enviar
                 </button>
@@ -343,10 +392,11 @@ export default function ValidarContenido() {
               </div>
               {/* Botones de acción */}
               {selectedContenido.pendingApproval && (
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', marginTop: '1.2rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1.2rem' }} className="sm:flex-row sm:justify-center sm:gap-1.5rem">
                   <button
                     onClick={() => setShowRejectModal(true)}
-                    style={{ background: '#f44336', color: 'white', border: 'none', borderRadius: '24px', padding: '0.7rem 2.2rem', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+                    style={{ background: '#f44336', color: 'white', border: 'none', borderRadius: '24px', padding: '0.7rem 2.2rem', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', width: '100%' }}
+                    className="sm:w-auto"
                   >
                     Rechazar &rarr;
                   </button>
@@ -355,7 +405,8 @@ export default function ValidarContenido() {
                       await handleAprobar();
                       setSelectedContenido(null);
                     }}
-                    style={{ background: '#4caf50', color: 'white', border: 'none', borderRadius: '24px', padding: '0.7rem 2.2rem', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+                    style={{ background: '#4caf50', color: 'white', border: 'none', borderRadius: '24px', padding: '0.7rem 2.2rem', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', width: '100%' }}
+                    className="sm:w-auto"
                   >
                     Aprobar &rarr;
                   </button>

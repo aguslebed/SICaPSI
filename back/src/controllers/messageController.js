@@ -2,6 +2,7 @@ import AppError from '../middlewares/AppError.js';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { buildUploadPath } from '../utils/uploadsHelper.js';
 
 export function makeMessageController({ messageService, messageFormatter }) {
   return {
@@ -95,7 +96,7 @@ export function makeMessageController({ messageService, messageFormatter }) {
         const payload = files.map(f => ({
           filename: f.filename,
           originalName: f.originalname,
-          url: `/uploads/${f.filename}`,
+          url: buildUploadPath(f.filename),
           size: f.size
         }));
         res.status(201).json({ attachments: payload });

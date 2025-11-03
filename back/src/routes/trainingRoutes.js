@@ -4,6 +4,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import { buildUploadPath, normalizeUploadPath, isUploadPath } from "../utils/uploadsHelper.js";
 
 //Controller
 import  {makeTrainingController}  from "../controllers/trainingController.js";
@@ -138,12 +139,13 @@ router.delete("/delete-file", (req, res) => {
         }
         
         // Verificar que es un archivo de uploads
-        if (!filePath.startsWith('/uploads/')) {
+        if (!isUploadPath(filePath)) {
             return res.status(400).json({ message: 'Ruta de archivo inválida' });
         }
         
-        // Construir ruta absoluta
-        const absolutePath = path.resolve(__dirname, "..", "..", filePath.replace('/uploads/', 'uploads/'));
+        // Construir ruta absoluta normalizada para filesystem
+        const normalizedPath = normalizeUploadPath(filePath);
+        const absolutePath = path.resolve(__dirname, "..", "..", normalizedPath);
         
         // Verificar si el archivo existe
         if (!fs.existsSync(absolutePath)) {
@@ -181,8 +183,9 @@ router.post("/replace-file", upload.single('file'), (req, res) => {
         }
         
         // Si hay archivo antiguo, eliminarlo
-        if (oldFilePath && oldFilePath !== '__PENDING_UPLOAD__' && oldFilePath.startsWith('/uploads/')) {
-            const oldAbsolutePath = path.resolve(__dirname, "..", "..", oldFilePath.replace('/uploads/', 'uploads/'));
+        if (oldFilePath && oldFilePath !== '__PENDING_UPLOAD__' && isUploadPath(oldFilePath)) {
+            const normalizedPath = normalizeUploadPath(oldFilePath);
+            const oldAbsolutePath = path.resolve(__dirname, "..", "..", normalizedPath);
             
             if (fs.existsSync(oldAbsolutePath)) {
                 fs.unlinkSync(oldAbsolutePath);
@@ -200,7 +203,7 @@ router.post("/replace-file", upload.single('file'), (req, res) => {
         const finalPath = path.join(finalFolder, req.file.filename);
         fs.renameSync(tempPath, finalPath);
         
-        const newFilePath = `/uploads/trainings/${trainingId}/${req.file.filename}`;
+        const newFilePath = buildUploadPath(`trainings/${trainingId}/${req.file.filename}`);
         
         res.status(200).json({
             message: 'Archivo reemplazado exitosamente',
@@ -227,7 +230,7 @@ router.post("/upload-image", authMiddleware, upload.single('image'), (req, res) 
         }
         
         // Guardar en temp, devolver ruta temporal
-        const tempPath = `/uploads/temp/${req.file.filename}`;
+        const tempPath = buildUploadPath(`temp/${req.file.filename}`);
         console.log('✅ Imagen subida a temporal:', tempPath);
         res.status(200).json({ 
             message: 'Imagen subida exitosamente',
@@ -277,7 +280,7 @@ router.post("/move-temp-files", authMiddleware, (req, res) => {
             
             movedFiles.push({
                 oldPath: tempPath,
-                newPath: `/uploads/trainings/${trainingId}/${filename}`
+                newPath: buildUploadPath(`trainings/${trainingId}/${filename}`)
             });
         }
         
@@ -300,7 +303,7 @@ router.post("/upload-file", authMiddleware, upload.single('file'), (req, res) =>
         }
         
         // Guardar en temp, devolver ruta temporal
-        const tempPath = `/uploads/temp/${req.file.filename}`;
+        const tempPath = buildUploadPath(`temp/${req.file.filename}`);
         
         console.log('✅ Archivo subido a temporal:', { tempPath, size: req.file.size });
         

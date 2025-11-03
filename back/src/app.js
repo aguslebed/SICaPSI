@@ -91,7 +91,20 @@ class AppConfig {
       console.error("   Ruta intentada:", uploadsDir);
       console.error("   Error detallado:", e.message);
     }
-    this.app.use("/uploads", express.static(uploadsDir));
+    
+    // Servir archivos estáticos usando la ruta configurada en .env
+    const uploadsBasePath = process.env.UPLOADS_BASE_PATH || '/uploads';
+    this.app.use(uploadsBasePath, express.static(uploadsDir));
+    
+    // También servir en /uploads para compatibilidad con rutas legacy
+    if (uploadsBasePath !== '/uploads') {
+      this.app.use('/uploads', express.static(uploadsDir));
+    }
+    
+    console.log(`✅ Archivos estáticos servidos en: ${uploadsBasePath}`);
+    if (uploadsBasePath !== '/uploads') {
+      console.log(`✅ Ruta adicional para compatibilidad: /uploads`);
+    }
   }
 
   /**
