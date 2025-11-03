@@ -632,6 +632,31 @@ export default function GestionCapacitacion() {
       );
     }
     
+    // Filtro por cantidad de niveles aplicada
+    if (Array.isArray(appliedNiveles) && appliedNiveles.length > 0) {
+      const toLevelCount = (value) => {
+        if (typeof value === 'number' && Number.isFinite(value)) return Math.max(0, Math.round(value));
+        if (typeof value === 'string') {
+          const match = value.match(/\d+/);
+          if (match) return parseInt(match[0], 10);
+        }
+        return null;
+      };
+
+      const selectedCounts = appliedNiveles
+        .map(toLevelCount)
+        .filter((n) => typeof n === 'number' && n > 0);
+
+      if (selectedCounts.length > 0) {
+        filtered = filtered.filter((training) => {
+          const count = Array.isArray(training?.levels)
+            ? training.levels.length
+            : (typeof training?.totalLevels === 'number' ? training.totalLevels : 0);
+          return selectedCounts.includes(count);
+        });
+      }
+    }
+
     // Filtro por estados aplicados
     if (appliedEstados.length > 0) {
       filtered = filtered.filter(training => {
