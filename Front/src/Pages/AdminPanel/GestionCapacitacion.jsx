@@ -473,73 +473,16 @@ export default function GestionCapacitacion() {
     
     setLoading(true);
     try {
-      // 1. Primero obtener la capacitación completa para conocer todos sus archivos
-      const trainingData = await getTrainingById(trainingId);
-      
-      // 2. Recopilar todos los archivos que deben eliminarse
-      const filesToDelete = [];
-      
-      // 2.1 Imagen de presentación
-      if (trainingData.image && trainingData.image.startsWith('/uploads/')) {
-        filesToDelete.push(trainingData.image);
-      }
-      
-      // 2.2 Archivos en niveles
-      if (trainingData.levels && trainingData.levels.length > 0) {
-        trainingData.levels.forEach(level => {
-          // Video de capacitación
-          if (level.training?.url && level.training.url.startsWith('/uploads/')) {
-            filesToDelete.push(level.training.url);
-          }
-          
-          // Imagen del test
-          if (level.test?.imageUrl && level.test.imageUrl.startsWith('/uploads/')) {
-            filesToDelete.push(level.test.imageUrl);
-          }
-          
-          // Videos de escenas del test
-          if (level.test?.scenes && level.test.scenes.length > 0) {
-            level.test.scenes.forEach(scene => {
-              if (scene.videoUrl && scene.videoUrl.startsWith('/uploads/')) {
-                filesToDelete.push(scene.videoUrl);
-              }
-            });
-          }
-          
-          // Archivos de bibliografía
-          if (level.bibliography && level.bibliography.length > 0) {
-            level.bibliography.forEach(bib => {
-              if (bib.url && bib.url.startsWith('/uploads/')) {
-                filesToDelete.push(bib.url);
-              }
-            });
-          }
-        });
-      }
-      
-      // 3. Eliminar archivos del servidor
-      if (filesToDelete.length > 0) {
-        console.log('Eliminando archivos asociados:', filesToDelete);
-        for (const filePath of filesToDelete) {
-          try {
-            await deleteTrainingFile(filePath);
-          } catch (error) {
-            console.warn(`No se pudo eliminar el archivo ${filePath}:`, error);
-            // Continuar con los demás archivos aunque falle alguno
-          }
-        }
-      }
-      
-      // 4. Eliminar la capacitación de la base de datos
-      await deleteTraining(trainingId);
+      // Solo deshabilitar la capacitación (isActive = false)
+      await updateTraining(trainingId, { isActive: false });
       await refreshTrainings();
-      setSuccessMessage('Capacitación eliminada exitosamente');
+      setSuccessMessage('Capacitación deshabilitada exitosamente');
       setShowSuccessModal(true);
     } catch (error) {
-      console.error('Error eliminando capacitación:', error);
-      setErrorMessages([`Error al eliminar capacitación: ${error.message}`]);
-      setErrorModalTitle('No se puede eliminar la capacitación');
-      setErrorModalMessageText('Ocurrió un error al intentar eliminar. Revise los siguientes detalles:');
+      console.error('Error deshabilitando capacitación:', error);
+      setErrorMessages([`Error al deshabilitar capacitación: ${error.message}`]);
+      setErrorModalTitle('No se puede deshabilitar la capacitación');
+      setErrorModalMessageText('Ocurrió un error al intentar deshabilitar. Revise los siguientes detalles:');
       setShowErrorModal(true);
     } finally {
       setLoading(false);
@@ -1121,9 +1064,9 @@ export default function GestionCapacitacion() {
       {deleteConfirmData && (
         <ConfirmActionModal
           open={true}
-          title="Confirmar eliminación"
-          message={`¿Estás seguro de que deseas eliminar la capacitación "${deleteConfirmData.trainingTitle}"? Esta acción eliminará también todos los niveles asociados y no se puede deshacer.`}
-          confirmLabel="Eliminar"
+          title="Confirmar desactivación"
+          message={`¿Estás seguro de que deseas deshabilitar la capacitación "${deleteConfirmData.trainingTitle}"? La capacitación se ocultará pero todos sus datos y archivos se conservarán.`}
+          confirmLabel="Deshabilitar"
           cancelLabel="Cancelar"
           onConfirm={confirmDeleteTraining}
           onClose={() => setDeleteConfirmData(null)}
