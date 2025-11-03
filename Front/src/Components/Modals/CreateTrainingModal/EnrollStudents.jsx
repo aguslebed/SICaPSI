@@ -99,8 +99,8 @@ export default function EnrollStudents({ loadingStudents, students, searchStuden
                       <input
                         type="checkbox"
                         checked={selectedStudents.includes(student._id)}
-                        onChange={(e) => { e.stopPropagation(); handleStudentSelection(student._id, e.target.checked); }}
-                        className="w-3.5 h-3.5 text-green-600 border-gray-300 rounded focus:ring-green-500 cursor-pointer"
+                        onChange={() => {}}
+                        className="w-3.5 h-3.5 text-green-600 border-gray-300 rounded focus:ring-green-500 cursor-pointer pointer-events-none"
                       />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm text-gray-900 truncate">{student.firstName} {student.lastName}</div>
