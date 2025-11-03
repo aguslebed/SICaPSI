@@ -111,9 +111,15 @@ export function makeMessageController({ messageService, messageFormatter }) {
         const { id, index } = req.params;
         const msg = await messageService.getMessageById(id);
         if (!msg) throw new AppError('Mensaje no encontrado', 404);
-        // Autorización: remitente o destinatario pueden descargar
-        const isOwner = [msg.sender?.toString(), msg.recipient?.toString()].includes(userId.toString());
-        if (!isOwner) throw new AppError('No autorizado', 403);
+        
+        // Autorización: el usuario debe ser el remitente O el destinatario del mensaje
+        const senderId = msg.sender?._id?.toString() || msg.sender?.toString();
+        const recipientId = msg.recipient?._id?.toString() || msg.recipient?.toString();
+        const userIdStr = userId.toString();
+        const isAuthorized = (senderId === userIdStr) || (recipientId === userIdStr);
+        
+        if (!isAuthorized) throw new AppError('No autorizado para descargar este adjunto', 403);
+        
         const i = parseInt(index, 10);
         if (Number.isNaN(i) || i < 0 || i >= (msg.attachments?.length || 0)) throw new AppError('Adjunto no encontrado', 404);
   const att = msg.attachments[i];
@@ -131,7 +137,22 @@ export function makeMessageController({ messageService, messageFormatter }) {
   const downloadName = (att && att.originalName) || (att && att.filename) || safeName;
         res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(downloadName)}"`);
         // Simple content-type guess by extension
-        res.setHeader('Content-Type', 'application/octet-stream');
+        const ext = path.extname(safeName).toLowerCase();
+        const mimeTypes = {
+          '.pdf': 'application/pdf',
+          '.jpg': 'image/jpeg',
+          '.jpeg': 'image/jpeg',
+          '.png': 'image/png',
+          '.gif': 'image/gif',
+          '.webp': 'image/webp',
+          '.doc': 'application/msword',
+          '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          '.xls': 'application/vnd.ms-excel',
+          '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          '.txt': 'text/plain',
+          '.zip': 'application/zip'
+        };
+        res.setHeader('Content-Type', mimeTypes[ext] || 'application/octet-stream');
         const stream = fs.createReadStream(filePath);
         stream.on('error', (e) => next(e));
         stream.pipe(res);

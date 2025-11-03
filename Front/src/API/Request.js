@@ -369,6 +369,33 @@ export async function uploadMessageAttachments(files) {
   }
 }
 
+// Descargar adjunto de mensaje con autenticación
+export async function downloadMessageAttachment(messageId, attachmentIndex, filename) {
+  try {
+    const response = await api.get(`/messages/${messageId}/attachments/${attachmentIndex}/download`, {
+      responseType: 'blob' // Importante: obtener como blob para descargar archivo
+    });
+    
+    // Crear un enlace temporal y hacer click para descargar
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename || 'adjunto');
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data?.message || 'Error al descargar adjunto');
+    } else if (error.request) {
+      throw new Error('Error de conexión con el servidor');
+    } else {
+      throw new Error('Error al intentar descargar el archivo');
+    }
+  }
+}
+
 // Listar profesores 
 // CAMBIO: Ruta actualizada para usar el endpoint correcto en userRoutes
 export async function listTeachers() {

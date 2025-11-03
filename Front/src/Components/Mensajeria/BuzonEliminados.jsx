@@ -137,13 +137,14 @@ export default function BuzonEliminados({ trainingId, sortBy = 'fecha' }) {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Búsqueda */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h3 className="text-xl font-semibold">🗑️ Mensajes eliminados</h3>
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <input
             type="text"
-            placeholder="Buscar"
-            className="border px-3 py-2 rounded flex-1 min-w-0"
+            placeholder="Buscar mensajes..."
+            className="border px-3 py-2 rounded flex-1 min-w-0 text-sm"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -153,57 +154,53 @@ export default function BuzonEliminados({ trainingId, sortBy = 'fecha' }) {
         </div>
       </div>
 
-      <div className="text-sm text-gray-700 flex items-center flex-wrap gap-2">
-        <button
-          className={`underline ${selectedIds.length ? 'text-green-700 cursor-pointer' : 'text-gray-400 cursor-not-allowed'}`}
-          disabled={!selectedIds.length}
-          onClick={() => {
-            if (!selectedIds.length) return;
-            // Ask for confirmation before restoring
-            setConfirmAction({ open: true, type: 'restore', ids: selectedIds });
-          }}
-        >
-          Restaurar
-        </button>
-        <span className="text-gray-400">|</span>
-        <button
-          className={`underline ${selectedIds.length ? 'text-red-600 cursor-pointer' : 'text-gray-400 cursor-not-allowed'}`}
-          disabled={!selectedIds.length}
-          onClick={() => {
-            if (!selectedIds.length) return;
-            setConfirmAction({ open: true, type: 'deletePermanent', ids: selectedIds });
-          }}
-        >
-          Eliminar definitivamente
-        </button>
-      </div>
+      {/* Acciones sobre selección */}
+      {selectedIds.length > 0 && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex flex-wrap items-center gap-2 text-sm">
+          <span className="font-semibold text-yellow-900">{selectedIds.length} seleccionado{selectedIds.length > 1 ? 's' : ''}</span>
+          <button
+            className="px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 cursor-pointer text-sm"
+            onClick={() => setConfirmAction({ open: true, type: 'restore', ids: selectedIds })}
+          >
+            ↩️ Restaurar
+          </button>
+          <button
+            className="px-3 py-1.5 bg-red-600 text-white rounded hover:bg-red-700 cursor-pointer text-sm"
+            onClick={() => setConfirmAction({ open: true, type: 'deletePermanent', ids: selectedIds })}
+          >
+            🗑️ Eliminar definitivamente
+          </button>
+        </div>
+      )}
 
-      <div className="overflow-auto border rounded">
-          <table className="w-full">
-            <thead className="bg-gray-100 sticky top-0">
-              <tr>
-                <th className="p-2 w-10 text-center">
-                  <input type="checkbox" className="cursor-pointer" checked={allSelected} onChange={toggleAll} />
-                </th>
-                <th className="p-2 text-left">Origen</th>
-                <th className="p-2 text-left">Asunto</th>
-                <th className="p-2 text-left">Eliminado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {messages.length === 0 ? (
+      {messages.length === 0 ? (
+        <div className="text-center py-12 text-gray-500">
+          <div className="text-5xl mb-3">🗑️</div>
+          <p className="text-lg">Papelera vacía</p>
+        </div>
+      ) : (
+        <>
+          {/* Tabla desktop */}
+          <div className="hidden md:block overflow-auto border rounded-lg">
+            <table className="w-full">
+              <thead className="bg-gray-100 sticky top-0">
                 <tr>
-                  <td colSpan={4} className="p-2 text-center text-gray-500">Papelera vacía</td>
+                  <th className="p-3 w-10 text-center">
+                    <input type="checkbox" className="cursor-pointer" checked={allSelected} onChange={toggleAll} />
+                  </th>
+                  <th className="p-3 text-left font-semibold">Remitente</th>
+                  <th className="p-3 text-left font-semibold">Asunto</th>
+                  <th className="p-3 text-left font-semibold">Eliminado</th>
                 </tr>
-              ) : (
-                pageMessages.map((msg) => (
+              </thead>
+              <tbody>
+                {pageMessages.map((msg) => (
                   <tr
                     key={msg._id}
-                    className="border-t cursor-pointer transition-colors hover:bg-gray-100 hover:shadow-inner"
+                    className="border-t cursor-pointer transition-colors hover:bg-gray-50"
                     onClick={() => openDetail(msg)}
-                    title="Click para ver"
                   >
-                    <td className="p-2 text-center">
+                    <td className="p-3 text-center">
                       <input
                         type="checkbox"
                         className="cursor-pointer"
@@ -212,45 +209,81 @@ export default function BuzonEliminados({ trainingId, sortBy = 'fecha' }) {
                         onClick={(e) => e.stopPropagation()}
                       />
                     </td>
-                    <td className="p-2 text-left">{msg.sender?.firstName} {msg.sender?.lastName}</td>
-                    <td className="p-2 text-left">{msg.subject}</td>
-                    <td className="p-2 text-left">{new Date(msg.createdAt).toLocaleDateString('es-AR')}</td>
+                    <td className="p-3">{msg.sender?.firstName} {msg.sender?.lastName}</td>
+                    <td className="p-3">
+                      <span className="truncate block max-w-[40ch]" title={msg.subject}>{msg.subject}</span>
+                    </td>
+                    <td className="p-3 text-sm text-gray-600">{new Date(msg.createdAt).toLocaleDateString('es-AR')}</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-      </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Cards móvil */}
+          <div className="md:hidden space-y-2">
+            {pageMessages.map((msg) => (
+              <div
+                key={msg._id}
+                className={`border border-red-200 bg-red-50 rounded-lg p-3 cursor-pointer transition-all hover:shadow-md ${
+                  selectedIds.includes(msg._id) ? 'ring-2 ring-red-500' : ''
+                }`}
+                onClick={() => openDetail(msg)}
+              >
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    className="cursor-pointer mt-1"
+                    checked={selectedIds.includes(msg._id)}
+                    onChange={(e) => { e.stopPropagation(); toggleOne(msg._id); }}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className="font-semibold text-sm text-gray-900 truncate">
+                        {msg.sender?.firstName} {msg.sender?.lastName}
+                      </span>
+                      <span className="text-xs text-gray-500 whitespace-nowrap">
+                        {new Date(msg.createdAt).toLocaleDateString('es-AR')}
+                      </span>
+                    </div>
+                    <div className="text-sm text-gray-700 truncate mb-1">{msg.subject}</div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs px-2 py-0.5 bg-red-600 text-white rounded-full">Eliminado</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Paginación */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 text-sm mt-3">
-        <div className="text-gray-600 order-2 sm:order-1">
-          {totalItems > 0 ? (
-            <span>
-              Mostrando {startIdx + 1}-{Math.min(endIdx, totalItems)} de {totalItems}
-            </span>
-          ) : (
-            <span>Sin resultados</span>
-          )}
+      {messages.length > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t">
+          <div className="text-sm text-gray-600 text-center sm:text-left">
+            Mostrando {startIdx + 1}-{Math.min(endIdx, totalItems)} de {totalItems}
+          </div>
+          <div className="flex items-center justify-center gap-2">
+            <button
+              className="px-3 py-1.5 border rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={safePage <= 1}
+            >
+              ← Anterior
+            </button>
+            <span className="px-3 text-sm whitespace-nowrap">{safePage} / {totalPages}</span>
+            <button
+              className="px-3 py-1.5 border rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={safePage >= totalPages}
+            >
+              Siguiente →
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2 order-1 sm:order-2 self-end sm:self-auto">
-          <button
-            className="px-3 py-1 border rounded cursor-pointer disabled:opacity-50"
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={safePage <= 1}
-          >
-            Anterior
-          </button>
-          <span className="px-2 whitespace-nowrap">Página {safePage} de {totalPages}</span>
-          <button
-            className="px-3 py-1 border rounded cursor-pointer disabled:opacity-50"
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={safePage >= totalPages}
-          >
-            Siguiente
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* Acciones individuales removidas en favor de acciones en lote */}
 

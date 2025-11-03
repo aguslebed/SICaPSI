@@ -264,12 +264,42 @@ export default function ComposeModal({ open, onClose, onSend, onSuccess, initial
   const onFilesSelected = async (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
+    
+    // Validar tamaños antes de subir
+    const maxSize = 10 * 1024 * 1024; // 10 MB
+    const oversized = files.filter(f => f.size > maxSize);
+    if (oversized.length > 0) {
+      const names = oversized.map(f => f.name).join(', ');
+      const sizeMB = (oversized[0].size / (1024 * 1024)).toFixed(2);
+      setInlineError(`❌ Archivo${oversized.length > 1 ? 's' : ''} demasiado grande${oversized.length > 1 ? 's' : ''}: ${names}. Tamaño máximo permitido: 10 MB por archivo.`);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+    
+    // Validar tipos de archivo
+    const allowedTypes = [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+      'application/pdf',
+      'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain',
+      'application/zip', 'application/x-zip-compressed'
+    ];
+    const invalidFiles = files.filter(f => !allowedTypes.includes(f.type));
+    if (invalidFiles.length > 0) {
+      const names = invalidFiles.map(f => `${f.name} (${f.type || 'desconocido'})`).join(', ');
+      setInlineError(`Tipos de archivo no permitidos: ${names}. Solo se aceptan imágenes, PDF, documentos de Office y archivos ZIP.`);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+    
     try {
       const uploaded = await uploadMessageAttachments(files);
       setAttachments(prev => [...prev, ...uploaded]);
     } catch (err) {
       console.error('Error subiendo adjuntos', err);
-      setInlineError('No se pudieron subir algunos adjuntos.');
+      const errorMsg = err?.message || 'No se pudieron subir algunos adjuntos.';
+      setInlineError(errorMsg);
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }

@@ -69,13 +69,13 @@ export default function Mensajeria() {
   return (
     <>
       <div className="min-h-screen bg-gray-100">
-        <div className="max-w-screen-xl w-full mx-auto flex px-4 sm:px-6 md:px-8 py-6 md:py-8">
+        <div className="max-w-screen-xl w-full mx-auto flex px-4 sm:px-6 md:px-8 py-4 md:py-6">
           {/* Sidebar (same rendering as other pages) */}
           {/* Main content */}
           <main className="flex-1 min-w-0">
-            <div className="mb-4">
+            <div className="mb-3 md:mb-4">
               <div className="flex items-center justify-between">
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Mensajería</h1>
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">Mensajería</h1>
                 <button
                   className="lg:hidden ml-3 px-3 py-2 text-sm border rounded cursor-pointer"
                   onClick={() => setSidebarOpen(true)}
@@ -87,66 +87,92 @@ export default function Mensajeria() {
             </div>
 
             <div className="bg-white rounded-xl shadow p-3 sm:p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <button
-                    className="inline-flex items-center gap-2 rounded-full bg-green-600 text-white px-4 py-2 cursor-pointer hover:bg-green-700"
-                    onClick={() => setComposeOpen(true)}
-                  >
-                    <MailPlus size={18} />
-                    <span>Redactar</span>
-                  </button>
-                  <div className="hidden sm:flex items-center gap-2 text-sm">
-                    <span className="font-semibold">Ordenar por defecto:</span>
-                    <select
-                      className="border rounded px-2 py-1 text-sm cursor-pointer"
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value)}
-                    >
-                      <option value="fecha">Fecha</option>
-                      <option value="unread">No leídos primero</option>
-                      <option value="remitente">Remitente A-Z</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="sm:hidden flex items-center gap-2 text-sm">
-                  <span className="font-semibold">Ordenar:</span>
+              {/* Botón Redactar y filtro de ordenamiento */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <button
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-600 text-white px-5 py-2.5 cursor-pointer hover:bg-green-700 font-medium transition-colors shadow-sm hover:shadow-md"
+                  onClick={() => setComposeOpen(true)}
+                >
+                  <MailPlus size={20} />
+                  <span>Redactar mensaje</span>
+                </button>
+                
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="font-semibold whitespace-nowrap text-gray-700">Ordenar por:</span>
                   <select
-                    className="border rounded px-2 py-1 text-sm cursor-pointer"
+                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm cursor-pointer bg-white hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
                   >
-                    <option value="fecha">Fecha</option>
+                    <option value="fecha">Fecha (más reciente)</option>
                     <option value="unread">No leídos primero</option>
                     <option value="remitente">Remitente A-Z</option>
                   </select>
                 </div>
               </div>
 
-              <div className="mt-4">
-                <div className="flex flex-wrap gap-2">
+              {/* Tabs de bandejas */}
+              <div className="mb-4 border-b border-gray-200">
+                <div className="grid grid-cols-3 gap-2">
                   <button
-                    className={`px-4 py-2 rounded-full text-sm cursor-pointer ${tab === "entrada" ? "bg-gray-200 font-semibold" : "bg-gray-100 hover:bg-gray-200"}`}
+                    className={`px-3 py-2.5 rounded-t-lg text-sm cursor-pointer transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 ${
+                      tab === "entrada" 
+                        ? "bg-blue-50 text-blue-700 font-semibold border-b-2 border-blue-600 -mb-px" 
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    }`}
                     onClick={() => setTab("entrada")}
                   >
-                    Recibidos ({counts.inbox})
+                    <span className="text-lg sm:text-base">📥</span>
+                    <div className="flex flex-col sm:flex-row items-center gap-1">
+                      <span className="text-xs sm:text-sm font-medium">Recibidos</span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                        tab === "entrada" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
+                      }`}>
+                        {counts.inbox}
+                      </span>
+                    </div>
                   </button>
                   <button
-                    className={`px-4 py-2 rounded-full text-sm cursor-pointer ${tab === "enviados" ? "bg-gray-200 font-semibold" : "bg-gray-100 hover:bg-gray-200"}`}
+                    className={`px-3 py-2.5 rounded-t-lg text-sm cursor-pointer transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 ${
+                      tab === "enviados" 
+                        ? "bg-blue-50 text-blue-700 font-semibold border-b-2 border-blue-600 -mb-px" 
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    }`}
                     onClick={() => setTab("enviados")}
                   >
-                    Enviados ({counts.sent})
+                    <span className="text-lg sm:text-base">📤</span>
+                    <div className="flex flex-col sm:flex-row items-center gap-1">
+                      <span className="text-xs sm:text-sm font-medium">Enviados</span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                        tab === "enviados" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
+                      }`}>
+                        {counts.sent}
+                      </span>
+                    </div>
                   </button>
                   <button
-                    className={`px-4 py-2 rounded-full text-sm cursor-pointer ${tab === "eliminados" ? "bg-gray-200 font-semibold" : "bg-gray-100 hover:bg-gray-200"}`}
+                    className={`px-3 py-2.5 rounded-t-lg text-sm cursor-pointer transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 ${
+                      tab === "eliminados" 
+                        ? "bg-blue-50 text-blue-700 font-semibold border-b-2 border-blue-600 -mb-px" 
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    }`}
                     onClick={() => setTab("eliminados")}
                   >
-                    Papelera ({counts.trash})
+                    <span className="text-lg sm:text-base">🗑️</span>
+                    <div className="flex flex-col sm:flex-row items-center gap-1">
+                      <span className="text-xs sm:text-sm font-medium">Papelera</span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                        tab === "eliminados" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
+                      }`}>
+                        {counts.trash}
+                      </span>
+                    </div>
                   </button>
                 </div>
               </div>
 
-              <div className="mt-4">
+              {/* Contenido de la bandeja activa */}
+              <div>
                 {tab === "entrada" && <BuzonEntrada hideCompose trainingId={activeTrainingId} sortBy={sortBy} />}
                 {tab === "enviados" && <BuzonEnviados hideCompose trainingId={activeTrainingId} sortBy={sortBy} />}
                 {tab === "eliminados" && <BuzonEliminados trainingId={activeTrainingId} sortBy={sortBy} />}
