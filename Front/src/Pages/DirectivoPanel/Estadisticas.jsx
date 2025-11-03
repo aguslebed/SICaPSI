@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import './DirectivoPanel.css';
 import NavBar from '../../Components/Student/NavBar';
-import { getAllActiveTrainings, getAllTrainingsProgress, getStudents, getTrainingProgress } from '../../API/Request';
+import { getAllActiveTrainings, getAllTrainings, getAllTrainingsProgress, getStudents, getTrainingProgress } from '../../API/Request';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import LoadingOverlay from '../../Components/Shared/LoadingOverlay';
@@ -14,6 +14,7 @@ export default function Estadisticas() {
   const [studentCap, setStudentCap] = useState('all');
   const [individualRows, setRowsRaw] = useState([]);
   const [generalRows, setGeneralRows] = useState([]);
+  const [trainings, setTrainings] = useState([]);
 
   const stripHtml = (value) =>
     typeof value === 'string' ? value.replace(/<[^>]+>/g, '').trim() : value ?? '';
@@ -62,6 +63,10 @@ export default function Estadisticas() {
 
     (async () => {
       try {
+        const allTrainings = await getAllTrainings();
+        const trainingsList = Array.isArray(allTrainings) ? allTrainings : (allTrainings?.items || []);
+        if (alive) setTrainings(trainingsList);
+
         const trainingsProgress = await getAllTrainingsProgress();
         const activeTrainings = await getAllActiveTrainings();
 
@@ -156,9 +161,11 @@ export default function Estadisticas() {
                   style={{ minWidth: '180px' }}
                 >
                   <option value="all">Todas</option>
-                  <option value="Capacitación 1">1</option>
-                  <option value="Capacitación 2">2</option>
-                  <option value="Capacitación 3">3</option>
+                  {trainings.map(training => (
+                    <option key={training._id} value={stripHtml(training.title)}>
+                      {stripHtml(training.title)}
+                    </option>
+                  ))}
                 </select>
               </div>
             <button className="admin-btn admin-btn-secondary" onClick={handleExportPending}>Exportar Datos</button>
@@ -222,9 +229,11 @@ export default function Estadisticas() {
                     style={{ minWidth: '180px' }}
                   >
                     <option value="all">Todas</option>
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
+                    {trainings.map(training => (
+                      <option key={training._id} value={stripHtml(training.title)}>
+                        {stripHtml(training.title)}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <button className="admin-btn admin-btn-secondary" onClick={handleExportPending}>Exportar Datos</button>

@@ -103,7 +103,7 @@ export default function GestionDirectivo() {
                 >
                   <option value="all">Filtrar por rol</option>
                   <option value="alumno">Alumno</option>
-                  <option value="profesor">Profesor</option>
+                  <option value="capacitador">Capacitador</option>
                   <option value="directivo">Directivo</option>
                 </select>
               </div>

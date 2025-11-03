@@ -284,7 +284,7 @@ export default function Registros() {
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
               <input
                 type="text"
-                placeholder="Buscar por capacitador"
+                placeholder="Buscar por usuario"
                 value={filtroCapacitador}
                 onChange={e => setFiltroCapacitador(e.target.value)}
                 className="admin-search-input"
@@ -321,7 +321,7 @@ export default function Registros() {
             </button>
           </div>
           <div style={{ background: '#1976d2', borderRadius: 0, color: 'white', display: 'flex', padding: '0.7rem 0.5rem' }}>
-            <div style={{ flex: 2, textAlign: 'left', paddingLeft: '1rem' }}>Capacitadores</div>
+            <div style={{ flex: 2, textAlign: 'left', paddingLeft: '1rem' }}>Usuario</div>
             <div style={{ flex: 2, textAlign: 'left' }}>Acción</div>
             <div style={{ flex: 2, textAlign: 'left' }}>Fecha/Hora</div>
             <div style={{ flex: 1, textAlign: 'left' }}>DNI</div>
