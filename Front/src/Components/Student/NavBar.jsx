@@ -63,6 +63,7 @@ const NavBar = () => {
     '/directivoPanel/registros': '/directivoPanel',
     '/directivoPanel/estadisticas': '/directivoPanel',
     '/directivoPanel/gestionDirectivo': '/directivoPanel',
+    '/directivoPanel/feedback': '/directivoPanel',
   };
   
   // Encontrar la ruta de retorno correspondiente
