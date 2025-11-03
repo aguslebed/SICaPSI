@@ -1,7 +1,8 @@
 // Controlador desacoplado que orquesta servicios y formatters
-import AppError from '../middlewares/AppError.js';
+import AppError from "../middlewares/AppError.js";
+import { buildUploadPath } from "../utils/uploadsHelper.js";
 
-export function makeUserController({ userService, trainingService, messageService, userFormatter, trainingFormatter, messageFormatter }) {
+const makeUserController = ({ userService, trainingService, messageService, userFormatter, trainingFormatter, messageFormatter }) => {
   return {
 
     async create(req, res, next) {
@@ -61,8 +62,8 @@ export function makeUserController({ userService, trainingService, messageServic
         if (!userId) throw new AppError('ID de usuario requerido', 400);
         if (!req.file) throw new AppError('Archivo de imagen requerido', 400);
 
-        // Build public URL path
-        const filePath = `/uploads/${req.file.filename}`;
+        // Build public URL path usando el helper
+        const filePath = buildUploadPath(req.file.filename);
         const user = await userService.update(userId, { profileImage: filePath });
         res.status(200).json({ user: userFormatter.toPublic(user), profileImage: filePath });
       } catch (err) { next(err); }
@@ -95,14 +96,32 @@ export function makeUserController({ userService, trainingService, messageServic
           messageService.getMessagesForUser(userId)
         ]);
         if (!user) throw new AppError('Usuario no encontrado', 404);
+
+        // Enriquecer trainings con progreso
+        let trainingFormatted = training.map(t => trainingFormatter.format(t));
+        try {
+          const { default: ProgressService } = await import('../services/ProgressService.js');
+          const progressService = new ProgressService();
+          const trainingIds = training.map(t => t._id);
+          const progressByTraining = await progressService.getProgressByTraining(userId, trainingIds);
+          trainingFormatted = trainingFormatted.map(t => {
+            const p = progressByTraining[t._id?.toString?.() || t._id] || { totalLevels: t.totalLevels || (t.levels?.length || 0), levelsCompleted: 0, progressPercent: 0 };
+            return { ...t, totalLevels: p.totalLevels, levelsCompleted: p.levelsCompleted, progressPercent: p.progressPercent };
+          });
+        } catch (e) {
+          // Si falla el cálculo de progreso, seguimos sin romper la respuesta
+          trainingFormatted = trainingFormatted.map(t => ({ ...t, totalLevels: t.totalLevels || (t.levels?.length || 0), levelsCompleted: 0, progressPercent: 0 }));
+        }
+
         const userFormatted = userFormatter.toPublic(user);
-        const trainingFormatted = training.map(t => trainingFormatter.format(t));
         const messageFormatted = mensajes.map(m => messageFormatter.format(m));
         const uidStr = userId.toString();
         const unreadMessages = messageFormatted.filter(m => {
           const recipientId = m?.recipient?._id?.toString?.() ?? m?.recipient?.toString?.();
           return !m.isRead && recipientId === uidStr;
         }).length;
+        const roleLower = (user?.role || '').toLowerCase();
+        const isFirstLogin = !user?.lastLogin && roleLower === 'alumno';
         res.json({
           user: userFormatted,
           training: trainingFormatted,
@@ -113,7 +132,9 @@ export function makeUserController({ userService, trainingService, messageServic
           },
           metadata: {
             ultimaActualizacion: new Date(),
-            version: '1.0.0'
+            version: '1.0.0',
+            isFirstLogin,
+            lastLogin: user?.lastLogin ?? null
           }
         });
       } catch (err) { next(err); }
@@ -220,6 +241,38 @@ export function makeUserController({ userService, trainingService, messageServic
         if (!deletedUser) throw new AppError('Usuario no encontrado', 404);
 
         res.json({ message: 'Usuario eliminado exitosamente', user: userFormatter.toPublic(deletedUser) });
+      } catch (err) {
+        next(err);
+      }
+    },
+
+    /**
+     * Obtener guardias inscritos en una capacitación específica
+     */
+    async getEnrolledStudents(req, res, next) {
+      try {
+        const { trainingId } = req.params;
+        if (!trainingId) throw new AppError('ID de capacitación requerido', 400);
+        
+        const enrolledStudents = await userService.getEnrolledStudents(trainingId);
+        res.json(userFormatter.toPublicList(enrolledStudents));
+      } catch (err) {
+        next(err);
+      }
+    },
+
+    /**
+     * Actualizar el último login del usuario con la fecha/hora actual
+     */
+    async updateLastLogin(req, res, next) {
+      try {
+        const userId = req.params.id;
+        if (!userId) throw new AppError('ID de usuario requerido', 400);
+
+        const updated = await userService.updateLastLogin(userId);
+        if (!updated) throw new AppError('Usuario no encontrado', 404);
+
+        res.json(userFormatter.toPublic(updated));
       } catch (err) {
         next(err);
       }

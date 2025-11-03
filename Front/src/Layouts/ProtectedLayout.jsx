@@ -1,22 +1,90 @@
-import React, { useEffect } from 'react';
-import { Outlet, useLoaderData } from 'react-router-dom';
+import React, { useEffect, useRef } from 'react';
+import { Outlet, useLoaderData, useLocation, useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 
-function SetUserData({ me }) {
+function RoleAwareOutlet({ me }) {
   const { userData, setUserData } = useUser();
+  const hydratedRef = useRef(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+
   useEffect(() => {
-    // Only initialize context from the loader when there is no existing userData in context.
-    // This avoids overwriting client-side updates (e.g. after messaging actions) with loader data
-    // that may be stale during navigation.
     if (!userData) {
-      setUserData(me);
+      if (!hydratedRef.current) {
+        if (me) {
+          setUserData(me);
+        } else {
+          navigate('/login', { replace: true });
+        }
+        hydratedRef.current = true;
+      } else {
+        navigate('/login', { replace: true });
+      }
+      return;
     }
-    // Intentionally do not overwrite userData on subsequent loader runs to preserve local updates.
-  }, [me, userData, setUserData]);
+
+    hydratedRef.current = true;
+
+    const role = userData?.user?.role;
+    if (!role) return;
+
+    const pathname = (location.pathname || '/').replace(/\/+$/, '') || '/';
+
+    const resolveBaseByRole = (r) => {
+      if (r === 'Administrador') return '/adminPanel';
+      if (r === 'Directivo') return '/directivoPanel';
+      if (r === 'Capacitador') return '/trainer';
+      return '/userPanel';
+    };
+
+    const targetBase = resolveBaseByRole(role);
+
+    const ensureMatchesRole = (requiredRole, fallback) => {
+      if (role !== requiredRole) {
+        const target = resolveBaseByRole(fallback ?? role);
+        if (!pathname.startsWith(target)) {
+          navigate(target, { replace: true });
+        }
+        return false;
+      }
+      return true;
+    };
+
+    if (pathname.startsWith('/adminPanel')) {
+      ensureMatchesRole('Administrador');
+      return;
+    }
+
+    if (pathname.startsWith('/directivoPanel')) {
+      ensureMatchesRole('Directivo');
+      return;
+    }
+
+    if (pathname.startsWith('/trainer')) {
+      ensureMatchesRole('Capacitador');
+      return;
+    }
+
+    if (pathname.startsWith('/userPanel')) {
+      if (role === 'Administrador' || role === 'Directivo' || role === 'Capacitador') {
+        if (!pathname.startsWith(targetBase)) {
+          navigate(targetBase, { replace: true });
+        }
+      }
+      return;
+    }
+
+    if (pathname === '/login') {
+      if (!pathname.startsWith(targetBase)) {
+        navigate(targetBase, { replace: true });
+      }
+    }
+  }, [location.pathname, userData, me, navigate, setUserData]);
+
   return <Outlet />;
 }
 
 export default function ProtectedLayout() {
   const { me } = useLoaderData();
-  return <SetUserData me={me} />;
+  return <RoleAwareOutlet me={me} />;
 }

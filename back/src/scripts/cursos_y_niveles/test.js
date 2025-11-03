@@ -1,13 +1,13 @@
 export const sampleTest = {
     title: "Simulación: Control de Acceso en Garita",
     description: "Resuelve correctamente cada situación aplicando protocolo de control de acceso.",
-    imageUrl: "/uploads/5.jpeg", 
+    imageUrl: "/api/uploads/5.jpeg", 
     createdAt: new Date(),
     isActive: true,
     scenes: [
         {
             idScene: 0,
-            videoUrl: "/src/Assets/videos/v1.mp4",
+            url: "/src/Assets/videos/v1.mp4",
             description: "Una persona vestida de policía toca la puerta de ingreso.",
             createdAt: new Date(),
             lastOne: false,
@@ -19,7 +19,7 @@ export const sampleTest = {
         },
         {
             idScene: 1,
-            videoUrl: "/src/Assets/videos/v2.mp4",
+            url: "/src/Assets/videos/v2.mp4",
             description: "Se establece comunicación con el visitante.",
             createdAt: new Date(),
             lastOne: false,
@@ -31,7 +31,7 @@ export const sampleTest = {
         },
         {
             idScene: 2,
-            videoUrl: "/src/Assets/videos/v6.mp4",
+            url: "/src/Assets/videos/v6.mp4",
             description: "Se evalúa la situación desde el puesto.",
             createdAt: new Date(),
             lastOne: false,
@@ -43,7 +43,7 @@ export const sampleTest = {
         },
         {
             idScene: 3,
-            videoUrl: "/src/Assets/videos/v3.mp4",
+            url: "/src/Assets/videos/v3.mp4",
             description: "Detectas que la identificación es falsa.",
             createdAt: new Date(),
             lastOne: false,
@@ -55,7 +55,7 @@ export const sampleTest = {
         },
         {
             idScene: 4,
-            videoUrl: "/src/Assets/videos/v7.mp4",
+            url: "/src/Assets/videos/v7.mp4",
             description: "Se solicita registro del ingreso.",
             createdAt: new Date(),
             lastOne: false,
@@ -67,7 +67,7 @@ export const sampleTest = {
         },
         {
             idScene: 5,
-            videoUrl: "/src/Assets/videos/v10.mp4",
+            url: "/src/Assets/videos/v10.mp4",
             description: "Informan que nadie espera a un oficial.",
             createdAt: new Date(),
             lastOne: false,
@@ -79,7 +79,7 @@ export const sampleTest = {
         },
         {
             idScene: 6,
-            videoUrl: "/src/Assets/videos/v13.mp4",
+            url: "/src/Assets/videos/v13.mp4",
             description: "La persona se torna errática e insiste en ingresar.",
             createdAt: new Date(),
             lastOne: false,
@@ -91,7 +91,7 @@ export const sampleTest = {
         },
         {
             idScene: 7,
-            videoUrl: "/src/Assets/videos/v4.mp4",
+            url: "/src/Assets/videos/v4.mp4",
             description: "Cierre de caso: derivación interna.",
             createdAt: new Date(),
             lastOne: true,
@@ -103,7 +103,7 @@ export const sampleTest = {
         },
         {
             idScene: 8,
-            videoUrl: "/src/Assets/videos/v5.mp4",
+            url: "/src/Assets/videos/v5.mp4",
             description: "Cierre de caso: acceso denegado.",
             createdAt: new Date(),
             lastOne: true,
@@ -115,7 +115,7 @@ export const sampleTest = {
         },
         {
             idScene: 9,
-            videoUrl: "/src/Assets/videos/v8.mp4",
+            url: "/src/Assets/videos/v8.mp4",
             description: "Cierre de caso: registro completo.",
             createdAt: new Date(),
             lastOne: true,
@@ -127,7 +127,7 @@ export const sampleTest = {
         },
         {
             idScene: 10,
-            videoUrl: "/src/Assets/videos/v9.mp4",
+            url: "/src/Assets/videos/v9.mp4",
             description: "Cierre de caso: error de procedimiento.",
             createdAt: new Date(),
             lastOne: true,
@@ -139,7 +139,7 @@ export const sampleTest = {
         },
         {
             idScene: 11,
-            videoUrl: "/src/Assets/videos/v11.mp4",
+            url: "/src/Assets/videos/v11.mp4",
             description: "Cierre de caso: coordinación con fuerzas de seguridad.",
             createdAt: new Date(),
             lastOne: true,
@@ -151,7 +151,7 @@ export const sampleTest = {
         },
         {
             idScene: 12,
-            videoUrl: "/src/Assets/videos/v12.mp4",
+            url: "/src/Assets/videos/v12.mp4",
             description: "Cierre de caso: reentrenamiento recomendado.",
             createdAt: new Date(),
             lastOne: true,
@@ -163,7 +163,7 @@ export const sampleTest = {
         },
         {
             idScene: 13,
-            videoUrl: "/src/Assets/videos/v14.mp4",
+            url: "/src/Assets/videos/v14.mp4",
             description: "Cierre de caso: intervención policial.",
             createdAt: new Date(),
             lastOne: true,
@@ -175,7 +175,7 @@ export const sampleTest = {
         },
         {
             idScene: 14,
-            videoUrl: "/src/Assets/videos/v15.mp4",
+            url: "/src/Assets/videos/v15.mp4",
             description: "Cierre de caso: protocolo ejemplar.",
             createdAt: new Date(),
             lastOne: true,

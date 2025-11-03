@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 import express from "express";
+import http from "http";
 import cors from "cors";
 import authRoutes from "./routes/authRoutes.js";
 import { connectDB } from "./config/db.js";
@@ -14,6 +15,12 @@ import { fileURLToPath } from 'url';
 import trainingRoutes from "./routes/trainingRoutes.js";
 import enrollmentRoutes from "./routes/enrollmentRoutes.js";
 import levelRoutes from "./routes/levelRoutes.js";
+import { startTrainingScheduler } from "./utils/trainingScheduler.js";
+import progressRoutes from "./routes/progressRoutes.js";
+import feedbackRoutes from "./routes/feedbackRoutes.js";
+import auditRoutes from "./routes/auditRoutes.js";
+import { initRealtime } from "./realtime/socket.js";
+import { resolveAllowedOrigins } from "./utils/originHelper.js";
 
 
 // __dirname equivalent for ES Modules
@@ -38,14 +45,24 @@ class AppConfig {
   constructor() {
     this.app = express();
     this.PORT = process.env.PORT || 4000;
+    this.server = http.createServer(this.app);
   }
 
   /**
    * Responsabilidad 1: Configurar middlewares base
    */
   configureMiddlewares() {
+    const allowedOrigins = resolveAllowedOrigins();
+    console.log('✅ Orígenes permitidos (CORS):', allowedOrigins);
+
     this.app.use(cors({
-      origin: 'http://localhost:5173',
+      origin: (origin, callback) => {
+        // Allow server-to-server or same-origin requests without Origin header
+        if (!origin) return callback(null, true);
+        const list = Array.isArray(allowedOrigins) ? allowedOrigins : [allowedOrigins];
+        if (list.includes(origin)) return callback(null, true);
+        return callback(new Error('Origin not allowed by CORS'));
+      },
       credentials: true
     }));
     this.app.use(express.json());
@@ -53,14 +70,41 @@ class AppConfig {
 
     // Ensure uploads directory exists and serve it statically
     const uploadsDir = path.resolve(__dirname, "..", "uploads");
+    const trainingsDir = path.resolve(uploadsDir, "trainings");
+    const tempDir = path.resolve(uploadsDir, "temp");
+    
     try {
       if (!fs.existsSync(uploadsDir)) {
         fs.mkdirSync(uploadsDir, { recursive: true });
+        console.log("✅ Directorio uploads creado:", uploadsDir);
+      }
+      if (!fs.existsSync(trainingsDir)) {
+        fs.mkdirSync(trainingsDir, { recursive: true });
+        console.log("✅ Directorio trainings creado:", trainingsDir);
+      }
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+        console.log("✅ Directorio temp creado:", tempDir);
       }
     } catch (e) {
-      console.error("No se pudo crear el directorio de uploads:", e);
+      console.error("❌ No se pudo crear los directorios de uploads:", e);
+      console.error("   Ruta intentada:", uploadsDir);
+      console.error("   Error detallado:", e.message);
     }
-    this.app.use("/uploads", express.static(uploadsDir));
+    
+    // Servir archivos estáticos usando la ruta configurada en .env
+    const uploadsBasePath = process.env.UPLOADS_BASE_PATH || '/uploads';
+    this.app.use(uploadsBasePath, express.static(uploadsDir));
+    
+    // También servir en /uploads para compatibilidad con rutas legacy
+    if (uploadsBasePath !== '/uploads') {
+      this.app.use('/uploads', express.static(uploadsDir));
+    }
+    
+    console.log(`✅ Archivos estáticos servidos en: ${uploadsBasePath}`);
+    if (uploadsBasePath !== '/uploads') {
+      console.log(`✅ Ruta adicional para compatibilidad: /uploads`);
+    }
   }
 
   /**
@@ -73,6 +117,9 @@ class AppConfig {
     this.app.use("/training", trainingRoutes);
     this.app.use("/enrollment", enrollmentRoutes);
     this.app.use("/level", levelRoutes);
+    this.app.use("/progress", progressRoutes);
+    this.app.use("/feedback", feedbackRoutes);
+    this.app.use("/audit", auditRoutes);
   } 
 
 
@@ -96,9 +143,17 @@ class AppConfig {
       this.configureRoutes();
       this.configureErrorHandling();
 
+      // Inicializar realtime (WebSocket) y compartir instancia en la app
+      const io = initRealtime(this.server);
+      this.app.set('io', io);
+
+      // Iniciar scheduler de capacitaciones
+      startTrainingScheduler();
+
       // Iniciar servidor
-      this.app.listen(this.PORT, "0.0.0.0", () => {
+      this.server.listen(this.PORT, "0.0.0.0", () => {
         console.log(`🚀 Servidor corriendo en http://localhost:${this.PORT}`);
+        console.log(`📡 WebSocket listo (Socket.IO)`);
       });
     } catch (error) {
       console.error("❌ Error al iniciar servidor:", error);

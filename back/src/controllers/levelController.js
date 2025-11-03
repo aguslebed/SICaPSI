@@ -10,7 +10,8 @@ export function makeLevelController({ levelService }) {
           throw new AppError('Falta el ID de la capacitación', 400);
         }
         const levels = await levelService.getAllLevelsInTraining(trainingId);
-        res.status(200).json(levels);
+        // Devolver en formato consistente con el resto de la API
+        res.status(200).json({ success: true, levels });
       } catch (err) {
         next(err);
       }
@@ -30,6 +31,24 @@ export function makeLevelController({ levelService }) {
         }
         const result = await levelService.addLevelsToTraining(trainingId, levels);
         res.status(201).json(result);
+      } catch (err) {
+        next(err);
+      }
+    },
+
+    async updateLevelsInTraining(req, res, next) {
+      try {
+        const { trainingId, levels } = req.body;
+        if (!trainingId || !Array.isArray(levels) || levels.length === 0) {
+          throw new AppError('Faltan datos obligatorios o el arreglo de niveles está vacío', 400);
+        }
+        // Validar que todos los niveles sean de la misma capacitación
+        const allSameTraining = levels.every(lvl => lvl.trainingId === trainingId);
+        if (!allSameTraining) {
+          throw new AppError('Todos los niveles deben pertenecer a la misma capacitación', 400);
+        }
+        const result = await levelService.updateLevelsInTraining(trainingId, levels);
+        res.status(200).json(result);
       } catch (err) {
         next(err);
       }

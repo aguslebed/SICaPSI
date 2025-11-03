@@ -3,8 +3,44 @@ import ModalWrapper from "../Modals/ModalWrapper";
 import { listUsers, uploadMessageAttachments } from "../../API/Request";
 import { X, Paperclip, Send, Smile } from 'lucide-react';
 import EmojiPicker from './EmojiPicker';
+import { useUser } from '../../context/UserContext';
 
-export default function ComposeModal({ open, onClose, onSend, onSuccess, initialTo, initialSubject, initialBody, trainingId }) {
+const ROLE_KEY_TO_VALUE = {
+  administrator: 'administrador',
+  trainer: 'capacitador',
+  manager: 'directivo',
+  student: 'alumno'
+};
+
+const ROLE_FILTER_OPTIONS = [
+  { key: 'todos', label: 'Todos' },
+  { key: 'administrator', label: 'Administradores' },
+  { key: 'trainer', label: 'Capacitador' },
+  { key: 'manager', label: 'Directivo' },
+  { key: 'student', label: 'Alumno' },
+];
+
+export default function ComposeModal({ open, onClose, onSend, onSuccess, initialTo, initialSubject, initialBody, trainingId, prefilledRecipient }) {
+  const { userData } = useUser();
+  const senderRole = userData?.user?.role;
+  const senderRoleLower = (senderRole || '').toLowerCase();
+  const allowedRoles = useMemo(() => {
+    if (senderRoleLower === 'alumno') {
+      return new Set(['alumno', 'capacitador']);
+    }
+    if (senderRoleLower === 'capacitador') {
+      return new Set(['alumno']);
+    }
+    return null;
+  }, [senderRoleLower]);
+  const roleFilterOptions = useMemo(() => {
+    return ROLE_FILTER_OPTIONS.filter(opt => {
+      if (opt.key === 'todos') return true;
+      if (!allowedRoles) return true;
+      const mapped = ROLE_KEY_TO_VALUE[opt.key];
+      return mapped ? allowedRoles.has(mapped) : false;
+    });
+  }, [allowedRoles]);
   const [toInput, setToInput] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
@@ -23,6 +59,16 @@ export default function ComposeModal({ open, onClose, onSend, onSuccess, initial
   const bodyRef = useRef(null);
   const emojiRef = useRef(null);
   const userListRef = useRef(null);
+
+  useEffect(() => {
+    if (!allowedRoles) return;
+    if (selectedRoleFilter && selectedRoleFilter !== 'todos') {
+      const mapped = ROLE_KEY_TO_VALUE[selectedRoleFilter] || selectedRoleFilter.toLowerCase();
+      if (!allowedRoles.has(mapped)) {
+        setSelectedRoleFilter(null);
+      }
+    }
+  }, [allowedRoles, selectedRoleFilter]);
 
   useEffect(() => {
     (async () => {
@@ -52,13 +98,22 @@ export default function ComposeModal({ open, onClose, onSend, onSuccess, initial
       if (Array.isArray(input)) return input.map(r => (typeof r === 'string' ? { email: r } : r)).filter(Boolean);
       return [];
     };
-    const pre = normalizeRecipients(initialTo);
-    const byEmail = (email) => users.find(u => (u.email || '').toLowerCase() === (email || '').toLowerCase());
-    const resolved = pre.map(r => (r.email ? (byEmail(r.email) || r) : r));
-    setSelectedRecipients(resolved);
+    
+    // Si hay prefilledRecipient (alumno seleccionado), usarlo
+    let recipientsToSet = [];
+    if (prefilledRecipient) {
+      recipientsToSet = [prefilledRecipient];
+      setToInput(prefilledRecipient.email || '');
+    } else {
+      const pre = normalizeRecipients(initialTo);
+      const byEmail = (email) => users.find(u => (u.email || '').toLowerCase() === (email || '').toLowerCase());
+      recipientsToSet = pre.map(r => (r.email ? (byEmail(r.email) || r) : r));
+    }
+    
+    setSelectedRecipients(recipientsToSet);
 
     queueMicrotask?.(() => bodyRef.current?.focus());
-  }, [open, initialTo, initialSubject, initialBody, users]);
+  }, [open, initialTo, initialSubject, initialBody, users, prefilledRecipient]);
 
   // Auto-resize textarea to avoid inner scrollbars
   const autoResizeBody = () => {
@@ -71,19 +126,20 @@ export default function ComposeModal({ open, onClose, onSend, onSuccess, initial
 
   const filteredUsers = useMemo(() => {
     const q = (recipientQuery || '').toLowerCase();
+    const resolveRole = (user) => (user.role || user.roles || user.roleName || user.type || user.role_label || '').toString().toLowerCase();
     let list = users;
+    if (allowedRoles) {
+      list = list.filter(u => allowedRoles.has(resolveRole(u)));
+    }
     if (selectedRoleFilter && selectedRoleFilter !== 'todos') {
-      const key = selectedRoleFilter.toLowerCase();
-      list = list.filter(u => {
-        const r = (u.role || u.roles || u.roleName || u.type || u.role_label || '').toString().toLowerCase();
-        return r.includes(key);
-      });
+      const mapped = ROLE_KEY_TO_VALUE[selectedRoleFilter] || selectedRoleFilter.toLowerCase();
+      list = list.filter(u => resolveRole(u) === mapped);
     }
     if (!q) return list.slice(0, 100);
     return list.filter(u => {
       return (u.email || '').toLowerCase().includes(q) || (`${u.firstName || ''} ${u.lastName || ''}`.toLowerCase().includes(q));
     }).slice(0, 200);
-  }, [recipientQuery, users, selectedRoleFilter]);
+  }, [recipientQuery, users, selectedRoleFilter, allowedRoles]);
 
   const handleSend = useCallback(async () => {
     setInlineError('');
@@ -208,12 +264,42 @@ export default function ComposeModal({ open, onClose, onSend, onSuccess, initial
   const onFilesSelected = async (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
+    
+    // Validar tamaños antes de subir
+    const maxSize = 10 * 1024 * 1024; // 10 MB
+    const oversized = files.filter(f => f.size > maxSize);
+    if (oversized.length > 0) {
+      const names = oversized.map(f => f.name).join(', ');
+      const sizeMB = (oversized[0].size / (1024 * 1024)).toFixed(2);
+      setInlineError(`❌ Archivo${oversized.length > 1 ? 's' : ''} demasiado grande${oversized.length > 1 ? 's' : ''}: ${names}. Tamaño máximo permitido: 10 MB por archivo.`);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+    
+    // Validar tipos de archivo
+    const allowedTypes = [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+      'application/pdf',
+      'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain',
+      'application/zip', 'application/x-zip-compressed'
+    ];
+    const invalidFiles = files.filter(f => !allowedTypes.includes(f.type));
+    if (invalidFiles.length > 0) {
+      const names = invalidFiles.map(f => `${f.name} (${f.type || 'desconocido'})`).join(', ');
+      setInlineError(`Tipos de archivo no permitidos: ${names}. Solo se aceptan imágenes, PDF, documentos de Office y archivos ZIP.`);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+    
     try {
       const uploaded = await uploadMessageAttachments(files);
       setAttachments(prev => [...prev, ...uploaded]);
     } catch (err) {
       console.error('Error subiendo adjuntos', err);
-      setInlineError('No se pudieron subir algunos adjuntos.');
+      const errorMsg = err?.message || 'No se pudieron subir algunos adjuntos.';
+      setInlineError(errorMsg);
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
@@ -259,13 +345,7 @@ export default function ComposeModal({ open, onClose, onSend, onSuccess, initial
                   <div className="p-3 border-b bg-gray-50">
                     <div className="flex items-center gap-3 flex-wrap">
                       <span className="text-sm text-gray-700 font-medium">Grupos:</span>
-                      {[
-                        { key: 'todos', label: 'Todos' },
-                        { key: 'administrator', label: 'Administradores' },
-                        { key: 'trainer', label: 'Capacitador' },
-                        { key: 'manager', label: 'Directivo' },
-                        { key: 'student', label: 'Alumno' },
-                      ].map(opt => (
+                      {roleFilterOptions.map(opt => (
                         <button
                           key={opt.key}
                           type="button"

@@ -1,23 +1,34 @@
-import { useEffect, useMemo, useState } from "react";
-import "./gestionPanel.css";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import NavBar from "../../Components/Student/NavBar";
-import { useNavigate } from "react-router-dom";
-import { listTeachers, setTeacherStatus } from "../../API/Request";
+import { listTeachers, setTeacherStatus, getAllTrainings, unenrollTrainerFromTraining, enrollTrainerToTraining, getTrainerByTrainingId } from "../../API/Request";
 import LoadingOverlay from "../../Components/Shared/LoadingOverlay";
+import ConfirmActionModal from "../../Components/Modals/ConfirmActionModal";
+import ErrorModal from "../../Components/Modals/ErrorModal";
+import SucessModal from "../../Components/Modals/SucessModal";
+import ModalWrapper from "../../Components/Modals/ModalWrapper";
+import './AdminPanel.css';
 
-// Pill de estado
+// Badge de estado
 function Chip({ estado }) {
   const ok = estado === "disponible";
   return (
-    <span className={`chip ${ok ? "chip--ok" : "chip--off"}`}>
+    <span className={`admin-badge ${ok ? "admin-badge-success" : "admin-badge-danger"}`}>
       {ok ? "Disponible" : "Deshabilitado"}
     </span>
   );
 }
 
+const INITIAL_EDIT_MODAL_STATE = {
+  open: false,
+  teacher: null,
+  selectedTrainingId: '',
+  occupant: null,
+  isSubmitting: false,
+  trainingsToRemove: [] // IDs de capacitaciones marcadas para eliminar
+};
+
 
 export default function GestionProfesores() {
-  const navigate = useNavigate();
 
   // filtros
   const [search, setSearch] = useState("");
@@ -28,46 +39,428 @@ export default function GestionProfesores() {
   const [hasta, setHasta] = useState("");
   const [appliedFilters, setAppliedFilters] = useState({ filtrarDisponible: true, filtrarDeshabilitado: true, desde: "", hasta: "" });
 
+  // Estados para el dropdown de fecha
+  const [fechaMenu, setFechaMenu] = useState(false);
+  const [fechaDesdeVisible, setFechaDesdeVisible] = useState(false);
+  const [fechaHastaVisible, setFechaHastaVisible] = useState(false);
+  
+  // Estados para el dropdown de estado
+  const [estadoMenu, setEstadoMenu] = useState(false);
+
+  // Referencias para los dropdowns
+  const estadoMenuRef = useRef(null);
+  const fechaMenuRef = useRef(null);
+
+  // Cerrar dropdowns al hacer click fuera
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (estadoMenuRef.current && !estadoMenuRef.current.contains(event.target)) {
+        setEstadoMenu(false);
+      }
+      if (fechaMenuRef.current && !fechaMenuRef.current.contains(event.target)) {
+        setFechaMenu(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   // datos
   const [rowsRaw, setRowsRaw] = useState([]);
 
   // loading
   const [loading, setLoading] = useState(false);
+  const [listError, setListError] = useState(null);
 
   // paginado
   const [page, setPage] = useState(1);
   const size = 10;
+  // confirm / success / error modals for status changes
+  const [confirmAction, setConfirmAction] = useState({ open: false, teacherId: null, toStatus: null, label: '', name: '' });
+  const [successMessage, setSuccessMessage] = useState(null);
+  const [errorMessage, setErrorMessage] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  // cargar desde backend
-  useEffect(() => {
-    let alive = true;
-    setLoading(true);
-    (async () => {
-      try {
-        const data = await listTeachers();
-        const mapped = (data || []).map((r) => ({
-          id: r._id || r.id,
-          nombre: r.firstName,
-          apellido: r.lastName,
-          email: r.email,
-          dni: r.documentNumber,
-          estado: r.status === "available" ? "disponible" : "deshabilitado",
-          creado: r.createdAt,
-          curso: r.assignedTraining && r.assignedTraining.length > 0
-            ? r.assignedTraining.map(training => training.title || training.subtitle).filter(Boolean)
-            : ["–"],
-        }));
-        if (alive) setRowsRaw(mapped);
-      } catch {
-        if (alive) setRowsRaw([]);
-      } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-    return () => { alive = false; };
+  const [trainingOptions, setTrainingOptions] = useState([]);
+  const [trainingsCatalogLoading, setTrainingsCatalogLoading] = useState(false);
+  const [trainingsCatalogError, setTrainingsCatalogError] = useState(null);
+  const trainerCacheRef = useRef({});
+  const [editModal, setEditModal] = useState(INITIAL_EDIT_MODAL_STATE);
+  const [editModalError, setEditModalError] = useState(null);
+  
+  // Estado para modal de confirmación de eliminación de capacitación (YA NO SE USA)
+  // const [removeTrainingModal, setRemoveTrainingModal] = useState({
+  //   open: false,
+  //   teacherId: null,
+  //   teacherName: '',
+  //   trainingId: null,
+  //   trainingTitle: ''
+  // });
+
+  const mapTeacherRow = useCallback((rawTeacher) => {
+    const trainings = Array.isArray(rawTeacher?.assignedTraining)
+      ? rawTeacher.assignedTraining.map((training) => ({
+          id: training?._id || training?.id || '',
+          title: training?.title || training?.subtitle || 'Capacitación sin título'
+        }))
+      : [];
+
+    return {
+      id: rawTeacher?._id || rawTeacher?.id,
+      nombre: rawTeacher?.firstName || '',
+      apellido: rawTeacher?.lastName || '',
+      email: rawTeacher?.email || '',
+      dni: rawTeacher?.documentNumber || '',
+      estado: rawTeacher?.status === 'available' ? 'disponible' : 'deshabilitado',
+      creado: rawTeacher?.createdAt,
+      curso: trainings.length > 0 ? trainings.map((training) => training.title) : ['–'],
+      trainings,
+      fullName: [rawTeacher?.firstName, rawTeacher?.lastName].filter(Boolean).join(' ').trim()
+    };
   }, []);
 
+  const refreshTeachers = useCallback(async () => {
+    setLoading(true);
+    setListError(null);
+    try {
+      const data = await listTeachers();
+      const items = Array.isArray(data) ? data : (data?.items || []);
+      const mapped = items.map(mapTeacherRow);
+      setRowsRaw(mapped);
+    } catch (error) {
+      console.error('Error cargando profesores:', error);
+      setRowsRaw([]);
+      setListError(error?.message || 'No se pudieron cargar los profesores.');
+    } finally {
+      setLoading(false);
+    }
+  }, [mapTeacherRow]);
+
+  useEffect(() => {
+    refreshTeachers();
+  }, [refreshTeachers]);
+
+  const loadTrainingsCatalog = useCallback(async () => {
+    setTrainingsCatalogLoading(true);
+    setTrainingsCatalogError(null);
+    try {
+      const data = await getAllTrainings();
+      const items = Array.isArray(data) ? data : (data?.items || []);
+      const options = items
+        .map((training) => {
+          const id = training?._id || training?.id || '';
+          if (!id) return null;
+          const title = training?.title || training?.subtitle || 'Capacitación sin título';
+          const statusLabel = training?.pendingApproval
+            ? 'Pendiente'
+            : training?.isActive
+              ? 'Activa'
+              : 'Borrador';
+          return {
+            id,
+            title,
+            status: statusLabel
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.title.localeCompare(b.title, 'es', { sensitivity: 'base' }));
+      setTrainingOptions(options);
+    } catch (error) {
+      console.error('Error cargando capacitaciones:', error);
+      setTrainingOptions([]);
+      setTrainingsCatalogError(error?.message || 'No se pudieron cargar las capacitaciones.');
+    } finally {
+      setTrainingsCatalogLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadTrainingsCatalog();
+  }, [loadTrainingsCatalog]);
+
+  const fetchTrainerForTraining = useCallback(async (trainingId) => {
+    if (!trainingId) return null;
+    if (Object.prototype.hasOwnProperty.call(trainerCacheRef.current, trainingId)) {
+      return trainerCacheRef.current[trainingId];
+    }
+    try {
+      const response = await getTrainerByTrainingId(trainingId);
+      const trainer = response?.trainer ?? response ?? null;
+      trainerCacheRef.current = { ...trainerCacheRef.current, [trainingId]: trainer };
+      return trainer;
+    } catch (error) {
+      console.warn('No se pudo obtener el profesor asignado para la capacitación', trainingId, error);
+      trainerCacheRef.current = { ...trainerCacheRef.current, [trainingId]: null };
+      return null;
+    }
+  }, []);
+
+  const closeEditModal = useCallback(() => {
+    setEditModal(INITIAL_EDIT_MODAL_STATE);
+    setEditModalError(null);
+  }, []);
+
+  const handleOpenEditModal = useCallback((teacherRow) => {
+    if (!teacherRow) return;
+    if (!trainingOptions.length && !trainingsCatalogLoading) {
+      loadTrainingsCatalog();
+    }
+    setEditModal({
+      open: true,
+      teacher: teacherRow,
+      selectedTrainingId: '',
+      occupant: null,
+      isSubmitting: false
+    });
+    setEditModalError(null);
+  }, [loadTrainingsCatalog, trainingOptions.length, trainingsCatalogLoading]);
+
+  const handleTrainingSelectionChange = useCallback((event) => {
+    const { value } = event.target;
+    setEditModal((prev) => ({
+      ...prev,
+      selectedTrainingId: value,
+      occupant: value ? undefined : null
+    }));
+    setEditModalError(null);
+  }, []);
+
+  useEffect(() => {
+    if (!editModal.open) {
+      return;
+    }
+    const trainingId = editModal.selectedTrainingId;
+    if (!trainingId) {
+      setEditModal((prev) => ({ ...prev, occupant: null }));
+      return;
+    }
+
+    let cancelled = false;
+    setEditModal((prev) => ({ ...prev, occupant: undefined }));
+    fetchTrainerForTraining(trainingId)
+      .then((trainer) => {
+        if (!cancelled) {
+          setEditModal((prev) => ({ ...prev, occupant: trainer || null }));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setEditModal((prev) => ({ ...prev, occupant: null }));
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editModal.open, editModal.selectedTrainingId, fetchTrainerForTraining]);
+
+  const summaryItems = useMemo(() => {
+    if (!editModal.open || !editModal.teacher) {
+      return [];
+    }
+
+    const teacherTrainings = Array.isArray(editModal.teacher.trainings)
+      ? editModal.teacher.trainings
+      : [];
+    const teacherName = editModal.teacher.fullName || editModal.teacher.email || 'el profesor';
+    const selectedId = editModal.selectedTrainingId;
+    const selectedTraining = trainingOptions.find((option) => option.id === selectedId);
+    const trainingsToRemove = editModal.trainingsToRemove || [];
+    const items = [];
+    const pushItem = (message, intent = 'info') => {
+      items.push({ message, intent });
+    };
+
+    // Mostrar capacitaciones a quitar
+    if (trainingsToRemove.length > 0) {
+      trainingsToRemove.forEach((trainingId) => {
+        const training = teacherTrainings.find((t) => t.id === trainingId);
+        if (training) {
+          pushItem(`Se quitará la capacitación "${training.title}" del profesor ${teacherName}.`, 'remove');
+        }
+      });
+    }
+
+    // Mostrar capacitación a agregar
+    if (selectedId) {
+      const isAlreadyAssigned = teacherTrainings.some((training) => training.id === selectedId);
+      
+      if (isAlreadyAssigned) {
+        const selectedTitle = selectedTraining?.title || 'Capacitación seleccionada';
+        pushItem(`El profesor ${teacherName} ya tiene asignada la capacitación "${selectedTitle}".`, 'info');
+      } else {
+        const selectedTitle = selectedTraining?.title || 'Capacitación seleccionada';
+        pushItem(`Se agregará la capacitación "${selectedTitle}" al profesor ${teacherName}.`, 'assign');
+
+        const occupant = editModal.occupant;
+        const occupantId = occupant && (occupant._id || occupant.id);
+        if (occupantId && occupantId !== editModal.teacher.id) {
+          const occupantName = [occupant.firstName, occupant.lastName].filter(Boolean).join(' ').trim() || occupant.email || 'otro profesor';
+          pushItem(`La capacitación "${selectedTitle}" se quitará del profesor ${occupantName}.`, 'remove');
+        }
+      }
+    }
+
+    if (items.length === 0) {
+      pushItem(`Seleccioná una capacitación para agregar o marcá capacitaciones para quitar.`, 'info');
+    }
+
+    return items;
+  }, [editModal, trainingOptions]);
+
+  const hasTrainingChanges = useMemo(() => {
+    if (!editModal.open || !editModal.teacher) return false;
+    const selectedId = editModal.selectedTrainingId;
+    const trainingsToRemove = editModal.trainingsToRemove || [];
+    
+    // Hay cambios si se seleccionó una nueva capacitación o si hay capacitaciones marcadas para quitar
+    if (trainingsToRemove.length > 0) return true;
+    if (!selectedId) return false;
+    
+    const currentTrainingIds = Array.isArray(editModal.teacher.trainings)
+      ? editModal.teacher.trainings.map((training) => training.id).filter(Boolean)
+      : [];
+    
+    // Hay cambios si la capacitación seleccionada NO está ya asignada
+    return !currentTrainingIds.includes(selectedId);
+  }, [editModal]);
+
+  const handleEditModalSubmit = useCallback(async () => {
+    if (!editModal.teacher) {
+      return;
+    }
+
+    if (!hasTrainingChanges) {
+      closeEditModal();
+      return;
+    }
+
+    setEditModalError(null);
+    setEditModal((prev) => ({ ...prev, isSubmitting: true }));
+
+    const teacherId = editModal.teacher.id;
+    const selectedId = editModal.selectedTrainingId;
+    const trainingsToRemove = editModal.trainingsToRemove || [];
+
+    try {
+      // 1. Quitar capacitaciones marcadas para eliminar
+      for (const trainingId of trainingsToRemove) {
+        await unenrollTrainerFromTraining(trainingId, teacherId);
+        trainerCacheRef.current = { ...trainerCacheRef.current, [trainingId]: null };
+      }
+
+      // 2. Agregar nueva capacitación (si se seleccionó una)
+      if (selectedId) {
+        const currentTrainingIds = Array.isArray(editModal.teacher.trainings)
+          ? editModal.teacher.trainings.map((training) => training.id).filter(Boolean)
+          : [];
+        
+        // Solo agregar si no está ya asignada
+        if (!currentTrainingIds.includes(selectedId)) {
+          // Quitar al profesor ocupante actual de la capacitación (si existe y es diferente)
+          let occupant = editModal.occupant;
+          if (occupant === undefined) {
+            occupant = await fetchTrainerForTraining(selectedId);
+          }
+          const occupantId = occupant && (occupant._id || occupant.id);
+          if (occupantId && occupantId !== teacherId) {
+            try {
+              await unenrollTrainerFromTraining(selectedId, occupantId);
+              trainerCacheRef.current = { ...trainerCacheRef.current, [selectedId]: null };
+            } catch (error) {
+              console.warn('No se pudo quitar al profesor anterior de la capacitación seleccionada:', error);
+            }
+          }
+
+          // Agregar la capacitación al profesor
+          await enrollTrainerToTraining(selectedId, teacherId);
+          trainerCacheRef.current = {
+            ...trainerCacheRef.current,
+            [selectedId]: {
+              _id: teacherId,
+              firstName: editModal.teacher.nombre,
+              lastName: editModal.teacher.apellido,
+              email: editModal.teacher.email
+            }
+          };
+        }
+      }
+
+      const teacherName = editModal.teacher.fullName || editModal.teacher.email || 'el profesor';
+      setSuccessMessage(`Se actualizaron las capacitaciones de ${teacherName}.`);
+      closeEditModal();
+      await refreshTeachers();
+    } catch (error) {
+      console.error('Error actualizando capacitaciones del profesor:', error);
+      setEditModalError(error?.message || 'No se pudo actualizar las capacitaciones del profesor.');
+      setEditModal((prev) => ({ ...prev, isSubmitting: false }));
+    }
+  }, [closeEditModal, editModal, fetchTrainerForTraining, hasTrainingChanges, refreshTeachers]);
+
+  const handleRemoveTraining = useCallback((teacher, training) => {
+    // Marcar la capacitación para eliminación (solo en el estado del modal)
+    setEditModal((prev) => {
+      const currentToRemove = prev.trainingsToRemove || [];
+      // Si ya está marcada, desmarcarla (toggle)
+      if (currentToRemove.includes(training.id)) {
+        return {
+          ...prev,
+          trainingsToRemove: currentToRemove.filter((id) => id !== training.id)
+        };
+      }
+      // Si no está marcada, marcarla
+      return {
+        ...prev,
+        trainingsToRemove: [...currentToRemove, training.id]
+      };
+    });
+  }, []);
+
+  const handleConfirmRemoveTraining = useCallback(async () => {
+    // Esta función ya no se usa, la eliminación se hace al confirmar todo el modal
+  }, []);
+
+  const teacherTrainingsForModal = editModal.teacher && Array.isArray(editModal.teacher.trainings)
+    ? editModal.teacher.trainings
+    : [];
+  const trainingsToRemove = editModal.trainingsToRemove || [];
+  const visibleTrainings = teacherTrainingsForModal.filter((training) => !trainingsToRemove.includes(training.id));
+  const selectedTrainingOption = editModal.selectedTrainingId
+    ? trainingOptions.find((option) => option.id === editModal.selectedTrainingId) || null
+    : null;
+  const occupantData = editModal.occupant;
+  const occupantId = occupantData && (occupantData._id || occupantData.id);
+  const occupantName = occupantData
+    ? [occupantData.firstName, occupantData.lastName].filter(Boolean).join(' ').trim() || occupantData.email || ''
+    : '';
+  const occupantIsSameTeacher = Boolean(occupantId && editModal.teacher && occupantId === editModal.teacher.id);
+  const summaryIntentStyles = useMemo(() => ({
+    assign: {
+      background: 'rgba(37, 99, 235, 0.12)',
+      borderColor: 'rgba(37, 99, 235, 0.3)',
+      color: '#1d4ed8'
+    },
+    remove: {
+      background: 'rgba(220, 38, 38, 0.12)',
+      borderColor: 'rgba(220, 38, 38, 0.3)',
+      color: '#b91c1c'
+    },
+    info: {
+      background: 'rgba(30, 64, 175, 0.08)',
+      borderColor: 'rgba(148, 163, 184, 0.4)',
+      color: '#1f2937'
+    }
+  }), []);
+
   // aplicar filtros (en memoria)
+  const stripHtml = (value) =>
+    typeof value === 'string' ? value.replace(/<[^>]+>/g, '').trim() : value ?? '';
+
+  const renderHtml = (value) => ({ __html: value || '' });
+
   const filtrados = useMemo(() => {
     let rows = [...rowsRaw];
 
@@ -75,7 +468,7 @@ export default function GestionProfesores() {
     if (appliedSearch.trim()) {
       const q = appliedSearch.toLowerCase();
       rows = rows.filter((r) =>
-        [r.nombre, r.apellido, r.email, r.dni, ...(r.curso || [])]
+        [r.nombre, r.apellido, r.email, r.dni, ...(r.curso || []).map(stripHtml)]
           .join(" ")
           .toLowerCase()
           .includes(q)
@@ -85,9 +478,9 @@ export default function GestionProfesores() {
     // filtros de estado y fechas solo cuando se aplican
     if (!appliedFilters.filtrarDisponible || !appliedFilters.filtrarDeshabilitado) {
       rows = rows.filter((r) => {
-        if (r.estado === "disponible" && !appliedFilters.filtrarDisponible) return false;
-        if (r.estado === "deshabilitado" && !appliedFilters.filtrarDeshabilitado) return false;
-        return true;
+        if (r.estado === "disponible" && appliedFilters.filtrarDisponible) return true;
+        if (r.estado === "deshabilitado" && appliedFilters.filtrarDeshabilitado) return true;
+        return false;
       });
     }
     if (appliedFilters.desde || appliedFilters.hasta) {
@@ -124,97 +517,161 @@ export default function GestionProfesores() {
     setAppliedFilters({ filtrarDisponible: true, filtrarDeshabilitado: true, desde: "", hasta: "" });
   }
 
+  // Función para manejar cambios en los checkboxes de estado
+  const handleEstadoChange = (estadoValue) => {
+    if (estadoValue === 'disponible') {
+      setFD(!filtrarDisponible);
+    } else if (estadoValue === 'deshabilitado') {
+      setFDes(!filtrarDeshabilitado);
+    }
+  };
+
+  const estados = [
+    { label: 'Disponible', value: 'disponible' },
+    { label: 'Deshabilitado', value: 'deshabilitado' },
+  ];
+
   return (
     <>
       {loading && <LoadingOverlay label="Cargando profesores..." />}
       <NavBar />
-      <main className="w-full">
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 md:px-8 py-8">
-      <div className="gp-wrap gp-afterHeader">
-        <h1 className="gp-title">Gestión de Profesores</h1>
+      <main className="admin-container">
+        <div className="admin-content-wrapper">
+          <h1 className="admin-title">Gestión de Profesores</h1>
+          <hr className="admin-divider" />
 
-        {/* Filtros */}
-        <section className="gp-filters">
-          <div className="gp-col">
-            <div className="gp-label">Buscar</div>
-            <div className="gp-search">
-              <input
-                className="gp-input"
-                placeholder="Buscar"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') setAppliedSearch(search); }}
-              />
-              <button
-                className="gp-btn gp-btn--icon"
-                onClick={() => setAppliedSearch(search)}
-                title="Buscar"
-              >
-                🔎
-              </button>
+          {/* Sección principal con filtros y tabla */}
+          <section className="admin-card">
+            {/* Filtros */}
+            <div className="admin-filters" style={{ alignItems: 'flex-start' }}>
+            {/* Búsqueda y Botones */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', minWidth: 'fit-content' }}>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') setAppliedSearch(search); }}
+                  placeholder="Buscar profesor"
+                  className="admin-search-input"
+                  style={{ flex: 1, minWidth: 0 }}
+                />
+                <button className="admin-search-btn" onClick={() => setAppliedSearch(search)} title="Buscar">
+                  🔎
+                </button>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button 
+                  onClick={() => setAppliedFilters({ filtrarDisponible, filtrarDeshabilitado, desde, hasta })} 
+                  className="admin-btn admin-btn-primary admin-btn-sm" 
+                  style={{ flex: 1 }}
+                >
+                  Aplicar Filtros
+                </button>
+                <button onClick={limpiar} className="admin-btn admin-btn-primary admin-btn-sm" style={{ flex: 1 }}>
+                  Limpiar Filtros
+                </button>
+              </div>
             </div>
-            <div className="gp-actions">
-              <button
-                className="gp-btn gp-btn--primary"
-                onClick={() => setAppliedFilters({ filtrarDisponible, filtrarDeshabilitado, desde, hasta })}
-              >
-                Aplicar Filtros
+
+            {/* Filtro Estado */}
+            <div className="admin-filter-group admin-dropdown" ref={estadoMenuRef}>
+              <button onClick={() => setEstadoMenu(!estadoMenu)} className="admin-dropdown-btn">
+                Estado
+                <img width="14" height="14" src="https://img.icons8.com/ios-glyphs/60/chevron-down.png" alt="chevron-down"/>
               </button>
-              <button className="gp-btn" onClick={limpiar}>
-                Limpiar Filtros
+              {estadoMenu && (
+                <div className="admin-dropdown-menu">
+                  {estados.map((est) => (
+                    <label 
+                      key={est.value} 
+                      className="admin-dropdown-item"
+                      onClick={() => handleEstadoChange(est.value)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <span
+                        style={{
+                          width: 18,
+                          height: 18,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 4,
+                          background: '#fff',
+                          border: '1px solid #bdbdbd'
+                        }}
+                      >
+                        {((est.value === 'disponible' && filtrarDisponible) || (est.value === 'deshabilitado' && filtrarDeshabilitado)) && (
+                          <span style={{ fontSize: 12, color: '#18b620ff', fontWeight: 'bold' }}>✓</span>
+                        )}
+                      </span>
+                      {est.label}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Filtro Fecha */}
+            <div className="admin-filter-group admin-dropdown" ref={fechaMenuRef}>
+              <button onClick={() => setFechaMenu(!fechaMenu)} className="admin-dropdown-btn">
+                Fecha
+                <img width="14" height="14" src="https://img.icons8.com/ios-glyphs/60/chevron-down.png" alt="chevron-down"/>
               </button>
+              {fechaMenu && (
+                <div className="admin-dropdown-menu" style={{ minWidth: '200px', padding: '0.75rem' }}>
+                  <button
+                    onClick={() => setFechaDesdeVisible(!fechaDesdeVisible)}
+                    className="admin-btn admin-btn-secondary admin-btn-sm"
+                    style={{ width: '100%', marginBottom: '0.5rem', fontSize: '0.8125rem' }}
+                  >
+                    {desde ? `Desde: ${new Date(desde).toLocaleDateString()}` : "Desde"}
+                  </button>
+                  {fechaDesdeVisible && (
+                    <input
+                      type="date"
+                      value={desde}
+                      onChange={(e) => {
+                        setDesde(e.target.value);
+                        setFechaDesdeVisible(false);
+                      }}
+                      className="admin-filter-input"
+                      style={{ width: '100%', marginBottom: '0.5rem' }}
+                    />
+                  )}
+
+                  <button
+                    onClick={() => setFechaHastaVisible(!fechaHastaVisible)}
+                    className="admin-btn admin-btn-secondary admin-btn-sm"
+                    style={{ width: '100%', fontSize: '0.8125rem' }}
+                  >
+                    {hasta ? `Hasta: ${new Date(hasta).toLocaleDateString()}` : "Hasta"}
+                  </button>
+                  {fechaHastaVisible && (
+                    <input
+                      type="date"
+                      value={hasta}
+                      onChange={(e) => {
+                        setHasta(e.target.value);
+                        setFechaHastaVisible(false);
+                      }}
+                      className="admin-filter-input"
+                      style={{ width: '100%', marginTop: '0.5rem' }}
+                    />
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="gp-col">
-            <div className="gp-label">Estado</div>
-            <div className="gp-card">
-              <label className="gp-check">
-                <input
-                  type="checkbox"
-                  checked={filtrarDisponible}
-                  onChange={(e) => setFD(e.target.checked)}
-                />
-                <span>Disponible</span>
-              </label>
-              <label className="gp-check">
-                <input
-                  type="checkbox"
-                  checked={filtrarDeshabilitado}
-                  onChange={(e) => setFDes(e.target.checked)}
-                />
-                <span>Deshabilitado</span>
-              </label>
-            </div>
-          </div>
-
-          <div className="gp-col">
-            <div className="gp-label">Fecha de creación</div>
-            <div className="gp-card gp-grid2">
-              <label className="gp-stack">
-                <span>Desde</span>
-                <input
-                  type="date"
-                  className="gp-input"
-                  value={desde}
-                  onChange={(e) => setDesde(e.target.value)}
-                />
-              </label>
-              <label className="gp-stack">
-                <span>Hasta</span>
-                <input
-                  type="date"
-                  className="gp-input"
-                  value={hasta}
-                  onChange={(e) => setHasta(e.target.value)}
-                />
-              </label>
-            </div>
-          </div>
-        </section>
-
-        <section className="gp-tableCard">
-          <table className="gp-table">
+          {/* Tabla */}
+          <div className="admin-table-wrapper" style={{ marginTop: '1.5rem' }}>
+            {listError && (
+              <div className="admin-empty" style={{ color: 'var(--danger-color)', marginBottom: '0.75rem' }}>
+                {listError}
+              </div>
+            )}
+            <table className="admin-table">
             <thead>
               <tr>
                 <th>Nombre</th>
@@ -230,81 +687,248 @@ export default function GestionProfesores() {
             <tbody>
               {pageRows.length === 0 && (
                 <tr>
-                  <td colSpan="8" className="gp-empty">Sin resultados</td>
+                  <td colSpan="8" className="admin-empty">Sin resultados</td>
                 </tr>
               )}
               {pageRows.map((r) => (
                 <tr key={r.id}>
-                  <td>{r.nombre}</td>
-                  <td>{r.apellido}</td>
-                  <td>{r.email}</td>
-                  <td>{r.dni}</td>
-                  <td><Chip estado={r.estado} /></td>
-                  <td>{r.creado ? new Date(r.creado).toLocaleDateString() : "-"}</td>
-                  <td>{r.curso?.map((c, i) => <div key={i}>{c}</div>)}</td>
-                  <td className="gp-actionsRow">
-                    {/* Editar */}
-                    <button
-                      className="gp-iconBtn"
-                      title="Editar"
-                      onClick={() => navigate(`/adminPanel/profesorEditar/${r.id}`)}
-                    >
-                      📝
-                    </button>
+                  <td data-label="Nombre">{r.nombre}</td>
+                  <td data-label="Apellido">{r.apellido}</td>
+                  <td data-label="Email">{r.email}</td>
+                  <td data-label="DNI">{r.dni}</td>
+                  <td data-label="Estado"><Chip estado={r.estado} /></td>
+                  <td data-label="Fecha de creación">{r.creado ? new Date(r.creado).toLocaleDateString() : "-"}</td>
+                  <td data-label="Curso Asignado">
+                    {r.curso?.map((c, i) => (
+                      <div key={i} dangerouslySetInnerHTML={renderHtml(c)} />
+                    ))}
+                  </td>
+                  <td data-label="Acciones">
+                    <div className="admin-actions">
+                      {/* Editar */}
+                      <button
+                        className="admin-action-btn"
+                        title="Editar"
+                        onClick={() => handleOpenEditModal(r)}
+                      >
+                        📝
+                      </button>
 
-                    <button
-                      className="gp-iconBtn"
-                      title={r.estado === "disponible" ? "Bloquear" : "Habilitar"}
-                      onClick={async () => {
-                        // CAMBIO: Actualización de la lógica para usar los valores correctos del backend
-                        const toStatus = r.estado === "disponible" ? "disabled" : "available";
-                        const label = r.estado === "disponible" ? "bloquear" : "habilitar";
-                        if (!window.confirm(`¿Seguro querés ${label} a ${r.nombre} ${r.apellido}?`)) return;
-
-                        const prev = [...rowsRaw];
-                        // Actualizar el estado local optimistamente
-                        const next = prev.map((it) =>
-                          it.id === r.id
-                            ? { ...it, estado: toStatus === "available" ? "disponible" : "deshabilitado" }
-                            : it
-                        );
-                        setRowsRaw(next);
-
-                        try {
-                          await setTeacherStatus(r.id, toStatus);
-                        } catch {
-                          alert("No se pudo cambiar el estado. Se revierte.");
-                          setRowsRaw(prev); // Revertir en caso de error
-                        }
-                      }}
-                    >
-                      {r.estado === "disponible" ? "🚫" : "✅"}
-                    </button>
+                      <button
+                        className="admin-action-btn"
+                        title={r.estado === "disponible" ? "Bloquear" : "Habilitar"}
+                        onClick={() => {
+                          const toStatus = r.estado === "disponible" ? "disabled" : "available";
+                          const label = r.estado === "disponible" ? "bloquear" : "habilitar";
+                          setConfirmAction({ open: true, teacherId: r.id, toStatus, label, name: `${r.nombre} ${r.apellido}` });
+                        }}
+                      >
+                        {r.estado === "disponible" ? "🚫" : "✅"}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
 
-          <div className="gp-pager">
-            <button className="gp-btn" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-              Anterior
-            </button>
-            {[...Array(pages)].map((_, i) => (
+          {total > size && (
+            <div className="admin-pagination">
               <button
-                key={i}
-                className={`gp-btn gp-pageBtn ${page === i + 1 ? "is-active" : ""}`}
-                onClick={() => setPage(i + 1)}
+                className="admin-pagination-text"
+                onClick={() => setPage(prev => Math.max(1, prev - 1))}
+                disabled={page === 1}
               >
-                {i + 1}
+                Anterior
               </button>
-            ))}
-            <button className="gp-btn" disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>
-              Siguiente
-            </button>
-          </div>
-        </section>
-      </div>
+              {[...Array(pages)].map((_, i) => (
+                <button
+                  key={i}
+                  className={`admin-page-btn ${page === i + 1 ? "active" : ""}`}
+                  onClick={() => setPage(i + 1)}
+                >
+                  {i + 1}
+                </button>
+              ))}
+              <button
+                className="admin-pagination-text"
+                onClick={() => setPage(prev => Math.min(pages, prev + 1))}
+                disabled={page === pages}
+              >
+                Siguiente
+              </button>
+            </div>
+            )}
+
+            {/* Modal para reasignar capacitaciones */}
+            {editModal.open && (
+              <ModalWrapper
+                onClose={() => {
+                  if (!editModal.isSubmitting) {
+                    closeEditModal();
+                  }
+                }}
+                showCloseButton={!editModal.isSubmitting}
+                panelClassName="max-w-md"
+              >
+                <div className="flex flex-col gap-4 p-5">
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">Gestionar capacitaciones</h2>
+                    <p className="mt-1 text-sm text-gray-600">{editModal.teacher?.fullName || editModal.teacher?.email}</p>
+                  </div>
+
+                  {visibleTrainings.length > 0 && (
+                    <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
+                      <p className="mb-2 text-xs font-semibold text-blue-900">Capacitaciones actuales:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {visibleTrainings.map((training, index) => (
+                          <span
+                            key={training.id || training.title || index}
+                            className="inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-3 py-1 text-xs font-medium text-white"
+                          >
+                            <span dangerouslySetInnerHTML={renderHtml(training.title)} />
+                            <button
+                              type="button"
+                              className="cursor-pointer rounded-full transition-colors hover:bg-blue-700"
+                              onClick={() => handleRemoveTraining(editModal.teacher, training)}
+                              title="Quitar capacitación"
+                            >
+                              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {trainingsToRemove.length > 0 && (
+                    <div className="rounded-md border border-red-200 bg-red-50 p-3">
+                      <p className="mb-2 text-xs font-semibold text-red-900">Capacitaciones a quitar:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {teacherTrainingsForModal
+                          .filter((training) => trainingsToRemove.includes(training.id))
+                          .map((training, index) => (
+                            <span
+                              key={training.id || training.title || index}
+                              className="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-3 py-1 text-xs font-medium text-white"
+                            >
+                              <span dangerouslySetInnerHTML={renderHtml(training.title)} />
+                              <button
+                                type="button"
+                                className="cursor-pointer rounded-full transition-colors hover:bg-red-700"
+                                onClick={() => handleRemoveTraining(editModal.teacher, training)}
+                                title="Deshacer"
+                              >
+                                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                              </button>
+                            </span>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex flex-col gap-2">
+                    <label htmlFor="training-selection" className="text-sm font-medium text-gray-700">
+                      Capacitación a agregar
+                    </label>
+                    <select
+                      id="training-selection"
+                      className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100"
+                      value={editModal.selectedTrainingId}
+                      onChange={handleTrainingSelectionChange}
+                      disabled={editModal.isSubmitting || trainingsCatalogLoading}
+                    >
+                      <option value="">Seleccionar capacitación</option>
+                      {trainingOptions.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {stripHtml(option.title)}
+                        </option>
+                      ))}
+                    </select>
+                    {trainingsCatalogLoading && <p className="text-xs text-gray-500">Cargando...</p>}
+                    {trainingsCatalogError && <p className="text-xs text-red-600">{trainingsCatalogError}</p>}
+                  </div>
+
+                  {summaryItems.length > 0 && (
+                    <div className="rounded-md bg-blue-50 p-3">
+                      <ul className="space-y-1 text-xs text-gray-700">
+                        {summaryItems.map(({ message, intent }, index) => (
+                          <li
+                            key={index}
+                            className={intent === 'remove' ? 'text-red-700' : intent === 'assign' ? 'text-blue-700' : ''}
+                            dangerouslySetInnerHTML={{ __html: message }}
+                          />
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {editModalError && (
+                    <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+                      {editModalError}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="button"
+                      className="flex-1 cursor-pointer rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={closeEditModal}
+                      disabled={editModal.isSubmitting}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      className="flex-1 cursor-pointer rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
+                      onClick={handleEditModalSubmit}
+                      disabled={!hasTrainingChanges || editModal.isSubmitting}
+                    >
+                      {editModal.isSubmitting ? 'Guardando...' : 'Guardar'}
+                    </button>
+                  </div>
+                </div>
+              </ModalWrapper>
+            )}
+
+            {/* Confirm / Success / Error modals for status change */}
+            <ConfirmActionModal
+              open={confirmAction.open}
+              title={`Confirmar ${confirmAction.label}`}
+              message={`¿Seguro querés ${confirmAction.label} a ${confirmAction.name}?`}
+              confirmLabel={confirmAction.label?.charAt(0).toUpperCase() + confirmAction.label?.slice(1)}
+              onClose={() => setConfirmAction({ open: false, teacherId: null, toStatus: null, label: '', name: '' })}
+              onConfirm={async () => {
+                if (!confirmAction.teacherId) return;
+                setConfirmAction((c) => ({ ...c, open: false }));
+                const prev = [...rowsRaw];
+                const next = prev.map((it) =>
+                  it.id === confirmAction.teacherId
+                    ? { ...it, estado: confirmAction.toStatus === "available" ? "disponible" : "deshabilitado" }
+                    : it
+                );
+                setRowsRaw(next);
+                setIsProcessing(true);
+                try {
+                  await setTeacherStatus(confirmAction.teacherId, confirmAction.toStatus);
+                  setSuccessMessage('Estado actualizado correctamente');
+                } catch (e) {
+                  setErrorMessage('No se pudo cambiar el estado. Se revierte.');
+                  setRowsRaw(prev);
+                } finally {
+                  setIsProcessing(false);
+                }
+              }}
+            />
+            {isProcessing && <LoadingOverlay label="Procesando cambio de estado..." />}
+            {successMessage && <SucessModal titulo={'Operación exitosa'} mensaje={successMessage} onClose={() => setSuccessMessage(null)} />}
+            {errorMessage && <ErrorModal mensaje={errorMessage} onClose={() => setErrorMessage(null)} />}
+        </div>
+      </section>
         </div>
       </main>
     </>

@@ -10,10 +10,13 @@ export class TrainingValidator extends IValidator {
   /**
    * Valida datos de un Training
    * @param {Object} data - payload del curso
+   * @param {Object} options - opciones de validación
+   * @param {boolean} options.isUpdate - true si es actualización, false si es creación
    * @returns {{isValid: boolean, errors: Array<{field:string,message:string}>}}
    */
-  validate(data = {}) {
+  validate(data = {}, options = {}) {
     const errors = [];
+    const { isUpdate = false, isPartialUpdate = false } = options;
 
     // Normalización básica
     const title = String(data.title ?? "").trim();
@@ -21,25 +24,38 @@ export class TrainingValidator extends IValidator {
     const description = String(data.description ?? "").trim();
     const image = String(data.image ?? "").trim();
     const createdBy = data.createdBy;
+    const isActive = data.isActive === true;
 
-    // 1) Campos obligatorios
-    if (!title) errors.push({ field: "title", message: "Título requerido" });
-    if (!subtitle) errors.push({ field: "subtitle", message: "Subtítulo requerido" });
-    if (!description) errors.push({ field: "description", message: "Descripción requerida" });
-    if (!image) errors.push({ field: "image", message: "Imagen requerida" });
-    if (!createdBy) errors.push({ field: "createdBy", message: "Usuario creador requerido" });
-
-    // 2) Introduction
-    if (!data.introduction || typeof data.introduction !== "object") {
-      errors.push({ field: "introduction", message: "Introducción requerida" });
+    // Si es actualización parcial, solo validar campos presentes
+    if (isPartialUpdate) {
+      if (data.hasOwnProperty('title') && !title) {
+        errors.push({ field: "title", message: "Título requerido" });
+      }
+      if (data.hasOwnProperty('subtitle') && !subtitle) {
+        errors.push({ field: "subtitle", message: "Subtítulo requerido" });
+      }
+      if (data.hasOwnProperty('description') && !description) {
+        errors.push({ field: "description", message: "Descripción requerida" });
+      }
+      if (data.hasOwnProperty('image') && !image && image !== '__PENDING_UPLOAD__') {
+        errors.push({ field: "image", message: "Imagen requerida" });
+      }
     } else {
-      const intro = data.introduction;
-      if (!intro.title?.trim()) errors.push({ field: "introduction.title", message: "Título de introducción requerido" });
-      if (!intro.subtitle?.trim()) errors.push({ field: "introduction.subtitle", message: "Subtítulo de introducción requerido" });
-      if (!intro.welcomeMessage?.trim()) errors.push({ field: "introduction.welcomeMessage", message: "Mensaje de bienvenida requerido" });
+      // Validación completa
+      if (!title) errors.push({ field: "title", message: "Título requerido" });
+      if (!subtitle) errors.push({ field: "subtitle", message: "Subtítulo requerido" });
+      if (!description) errors.push({ field: "description", message: "Descripción requerida" });
+      
+      // Imagen requerida excepto si es placeholder temporal
+      if (!image && image !== '__PENDING_UPLOAD__') {
+        errors.push({ field: "image", message: "Imagen requerida" });
+      }
+      
+      // createdBy solo es requerido en creación, no en actualización
+      if (!isUpdate && !createdBy) errors.push({ field: "createdBy", message: "Usuario creador requerido" });
     }
 
-    // 3) Report (array de objetos)
+    // 2) Report (array de objetos)
     if (Array.isArray(data.report)) {
       data.report.forEach((r, i) => {
         if (typeof r.level !== "number") {

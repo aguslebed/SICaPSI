@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, Outlet } from 'react-router-dom';
 import NavBar from '../../Components/Student/NavBar';
-import { deleteUser as deleteUserApi, getAllUsers } from '../../API/Request';
+import { updateUser as updateUserApi, getAllUsers } from '../../API/Request';
 import LoadingOverlay from '../../Components/Shared/LoadingOverlay';
+import ErrorModal from '../../Components/Modals/ErrorModal';
+import './AdminPanel.css';
 
 
 function getEstadoLabel(status) {
@@ -14,10 +16,18 @@ function getEstadoLabel(status) {
 
 function getRoleLabel(role) {
   if (role === 'Capacitador') return 'Capacitador';
-  if (role === 'Alumno') return 'Guardia';
+  if (role === 'Alumno') return 'Alumno';
   if (role === 'Directivo') return 'Directivo';
   if (role === 'Administrador') return 'Administrador';
   return role;
+}
+
+function getRoleColor(role) {
+  if (role === 'Capacitador') return 'bg-green-500';
+  if (role === 'Alumno') return 'bg-purple-500';
+  if (role === 'Directivo') return 'bg-blue-500';
+  if (role === 'Administrador') return 'bg-orange-500';
+  return 'bg-gray-500';
 }
 
 function formatDate(dateStr) {
@@ -28,29 +38,69 @@ function formatDate(dateStr) {
 export default function GestionUsuario() {
   // Estados para los filtros aplicados
   const [tipo, setTipo] = useState('');
-  const [estado, setEstado] = useState('');
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
   const [filtersApplied, setFiltersApplied] = useState(false);
 
   // Estados para los filtros en edición (inputs)
   const [tipoEdit, setTipoEdit] = useState('');
-  const [estadoEdit, setEstadoEdit] = useState('');
   const [fechaDesdeEdit, setFechaDesdeEdit] = useState('');
   const [fechaHastaEdit, setFechaHastaEdit] = useState('');
+  
+  // Estados para el dropdown de fecha
+  const [fechaMenu, setFechaMenu] = useState(false);
+  const [fechaDesdeVisible, setFechaDesdeVisible] = useState(false);
+  const [fechaHastaVisible, setFechaHastaVisible] = useState(false);
+  
+  // Estados para los dropdowns de Tipo
+  const [tipoMenu, setTipoMenu] = useState(false);
+  const [tiposSeleccionados, setTiposSeleccionados] = useState([]);
 
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [search, setSearch] = useState('');
   const [searchApplied, setSearchApplied] = useState(''); // Nuevo estado
   const [loading, setLoading] = useState(false);
+  // Paginación
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 10;
+  
+  // Estados para modal de eliminar
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState(null);
+
+  // Referencias para los dropdowns
+  const tipoMenuRef = useRef(null);
+  const fechaMenuRef = useRef(null);
+
+  // Cerrar dropdowns al hacer click fuera
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (tipoMenuRef.current && !tipoMenuRef.current.contains(event.target)) {
+        setTipoMenu(false);
+      }
+      if (fechaMenuRef.current && !fechaMenuRef.current.contains(event.target)) {
+        setFechaMenu(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     async function fetchUsers() {
       setLoading(true);
       try {
         const data = await getAllUsers();
-        setUsers(data.items);
+        const items = Array.isArray(data.items) ? data.items : (data.items || []);
+        // Mostrar solo usuarios habilitados (available) en esta pantalla
+        const enabled = items.filter(u => String(u.status || '').toLowerCase() === 'available');
+        setUsers(enabled);
         // console.log(data.items);
       } finally {
         setLoading(false);
@@ -73,19 +123,16 @@ export default function GestionUsuario() {
           u.documentNumber?.toLowerCase().includes(s)
       );
     }
-    if(filtersApplied){
 
-      if (tipo) {
+    if (filtersApplied) {
+      // Filtrado por tipos - primero usar las selecciones múltiples si existen
+      if (tiposSeleccionados && tiposSeleccionados.length > 0) {
+        result = result.filter(u => tiposSeleccionados.includes(getRoleLabel(u.role)));
+      } else if (tipo) {
         result = result.filter(u => getRoleLabel(u.role) === tipo);
       }
-      if (estado) {
-        const estadoMap = {
-          'Habilitado': 'available',
-          'Deshabilitado': 'disabled',
-          'Pendiente': 'pending'
-        };
-        result = result.filter(u => u.status === estadoMap[estado]);
-      }
+
+      // Filtrado por fechas
       if (fechaDesde) {
         result = result.filter(u => new Date(u.createdAt) >= new Date(fechaDesde));
       }
@@ -93,189 +140,512 @@ export default function GestionUsuario() {
         result = result.filter(u => new Date(u.createdAt) <= new Date(fechaHasta));
       }
     }
+
     setFilteredUsers(result);
-  }, [users, searchApplied, tipo, estado, fechaDesde, fechaHasta, filtersApplied]);
+    // Resetear página cuando cambian filtros o usuarios
+    setPage(1);
+  }, [users, searchApplied, tipo, fechaDesde, fechaHasta, filtersApplied, tiposSeleccionados]);
 
   // Aplica los filtros (excepto búsqueda)
   const aplicarFiltros = () => {
     setTipo(tipoEdit);
-    setEstado(estadoEdit);
     setFechaDesde(fechaDesdeEdit);
     setFechaHasta(fechaHastaEdit);
     setFiltersApplied(true);
+    // Debug: mostrar selección de estados y estados presentes en users
+    // debug logs removed
   };
 
   // Limpia todos los filtros
   const limpiarFiltros = () => {
     setTipo('');
-    setEstado('');
     setFechaDesde('');
     setFechaHasta('');
     setTipoEdit('');
-    setEstadoEdit('');
     setFechaDesdeEdit('');
     setFechaHastaEdit('');
     setFiltersApplied(false);
+    setTiposSeleccionados([]);
   };
 
-  const deleteUser = async (id) => {
-  try {
-    await deleteUserApi(id);
-    const updatedUsers = users.filter(u => u._id !== id);
-    setUsers(updatedUsers);
-    setFilteredUsers(updatedUsers);
-  } catch (error) {
-    alert(error.message || "Error al eliminar usuario");
-  }
-};
+  // Funciones para manejar cambios en los checkboxes
+  const handleTipoChange = (tipoValue) => {
+    setTiposSeleccionados(prev => {
+      const newSelection = prev.includes(tipoValue)
+        ? prev.filter(t => t !== tipoValue)
+        : [...prev, tipoValue];
+      // Actualizar tipoEdit basado en la selección
+      if (newSelection.length === 1) {
+        setTipoEdit(newSelection[0]);
+      } else if (newSelection.length === 0 || newSelection.length === tipos.length) {
+        setTipoEdit('');
+      } else {
+        setTipoEdit(newSelection[0]); // Tomar el primero si hay múltiples
+      }
+      return newSelection;
+    });
+  };
+
+  const tipos = [
+    { label: 'Capacitador', value: 'Capacitador' },
+    { label: 'Alumno', value: 'Alumno' },
+    { label: 'Administrador', value: 'Administrador' },
+    { label: 'Directivo', value: 'Directivo' },
+  ];
+
+
+  const openDeleteModal = (user) => {
+    setUserToDelete(user);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!userToDelete) return;
+    
+    try {
+      setLoading(true);
+      // Soft-delete: marcar como 'disabled' en lugar de borrar
+      await updateUserApi(userToDelete._id, { status: 'disabled' });
+      const updatedUsers = users.filter(u => u._id !== userToDelete._id);
+      setUsers(updatedUsers);
+      setFilteredUsers(updatedUsers);
+      setShowDeleteModal(false);
+      setShowSuccessModal(true);
+      setUserToDelete(null);
+    } catch (error) {
+      console.error('Error al eliminar usuario:', error);
+      // Use modal to show error
+      const msg = error?.message || 'Error al eliminar usuario';
+      // create a simple error modal state if needed
+      // Reuse showSuccessModal for success; we'll show a quick error modal
+      setShowDeleteModal(false);
+      setErrorModalMessage(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setUserToDelete(null);
+  };
 
   return (
     <>
       {loading && <LoadingOverlay label="Cargando usuarios..." />}
       <NavBar />
-      <main className="p-6 bg-[#f6f8fa] min-h-screen">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex justify-between items-center mb-4">
-            <h1 className="text-3xl font-bold">Gestión de usuarios</h1>
-            <Link to="/adminPanel/gestionUsuario/crearUsuario" className="bg-green-400 hover:bg-green-500 text-white px-4 py-2 rounded-lg">Crear usuario</Link>
+      <main className="admin-container">
+        <div className="admin-content-wrapper">
+          <div className="admin-flex admin-justify-between admin-items-center" style={{ marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <h1 className="admin-title" style={{ marginBottom: 0 }}>Gestión de usuarios</h1>
+            <Link to="/adminPanel/gestionUsuario/crearUsuario" className="admin-btn admin-btn-success" style={{ padding: '0.5rem 0.875rem', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
+              Crear usuario
+            </Link>
           </div>
-          {/* Filtros */}
-          <div className="bg-white rounded shadow p-4 flex flex-wrap gap-4 mb-6 items-end">
-            <div>
-              <label className="block text-sm mb-1">Buscar</label>
-              <div className="flex">
+          <hr className="admin-divider" />
+          
+          {/* Filtros y Tabla dentro de la misma sección */}
+          <section className="admin-card">
+            <div className="admin-filters" style={{ alignItems: 'flex-start' }}>
+            {/* Búsqueda y Botones */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', minWidth: 'fit-content' }}>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <input
                   type="text"
-                  className="border rounded-l px-3 py-1"
-                  placeholder="Buscar..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
+                  placeholder="Buscar..."
+                  className="admin-search-input"
+                  style={{ flex: 1, minWidth: 0 }}
                 />
-                <button
-                  className="bg-sky-400 text-white px-3 rounded-r cursor-pointer"
-                  onClick={() => setSearchApplied(search)}
-                >🔍</button>
+                <button className="admin-search-btn" onClick={() => setSearchApplied(search)} title="Buscar">
+                  🔎
+                </button>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button onClick={aplicarFiltros} className="admin-btn admin-btn-primary admin-btn-sm" style={{ flex: 1 }}>
+                  Aplicar Filtros
+                </button>
+                <button onClick={limpiarFiltros} className="admin-btn admin-btn-primary admin-btn-sm" style={{ flex: 1 }}>
+                  Limpiar Filtros
+                </button>
               </div>
             </div>
-            <div>
-              <label className="block text-sm mb-1">Tipo</label>
-              <select
-                className="border rounded px-3 py-1"
-                value={tipoEdit}
-                onChange={e => setTipoEdit(e.target.value)}
-              >
-                <option value="">Todos</option>
-                <option value="Capacitador">Capacitador</option>
-                <option value="Guardia">Guardia</option>
-                <option value="Administrador">Administrador</option>
-                <option value="Directivo">Directivo</option>
-              </select>
+            
+            {/* Filtro Tipo */}
+            <div className="admin-filter-group admin-dropdown" ref={tipoMenuRef}>
+              <button onClick={() => setTipoMenu(!tipoMenu)} className="admin-dropdown-btn">
+                Tipo
+                <img width="14" height="14" src="https://img.icons8.com/ios-glyphs/60/chevron-down.png" alt="chevron-down"/>
+              </button>
+              {tipoMenu && (
+                <div className="admin-dropdown-menu">
+                  {tipos.map((t) => (
+                    <label 
+                      key={t.value} 
+                      className="admin-dropdown-item"
+                      onClick={() => handleTipoChange(t.value)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <span
+                        style={{
+                          width: 18,
+                          height: 18,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 4,
+                          background: '#fff',
+                          border: '1px solid #bdbdbd'
+                        }}
+                      >
+                        {tiposSeleccionados.includes(t.value) && (
+                          <span style={{ fontSize: 12, color: '#18b620ff', fontWeight: 'bold' }}>✓</span>
+                        )}
+                      </span>
+                      {t.label}
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
-            <div>
-              <label className="block text-sm mb-1">Estado</label>
-              <select
-                className="border rounded px-3 py-1"
-                value={estadoEdit}
-                onChange={e => setEstadoEdit(e.target.value)}
-              >
-                <option value="">Todos</option>
-                <option value="Habilitado">Habilitado</option>
-                <option value="Pendiente">Pendiente</option>
-                <option value="Deshabilitado">Deshabilitado</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm mb-1">Fecha de creación</label>
-              <div className="flex gap-1 items-center">
-                <p>Desde:</p>
-                <input
-                  type="date"
-                  className="border rounded px-2 py-1"
-                  value={fechaDesdeEdit}
-                  onChange={e => setFechaDesdeEdit(e.target.value)}
-                />
-                <p>Hasta:</p>
-                <input
-                  type="date"
-                  className="border rounded px-2 py-1"
-                  value={fechaHastaEdit}
-                  onChange={e => setFechaHastaEdit(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="flex flex-col gap-1">
-              <button
-                className="bg-sky-400 text-white px-3 py-1 rounded cursor-pointer"
-                onClick={aplicarFiltros}
-              >Aplicar Filtros</button>
-              <button
-                className="bg-gray-200 text-gray-700 px-3 py-1 rounded cursor-pointer"
-                onClick={limpiarFiltros}
-              >Limpiar Filtros</button>
+            
+            {/* Estado filter removed - this page shows only enabled users */}
+            
+            {/* Filtro Fecha */}
+            <div className="admin-filter-group admin-dropdown" ref={fechaMenuRef}>
+              <button onClick={() => setFechaMenu(!fechaMenu)} className="admin-dropdown-btn">
+                Fecha
+                <img width="14" height="14" src="https://img.icons8.com/ios-glyphs/60/chevron-down.png" alt="chevron-down"/>
+              </button>
+              {fechaMenu && (
+                <div className="admin-dropdown-menu" style={{ minWidth: '200px', padding: '0.75rem' }}>
+                  <button
+                    onClick={() => setFechaDesdeVisible(!fechaDesdeVisible)}
+                    className="admin-btn admin-btn-secondary admin-btn-sm"
+                    style={{ width: '100%', marginBottom: '0.5rem', fontSize: '0.8125rem' }}
+                  >
+                    {fechaDesdeEdit ? `Desde: ${new Date(fechaDesdeEdit).toLocaleDateString()}` : "Desde"}
+                  </button>
+                  {fechaDesdeVisible && (
+                    <input
+                      type="date"
+                      value={fechaDesdeEdit}
+                      onChange={(e) => {
+                        setFechaDesdeEdit(e.target.value);
+                        setFechaDesdeVisible(false);
+                      }}
+                      className="admin-filter-input"
+                      style={{ width: '100%', marginBottom: '0.5rem' }}
+                    />
+                  )}
+
+                  <button
+                    onClick={() => setFechaHastaVisible(!fechaHastaVisible)}
+                    className="admin-btn admin-btn-secondary admin-btn-sm"
+                    style={{ width: '100%', fontSize: '0.8125rem' }}
+                  >
+                    {fechaHastaEdit ? `Hasta: ${new Date(fechaHastaEdit).toLocaleDateString()}` : "Hasta"}
+                  </button>
+                  {fechaHastaVisible && (
+                    <input
+                      type="date"
+                      value={fechaHastaEdit}
+                      onChange={(e) => {
+                        setFechaHastaEdit(e.target.value);
+                        setFechaHastaVisible(false);
+                      }}
+                      className="admin-filter-input"
+                      style={{ width: '100%', marginTop: '0.5rem' }}
+                    />
+                  )}
+                </div>
+              )}
             </div>
           </div>
+        
           {/* Tabla */}
-          <div className="overflow-x-auto bg-white rounded shadow">
-            <table className="min-w-full">
-              <thead>
-                <tr className="bg-[#0888c2] text-white">
-                  <th className="px-4 py-3 text-left">Nombre</th>
-                  <th className="px-4 py-3 text-left">Apellido</th>
-                  <th className="px-4 py-3 text-left">Email</th>
-                  <th className="px-4 py-3 text-left">DNI</th>
-                  <th className="px-4 py-3 text-left">Estado</th>
-                  <th className="px-4 py-3 text-left">Fecha de creación</th>
-                  <th className="px-4 py-3 text-left">Tipo</th>
-                  <th className="px-4 py-3 text-left">Acciones</th>
+          <div className="admin-table-wrapper" style={{ marginTop: '1.5rem' }}>
+            <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Apellido</th>
+                <th>Email</th>
+                <th>DNI</th>
+                <th>Fecha de creación</th>
+                <th>Tipo</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="admin-empty">No hay usuarios para mostrar.</td>
                 </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="text-center py-8 text-gray-500">No hay usuarios para mostrar.</td>
-                  </tr>
-                ) : (
-                  filteredUsers.map(u => {
+              ) : (
+                (() => {
+                  const total = filteredUsers.length;
+                  const totalPages = Math.max(1, Math.ceil(total / itemsPerPage));
+                  const start = (page - 1) * itemsPerPage;
+                  const slice = filteredUsers.slice(start, start + itemsPerPage);
+                  return slice.map(u => {
                     const estado = getEstadoLabel(u.status);
                     return (
-                      <tr key={u._id} className="border-b">
-                        <td className="px-4 py-3">{u.firstName}</td>
-                        <td className="px-4 py-3">{u.lastName}</td>
-                        <td className="px-4 py-3">{u.email}</td>
-                        <td className="px-4 py-3">{u.documentNumber}</td>
-                        <td className="px-4 py-3">
-                          <span className={`text-white px-3 py-1 rounded-full text-sm ${estado.color}`}>{estado.label}</span>
+                      <tr key={u._id}>
+                        <td data-label="Nombre">{u.firstName}</td>
+                        <td data-label="Apellido">{u.lastName}</td>
+                        <td data-label="Email">{u.email}</td>
+                        <td data-label="DNI">{u.documentNumber}</td>
+                        <td data-label="Fecha">{formatDate(u.createdAt)}</td>
+                        <td data-label="Tipo">
+                          <span 
+                            className="inline-block px-3 py-1 rounded-full text-white text-xs font-medium text-center"
+                            style={{ minWidth: '110px', backgroundColor: getRoleColor(u.role) === 'bg-green-500' ? '#10b981' :
+                                     getRoleColor(u.role) === 'bg-purple-500' ? '#a855f7' :
+                                     getRoleColor(u.role) === 'bg-blue-500' ? '#3b82f6' :
+                                     getRoleColor(u.role) === 'bg-orange-500' ? '#f97316' : '#6b7280' }}
+                          >
+                            {getRoleLabel(u.role)}
+                          </span>
                         </td>
-                        <td className="px-4 py-3">{formatDate(u.createdAt)}</td>
-                        <td className="px-4 py-3">{getRoleLabel(u.role)}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex gap-2">
+                        <td data-label="Acciones">
+                          <div className="admin-actions">
                             <Link to="/adminPanel/gestionUsuario/modificarUsuario"
                               state={{ user: u }}
-                              className="cursor-pointer"
-                              >
-                      📝  </Link>
-                            <button className='cursor-pointer' title="Deshabilitar usuario" onClick={() => deleteUser(u._id)}><span role="img" aria-label="users">🚫</span></button>
+                              className="admin-action-btn"
+                              title="Editar usuario"
+                            >
+                              📝
+                            </Link>
+                            <button 
+                              className="admin-action-btn" 
+                              title="Eliminar usuario" 
+                              onClick={() => openDeleteModal(u)}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="black">
+                                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                                <circle cx="17" cy="17" r="5" fill="black"/>
+                                <path d="M14.5 14.5l5 5M19.5 14.5l-5 5" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                              </svg>
+                            </button>
                           </div>
                         </td>
                       </tr>
                     )
                   })
-                )}
-              </tbody>
-            </table>
-          </div>
-          {/* Paginación */}
-          <div className="flex justify-end mt-4 gap-2">
-            <button className="px-3 py-1 rounded border">Anterior</button>
-            <button className="px-3 py-1 rounded border bg-sky-400 text-white">1</button>
-            <button className="px-3 py-1 rounded border">2</button>
-            <button className="px-3 py-1 rounded border">3</button>
-            <button className="px-3 py-1 rounded border">Siguiente</button>
-          </div>
-          <Outlet />
+                })()
+              )}
+            </tbody>
+          </table>
         </div>
+        
+        {/* Paginación */}
+        {filteredUsers.length > itemsPerPage && (
+          <div className="admin-pagination">
+            <button
+              className="admin-pagination-text"
+              onClick={() => setPage(prev => Math.max(1, prev - 1))}
+              disabled={page === 1}
+            >
+              Anterior
+            </button>
+            {Array.from({ length: Math.max(1, Math.ceil(filteredUsers.length / itemsPerPage)) }).map((_, i) => (
+              <button
+                key={i}
+                className={`admin-page-btn ${page === i + 1 ? 'active' : ''}`}
+                onClick={() => setPage(i + 1)}
+              >
+                {i + 1}
+              </button>
+            ))}
+            <button
+              className="admin-pagination-text"
+              onClick={() => setPage(prev => Math.min(Math.max(1, Math.ceil(filteredUsers.length / itemsPerPage)), prev + 1))}
+              disabled={page === Math.max(1, Math.ceil(filteredUsers.length / itemsPerPage))}
+            >
+              Siguiente
+            </button>
+          </div>
+        )}
+      </section>
+        <Outlet />
+        </div>
+
+        {/* Modal de confirmación de eliminación */}
+        {showDeleteModal && (
+          <div 
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999
+            }}
+          >
+            <div 
+              style={{
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                padding: '24px',
+                maxWidth: '400px',
+                width: '90%',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)'
+              }}
+            >
+              <h3 style={{ 
+                fontSize: '1.25rem', 
+                fontWeight: '600', 
+                marginBottom: '16px',
+                color: '#1f2937'
+              }}>
+                ¿Confirmar eliminación?
+              </h3>
+              <p style={{ 
+                marginBottom: '24px', 
+                color: '#4b5563',
+                fontSize: '0.95rem'
+              }}>
+                ¿Estás seguro de que deseas eliminar al usuario <strong>{userToDelete?.firstName} {userToDelete?.lastName}</strong>? 
+                Esta acción deshabilitará al usuario y no podrá acceder al sistema.
+              </p>
+              <div style={{ 
+                display: 'flex', 
+                gap: '12px', 
+                justifyContent: 'flex-end' 
+              }}>
+                <button
+                  onClick={cancelDelete}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    border: '1px solid #d1d5db',
+                    backgroundColor: 'white',
+                    color: '#374151',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: '500'
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={loading}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: '500',
+                    opacity: loading ? 0.6 : 1
+                  }}
+                >
+                  {loading ? 'Eliminando...' : 'Eliminar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de éxito */}
+        {showSuccessModal && (
+          <div 
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999
+            }}
+          >
+            <div 
+              style={{
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                padding: '32px',
+                maxWidth: '400px',
+                width: '90%',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+                textAlign: 'center'
+              }}
+            >
+              {/* Checkmark verde */}
+              <div style={{ 
+                marginBottom: '20px',
+                display: 'flex',
+                justifyContent: 'center'
+              }}>
+                <svg 
+                  width="64" 
+                  height="64" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle cx="12" cy="12" r="10" fill="#10b981" />
+                  <path 
+                    d="M8 12l2 2 4-4" 
+                    stroke="white" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
+              
+              <h3 style={{ 
+                fontSize: '1.125rem', 
+                fontWeight: '600', 
+                marginBottom: '12px',
+                color: '#1f2937'
+              }}>
+                Usuario eliminado exitosamente
+              </h3>
+              
+              <p style={{ 
+                marginBottom: '24px', 
+                color: '#6b7280',
+                fontSize: '0.95rem',
+                lineHeight: '1.5'
+              }}>
+                Usuario dado de baja correctamente. No podrá acceder al sistema.
+              </p>
+              
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                style={{
+                  padding: '10px 24px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  width: '100%'
+                }}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        )}
       </main>
+      {errorModalMessage && <ErrorModal mensaje={errorModalMessage} onClose={() => setErrorModalMessage(null)} />}
     </>
   );
 }

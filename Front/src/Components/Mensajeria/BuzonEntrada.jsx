@@ -3,23 +3,40 @@ import { useUser } from "../../context/UserContext";
 import ModalWrapper from "../Modals/ModalWrapper";
 import MessageDetail from "./MessageDetail";
 import ComposeModal from "./ComposeModal";
-import { sendMessage, setMessageRead, moveMessageToTrash, getMe, bulkMoveToTrash, bulkSetMessageRead } from "../../API/Request";
+import { sendMessage, setMessageRead, getMe, bulkMoveToTrash, bulkSetMessageRead } from "../../API/Request";
 import { Search, Paperclip } from "lucide-react";
 import LoadingOverlay from "../Shared/LoadingOverlay";
 import ErrorModal from "../Modals/ErrorModal";
 import SucessModal from "../Modals/SucessModal";
 import ConfirmActionModal from "../Modals/ConfirmActionModal";
 
+const normalizeTrainingId = (value) => {
+  if (!value) return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    if (value._id) return value._id;
+    if (value.$oid) return value.$oid;
+    if (typeof value.toString === 'function') {
+      const str = value.toString();
+      return str.startsWith('ObjectId(') ? str.slice(9, -1) : str;
+    }
+  }
+  return String(value);
+};
+
 export default function BuzonEntrada({ hideCompose = false, trainingId, sortBy = 'fecha' }) {
   const { userData, setUserData } = useUser();
 
   // Solo mensajes de entrada (carpeta inbox)
+  const normalizedTrainingId = useMemo(() => (trainingId ? String(trainingId) : null), [trainingId]);
+
   const inbox = useMemo(() => (userData?.messages?.items || [])
     .filter((m) => m.folder === "inbox")
     .filter((m) => {
-      const t = m?.trainingId; const tid = (t && (t._id || t)) || undefined;
-      return !tid || tid === trainingId; // legacy sin trainingId: mostrar en todos
-    }), [userData, trainingId]);
+      if (!normalizedTrainingId) return true;
+      const messageTid = normalizeTrainingId(m?.trainingId);
+      return !messageTid || messageTid === normalizedTrainingId;
+    }), [userData, normalizedTrainingId]);
   const [messages, setMessages] = useState(inbox);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(null);
@@ -53,7 +70,9 @@ export default function BuzonEntrada({ hideCompose = false, trainingId, sortBy =
       list = inbox.filter((m) => {
         const subject = (m.subject || '').toLowerCase();
         const senderName = `${m.sender?.firstName || ''} ${m.sender?.lastName || ''}`.toLowerCase();
-        return subject.includes(q) || senderName.includes(q);
+        const senderEmail = (m.sender?.email || '').toLowerCase();
+        const body = (m.message || '').toLowerCase();
+        return subject.includes(q) || senderName.includes(q) || senderEmail.includes(q) || body.includes(q);
       });
     }
     // Orden
@@ -155,19 +174,18 @@ export default function BuzonEntrada({ hideCompose = false, trainingId, sortBy =
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Barra de acciones superior dentro de la tarjeta */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h3 className="text-xl font-semibold">📥 Bandeja de entrada</h3>
+      {/* Barra de búsqueda */}
+      <div className="flex flex-col sm:flex-row gap-2">
         {!hideCompose && (
-          <button className="cursor-pointer inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-full hover:bg-green-700" onClick={() => setComposeOpen(true)}>
+          <button className="cursor-pointer inline-flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 sm:order-2" onClick={() => setComposeOpen(true)}>
             <span className="text-lg leading-none">📝</span> <span>Redactar</span>
           </button>
         )}
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex items-center gap-2 flex-1 sm:order-1">
           <input
             type="text"
-            placeholder="Buscar"
-            className="border px-3 py-2 rounded flex-1 min-w-0"
+            placeholder="Buscar mensajes..."
+            className="border px-3 py-2 rounded flex-1 min-w-0 text-sm"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -178,92 +196,87 @@ export default function BuzonEntrada({ hideCompose = false, trainingId, sortBy =
       </div>
 
       {/* Acciones sobre selección */}
-      <div className="text-sm text-gray-700 flex items-center flex-wrap gap-2">
-        <button
-          className={`underline ${selectedIds.length ? 'text-red-600 cursor-pointer' : 'text-gray-400 cursor-not-allowed'}`}
-          disabled={!selectedIds.length}
-          onClick={() => {
-              if (!selectedIds.length) return;
-              // ask for confirmation before moving to trash
-              setConfirmAction({ open: true, type: 'moveToTrash', ids: selectedIds });
-            }}
-        >
-          Eliminar
-        </button>
-        <span className="text-gray-400">|</span>
-        <button
-          className={`underline ${selectedIds.length ? 'text-blue-700 cursor-pointer' : 'text-gray-400 cursor-not-allowed'}`}
-          disabled={!selectedIds.length}
-          onClick={async () => {
-            if (!selectedIds.length) return;
-            // Wait for backend then sync. No success modal for this action.
-            setIsLoading(true); setLoadingLabel('Marcando como leído...');
-            try {
-              await bulkSetMessageRead(selectedIds, true);
-              const fresh = await getMe();
-              setUserData(fresh);
-            } catch (e) {
-              console.error('Error marcando como leído:', e);
-              setErrorMessage(e?.message || 'Error al marcar mensajes como leídos');
-            } finally {
-              setIsLoading(false);
-              setSelectedIds([]);
-            }
-          }}
-        >
-          Marcar como leído
-        </button>
-        <span className="text-gray-400">|</span>
-        <button
-          className={`underline ${selectedIds.length ? 'text-blue-700 cursor-pointer' : 'text-gray-400 cursor-not-allowed'}`}
-          disabled={!selectedIds.length}
-          onClick={async () => {
-            if (!selectedIds.length) return;
-            setIsLoading(true); setLoadingLabel('Marcando como no leído...');
-            try {
-              await bulkSetMessageRead(selectedIds, false);
-              const fresh = await getMe();
-              setUserData(fresh);
-            } catch (e) {
-              console.error('Error marcando como no leído:', e);
-              setErrorMessage(e?.message || 'Error al marcar mensajes como no leídos');
-            } finally {
-              setIsLoading(false);
-              setSelectedIds([]);
-            }
-          }}
-        >
-          Marcar como no leído
-        </button>
-      </div>
+      {selectedIds.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex flex-wrap items-center gap-2 text-sm">
+          <span className="font-semibold text-blue-900">{selectedIds.length} seleccionado{selectedIds.length > 1 ? 's' : ''}</span>
+          <div className="flex flex-wrap gap-2">
+            <button
+              className="px-3 py-1.5 bg-red-600 text-white rounded hover:bg-red-700 cursor-pointer text-sm"
+              onClick={() => setConfirmAction({ open: true, type: 'moveToTrash', ids: selectedIds })}
+            >
+              🗑️ Eliminar
+            </button>
+            <button
+              className="px-3 py-1.5 bg-white border rounded hover:bg-gray-50 cursor-pointer text-sm"
+              onClick={async () => {
+                setIsLoading(true); setLoadingLabel('Marcando como leído...');
+                try {
+                  await bulkSetMessageRead(selectedIds, true);
+                  const fresh = await getMe();
+                  setUserData(fresh);
+                } catch (e) {
+                  console.error('Error marcando como leído:', e);
+                  setErrorMessage(e?.message || 'Error al marcar mensajes como leídos');
+                } finally {
+                  setIsLoading(false);
+                  setSelectedIds([]);
+                }
+              }}
+            >
+              ✓ Marcar leído
+            </button>
+            <button
+              className="px-3 py-1.5 bg-white border rounded hover:bg-gray-50 cursor-pointer text-sm"
+              onClick={async () => {
+                setIsLoading(true); setLoadingLabel('Marcando como no leído...');
+                try {
+                  await bulkSetMessageRead(selectedIds, false);
+                  const fresh = await getMe();
+                  setUserData(fresh);
+                } catch (e) {
+                  console.error('Error marcando como no leído:', e);
+                  setErrorMessage(e?.message || 'Error al marcar mensajes como no leídos');
+                } finally {
+                  setIsLoading(false);
+                  setSelectedIds([]);
+                }
+              }}
+            >
+              ✕ Marcar no leído
+            </button>
+          </div>
+        </div>
+      )}
 
-      <div className="overflow-auto border rounded">
-          <table className="w-full">
-            <thead className="bg-gray-100 sticky top-0">
-              <tr>
-                <th className="p-2 w-10 text-center">
-                  <input type="checkbox" className="cursor-pointer" checked={allSelected} onChange={toggleAll} />
-                </th>
-                <th className="p-2 text-left">Remitente</th>
-                <th className="p-2 text-left">Asunto</th>
-                <th className="p-2 w-10 text-center" title="Adjuntos"></th>
-                <th className="p-2 text-left">Fecha</th>
-              </tr>
-            </thead>
-            <tbody>
-              {messages.length === 0 ? (
+      {messages.length === 0 ? (
+        <div className="text-center py-12 text-gray-500">
+          <div className="text-5xl mb-3">📭</div>
+          <p className="text-lg">No hay mensajes</p>
+        </div>
+      ) : (
+        <>
+          {/* Tabla para desktop */}
+          <div className="hidden md:block overflow-auto border rounded-lg">
+            <table className="w-full">
+              <thead className="bg-gray-100 sticky top-0">
                 <tr>
-                  <td colSpan={5} className="p-2 text-center text-gray-500">No hay mensajes</td>
+                  <th className="p-3 w-10 text-center">
+                    <input type="checkbox" className="cursor-pointer" checked={allSelected} onChange={toggleAll} />
+                  </th>
+                  <th className="p-3 text-left font-semibold">Remitente</th>
+                  <th className="p-3 text-left font-semibold">Asunto</th>
+                  <th className="p-3 w-10 text-center" title="Adjuntos">📎</th>
+                  <th className="p-3 text-left font-semibold">Fecha</th>
                 </tr>
-              ) : (
-                pageMessages.map((msg) => (
+              </thead>
+              <tbody>
+                {pageMessages.map((msg) => (
                   <tr
                     key={msg._id}
-                    className={`border-t cursor-pointer transition-colors hover:bg-gray-100 hover:shadow-inner ${!msg.isRead ? 'bg-yellow-100' : ''}`}
+                    className={`border-t cursor-pointer transition-colors hover:bg-gray-50 ${!msg.isRead ? 'bg-blue-50 font-medium' : ''}`}
                     onClick={() => openDetail(msg)}
-                    title="Click para ver"
                   >
-                    <td className="p-2 text-center">
+                    <td className="p-3 text-center">
                       <input
                         type="checkbox"
                         className="cursor-pointer"
@@ -275,52 +288,109 @@ export default function BuzonEntrada({ hideCompose = false, trainingId, sortBy =
                         onClick={(e) => e.stopPropagation()}
                       />
                     </td>
-                    <td className="p-2 text-left">{msg.sender.firstName} {msg.sender.lastName}</td>
-                    <td className="p-2 text-left">
-                      <span className="truncate block max-w-[40ch]" title={msg.subject}>{msg.subject}</span>
+                    <td className="p-3">
+                      {((msg.sender?.firstName || '') + ' ' + (msg.sender?.lastName || '')).trim() || msg.sender?.email || 'Desconocido'}
                     </td>
-                    <td className="p-2 text-center align-middle">
+                    <td className="p-3">
+                      <span className="truncate block max-w-[40ch]" title={msg.subject}>
+                        {msg.subject}
+                      </span>
+                    </td>
+                    <td className="p-3 text-center">
                       {Array.isArray(msg.attachments) && msg.attachments.length > 0 ? (
-                        <Paperclip size={16} className="inline text-gray-500" aria-label="Tiene adjuntos" title="Tiene adjuntos" />
+                        <Paperclip size={16} className="inline text-gray-500" />
                       ) : null}
                     </td>
-                    <td className="p-2 text-left">{new Date(msg.createdAt).toLocaleDateString('es-AR')}</td>
+                    <td className="p-3 text-sm text-gray-600">
+                      {formatDateTime(msg.createdAt)}
+                    </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-      </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Cards para móvil */}
+          <div className="md:hidden space-y-2">
+            {pageMessages.map((msg) => (
+              <div
+                key={msg._id}
+                className={`border rounded-lg p-3 cursor-pointer transition-all hover:shadow-md ${
+                  !msg.isRead ? 'bg-blue-50 border-blue-200' : 'bg-white'
+                } ${selectedIds.includes(msg._id) ? 'ring-2 ring-blue-500' : ''}`}
+                onClick={() => openDetail(msg)}
+              >
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    className="cursor-pointer mt-1"
+                    checked={selectedIds.includes(msg._id)}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      toggleOne(msg._id);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className={`font-semibold text-sm truncate ${!msg.isRead ? 'text-blue-900' : 'text-gray-900'}`}>
+                        {((msg.sender?.firstName || '') + ' ' + (msg.sender?.lastName || '')).trim() || msg.sender?.email || 'Desconocido'}
+                      </span>
+                      <span className="text-xs text-gray-500 whitespace-nowrap">
+                        {new Date(msg.createdAt).toLocaleDateString('es-AR')}
+                      </span>
+                    </div>
+                    <div className={`text-sm mb-1 truncate ${!msg.isRead ? 'font-medium text-gray-900' : 'text-gray-700'}`}>
+                      {msg.subject}
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      {Array.isArray(msg.attachments) && msg.attachments.length > 0 && (
+                        <span className="flex items-center gap-1">
+                          <Paperclip size={12} />
+                          {msg.attachments.length}
+                        </span>
+                      )}
+                      {!msg.isRead && (
+                        <span className="px-2 py-0.5 bg-blue-600 text-white rounded-full text-xs font-medium">
+                          Nuevo
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Paginación */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 text-sm mt-3">
-        <div className="text-gray-600 order-2 sm:order-1">
-          {totalItems > 0 ? (
-            <span>
-              Mostrando {startIdx + 1}-{Math.min(endIdx, totalItems)} de {totalItems}
+      {messages.length > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t">
+          <div className="text-sm text-gray-600 text-center sm:text-left">
+            Mostrando {startIdx + 1}-{Math.min(endIdx, totalItems)} de {totalItems}
+          </div>
+          <div className="flex items-center justify-center gap-2">
+            <button
+              className="px-3 py-1.5 border rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={safePage <= 1}
+            >
+              ← Anterior
+            </button>
+            <span className="px-3 text-sm whitespace-nowrap">
+              {safePage} / {totalPages}
             </span>
-          ) : (
-            <span>Sin resultados</span>
-          )}
+            <button
+              className="px-3 py-1.5 border rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={safePage >= totalPages}
+            >
+              Siguiente →
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2 order-1 sm:order-2 self-end sm:self-auto">
-          <button
-            className="px-3 py-1 border rounded cursor-pointer disabled:opacity-50"
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={safePage <= 1}
-          >
-            Anterior
-          </button>
-          <span className="px-2 whitespace-nowrap">Página {safePage} de {totalPages}</span>
-          <button
-            className="px-3 py-1 border rounded cursor-pointer disabled:opacity-50"
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={safePage >= totalPages}
-          >
-            Siguiente
-          </button>
-        </div>
-      </div>
+      )}
 
       {open && selected && (
         <ModalWrapper onClose={closeDetail} panelClassName="md:max-w-[720px]">

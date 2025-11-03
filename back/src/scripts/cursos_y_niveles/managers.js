@@ -14,7 +14,8 @@ export const sampleManagers = [
     areaCode: "011",
     phone: "12341234",
     password: "manager123",
-    role: "Manager",
+    role: "Directivo",
+    status: "available",
     assignedTraining: []
   }
 ];

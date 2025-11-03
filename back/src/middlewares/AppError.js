@@ -3,7 +3,8 @@ class AppError extends Error {
     super(message);
     this.statusCode = statusCode;
     this.code = code;
-    this.details = details;
+    // Always keep details as an array (or null if explicitly passed as null)
+    this.details = details == null ? [] : details;
   }
 }
 export default AppError;

@@ -1,0 +1,65 @@
+import { useNavigate, useParams } from 'react-router-dom';
+import { FaHome } from 'react-icons/fa';
+import { FaLayerGroup } from 'react-icons/fa6';
+import { FaEnvelope } from 'react-icons/fa';
+import { FaClipboardList } from 'react-icons/fa';
+import { PiStudentFill } from "react-icons/pi";
+import { FaComments } from 'react-icons/fa'; // icono opcional para Mensajería
+import { GoGraph } from "react-icons/go";
+
+function SideBar() {
+  const navigate = useNavigate();
+  const { idTraining } = useParams();  
+
+  return (
+    <nav className="flex flex-col gap-4 lg:gap-6 items-start w-full lg:w-64 flex-shrink-0" aria-label="Menú lateral">
+      <button
+        type="button"
+        className="flex items-center gap-3 text-left text-blue-700 text-base lg:text-lg border-b border-blue-200 w-full pb-2 transition hover:bg-blue-50 hover:text-blue-800 cursor-pointer"
+        onClick={() => navigate('/trainer')}
+      >
+        <FaHome className="text-xl" />
+        <span>Inicio</span>
+      </button>
+
+      <button
+        type="button"
+        className="flex items-center gap-3 text-left text-blue-700 text-base lg:text-lg border-b border-blue-200 w-full pb-2 transition hover:bg-blue-50 hover:text-blue-800 cursor-pointer"
+        onClick={() => navigate(`/trainer/${idTraining}/levels`)}
+      >
+        <FaLayerGroup className="text-xl" />
+        <span>Niveles</span>
+      </button>
+
+      {/* 🔹 Nuevo botón de Mensajería general */}
+      <button
+        type="button"
+        className="flex items-center gap-3 text-left text-blue-700 text-base lg:text-lg border-b border-blue-200 w-full pb-2 transition hover:bg-blue-50 hover:text-blue-800 cursor-pointer"
+        onClick={() => navigate(`/trainer/${idTraining}/messages`)}
+      >
+        <FaComments className="text-xl" />
+        <span>Mensajería</span>
+      </button>
+
+      <button
+        type="button"
+        className="flex items-center gap-3 text-left text-blue-700 text-base lg:text-lg border-b border-blue-200 w-full pb-2 transition hover:bg-blue-50 hover:text-blue-800 cursor-pointer"
+        onClick={() => navigate(`/trainer/${idTraining}/students`)}
+      >
+        <PiStudentFill  className="text-xl" />
+        <span>Alumnos</span>
+      </button>
+
+      <button
+        type="button"
+        className="flex items-center gap-3 text-left text-blue-700 text-base lg:text-lg border-b border-blue-200 w-full pb-2 transition hover:bg-blue-50 hover:text-blue-800 cursor-pointer"
+        onClick={() => navigate(`/trainer/${idTraining}/statistics`)}
+      >
+        <GoGraph  className="text-xl" />
+        <span>Estadisticas</span>
+      </button>
+    </nav>
+  );
+}
+
+export default SideBar;

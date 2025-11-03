@@ -2,7 +2,11 @@ import React, { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
 import { useUser } from "../../../context/UserContext";
-import { resolveImageUrl } from '../../../API/Request';
+import { resolveImageUrl, checkLevelApproved, getAllTrainingsProgress } from '../../../API/Request';
+import { normalizeRichTextValue, getPlainTextFromRichText } from "../../../Components/Modals/CreateTrainingModal/RichTextInput";
+import { useEffect } from "react";
+import LevelResultModal from "../../../Components/Modals/LevelResultModal";
+import StudentFeedbackButton from "./StudentFeedbackButton";
 
 const LevelTest = () => {
   // Botón base: mantenemos cursor-pointer y legibilidad, pero adaptativo
@@ -38,38 +42,133 @@ const LevelTest = () => {
   }, [level]);
   const tests = scenes; 
   const testTitle = level?.test?.title;
-  console.log("Esta es la imagen:  ", level.test.imageUrl);
   const testImage = resolveImageUrl(level?.test?.imageUrl);
   // Estado para la simulación
   const [sceneIndex, setSceneIndex] = useState(null);
-
-  // Reiniciar video (volver al inicio)
-  const handleRestart = () => setSceneIndex(null);
+  // Objeto local que irá acumulando las opciones elegidas por el usuario
+  const createInitialLevelWithResults = () => {
+    const copy = JSON.parse(JSON.stringify(level || {}));
+    // Normalizar shape de test
+    if (copy.test && Array.isArray(copy.test)) {
+      copy.test = { scenes: copy.test };
+    }
+    if (!copy.test) copy.test = { scenes: [] };
+    // Estructura que iremos llenando
+    copy.test.scenesResults = [];
+    return copy;
+  };
+  const [levelWithResults, setLevelWithResults] = useState(createInitialLevelWithResults);
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [evaluationResult, setEvaluationResult] = useState(null);
 
   // Iniciar simulación (ir a la primera escena)
-  const handleStart = () => setSceneIndex(0);
+  const handleStart = () =>{ setSceneIndex(0);
+    setPoints(0);
+    setLevelWithResults(createInitialLevelWithResults());
+  }
 
-  // Ir a la siguiente escena según opción
-  const handleOption = (nextId) => {
+  // Reiniciar video (volver al inicio)
+  const handleRestart = async () => {
+
+    if (levelWithResults?.test?.scenesResults?.length > 0) {
+      const result = await verificarResultados();
+      setEvaluationResult(result);
+      setShowResultModal(true);
+    }
+
+    setSceneIndex(null);
+    setPoints(0);
+    setLevelWithResults(createInitialLevelWithResults());
+  }
+
+ //Cuando termina el nivel, se verifica el resultado del guardia. Solo cuando ya no hay escena activa (sceneIndex es null) y hay resultados.
+  useEffect(() => {
+  if (sceneIndex === null && levelWithResults?.test?.scenesResults?.length) {
+    (async () => {
+      const result = await verificarResultados();
+      console.log('API result object:', result);
+      console.log('Approved flag:', result?.data?.approved ?? result?.approved);
+      // Mostrar modal con resultado
+      setEvaluationResult(result);
+      setShowResultModal(true);
+    })();
+  }
+}, [sceneIndex, levelWithResults]);
+
+  
+  const [points,setPoints] = useState(0);
+
+  async function verificarResultados() {
+    // Return the API response so callers receive the result
+    const uid = userData?.user?._id || userData?._id || null;
+    return await checkLevelApproved(training._id, uid, levelWithResults._id, levelWithResults);
+  }
+
+
+  // Ir a la siguiente escena según opción y acumular resultado del usuario
+  const  handleOption = async (optObj, optIndex) => {
+    const nextId = optObj?.next;
+    const optPoints = Number(optObj?.points || 0);
     const nextIndex = tests.findIndex(test => test.idScene === nextId);
+
+    // Antes de seguir a la siguiente escena, acumula puntos
+    setPoints(prevPoints => prevPoints + optPoints);
+
+    // Registrar la elección del usuario para la escena actual
+    const currentScene = tests[sceneIndex];
+    if (currentScene) {
+      const resultEntry = {
+        idScene: currentScene.idScene || currentScene._id || currentScene.id || null,
+        selectedOptionIndex: typeof optIndex === 'number' ? optIndex : undefined,
+        selectedOptionId: optObj && (optObj._id || optObj.id) ? (optObj._id || optObj.id) : undefined,
+        selectedOptionDescription: optObj?.description || undefined,
+        selectedOption: { ...optObj, points: optPoints },
+        points: optPoints,
+        // Preservar la propiedad lastOne/isLastOne de la escena original
+        lastOne: currentScene.lastOne,
+        isLastOne: currentScene.isLastOne
+      };
+
+      setLevelWithResults(prev => {
+        const next = JSON.parse(JSON.stringify(prev || {}));
+        if (!next.test) next.test = { scenes: [], scenesResults: [] };
+        if (!Array.isArray(next.test.scenesResults)) next.test.scenesResults = [];
+        next.test.scenesResults.push(resultEntry);
+        // Espejar en test.scenes para compatibilidad con isLevelApproved
+        next.test.scenes = JSON.parse(JSON.stringify(next.test.scenesResults));
+
+
+        
+        return next;
+      });
+    }
+
     if (nextIndex !== -1) {
       setSceneIndex(nextIndex);
     } else {
       // Si no hay siguiente, termina la simulación
       setSceneIndex(null);
+
     }
   };
 
   // Render principal
   return (
     <>
+      {/* Modal de resultado */}
+      <LevelResultModal 
+        show={showResultModal} 
+        onClose={() => setShowResultModal(false)} 
+        result={evaluationResult} 
+      />
+
       {/* Modal bloqueante para el examen */}
       {sceneIndex !== null ? (
         <div className="fixed inset-0 z-[9999] bg-white/0 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 md:p-8 w-full sm:w-[90vw] md:w-[75vw] lg:w-[60vw] max-w-4xl max-h-[90vh] overflow-hidden flex flex-col items-center justify-between">
-            {/* Debug info: escena y ruta de video */}
+            {/* Info de escena */}
             <div style={{marginBottom: '6px', color: '#888', fontSize: '0.9em'}}>
-              <strong>Escena:</strong> {tests[sceneIndex]?.idScene} &nbsp;|&nbsp; <strong>Ruta video:</strong> {tests[sceneIndex]?.videoUrl}
+              <strong>Escena {sceneIndex + 1} de {tests.length}</strong>
             </div>
             {/* Video de la escena */}
               {tests[sceneIndex].videoUrl && (
@@ -88,19 +187,18 @@ const LevelTest = () => {
               </div>
             )}
             {/* Descripción */}
-            <h2 className="text-base sm:text-lg font-bold mb-2 text-center min-h-10 flex items-center justify-center">{tests[sceneIndex].description}</h2>
+            <h2 className="text-base sm:text-lg font-bold mb-2 text-center min-h-10 flex items-center justify-center break-words" dangerouslySetInnerHTML={{ __html: normalizeRichTextValue(tests[sceneIndex].description) || 'Escena de evaluación' }} />
             {/* Opciones */}
             <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-4 md:gap-6 justify-center w-full">
               {Array.isArray(tests[sceneIndex].options) &&
                 tests[sceneIndex].options.map((opt, idx) => (
                   <button
                     key={idx}
-                    className="bg-[#009fe3] text-white font-bold rounded-lg hover:bg-[#0077b6] transition cursor-pointer w-full sm:w-64 min-h-12 px-4"
+                    className="bg-[#009fe3] text-white font-bold rounded-lg hover:bg-[#0077b6] transition cursor-pointer w-full sm:w-64 min-h-12 px-4 break-words"
                     style={buttonStyle}
-                    onClick={() => handleOption(opt.next)}
-                  >
-                    {opt.description}
-                  </button>
+                    onClick={() => handleOption(opt, idx)}
+                    dangerouslySetInnerHTML={{ __html: normalizeRichTextValue(opt.description) || 'Opción' }}
+                  />
                 ))}
             </div>
             {/* Botón para reiniciar */}
@@ -124,6 +222,12 @@ const LevelTest = () => {
                   alt={testTitle}
                   className="rounded-2xl w-full object-cover mb-6 sm:mb-8 max-h-[50vh]"
                 />
+                
+                {/* Información del test */}
+                <h2 className="text-2xl font-bold mb-4 text-center text-gray-800 break-words" dangerouslySetInnerHTML={{ __html: normalizeRichTextValue(level?.test?.title) || 'Evaluación Interactiva del Nivel' }} />
+                
+                <div className="mb-6 text-center text-gray-600 break-words" dangerouslySetInnerHTML={{ __html: normalizeRichTextValue(level?.test?.description) || 'En este test interactivo pondrás a prueba los conocimientos adquiridos durante la capacitación.' }} />
+                
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-6 md:gap-8 justify-center w-full">
                   <button
                     className="bg-[#009fe3] text-white font-bold px-6 py-3 sm:px-8 sm:py-4 rounded-lg text-base sm:text-xl hover:bg-[#0077b6] transition cursor-pointer w-full sm:w-64"
@@ -138,12 +242,20 @@ const LevelTest = () => {
                     Iniciar Simulación
                   </button>
                 </div>
+                
+                {/* Información de escenas */}
+                {tests && tests.length > 0 && (
+                  <div className="mt-6 text-sm text-gray-500 text-center">
+                    <p>Esta evaluación contiene {tests.length} escena{tests.length !== 1 ? 's' : ''} interactiva{tests.length !== 1 ? 's' : ''}</p>
+                  </div>
+                )}
               </div>
               </main>
             </div>
           </div>
         </>
       )}
+      <StudentFeedbackButton trainingId={idTraining} training={training} />
     </>
   );
 };

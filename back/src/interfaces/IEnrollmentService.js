@@ -5,6 +5,7 @@ async getUsersNotEnrolledInTraining(trainingId) { throw new Error('Not implement
 async getUserEnrollments(userId) { throw new Error('Not implemented'); }
 async getUsersEnrolledInTraining(trainingId) { throw new Error('Not implemented'); }
 async enrollTrainerToTraining(userId, trainingId) { throw new Error('Not implemented'); }
+async unenrollTrainerFromTraining(userId, trainingId) { throw new Error('Not implemented'); }
 async getTrainersNotEnrolledInTraining(trainingId) { throw new Error('Not implemented'); }
 
 }

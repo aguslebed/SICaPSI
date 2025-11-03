@@ -1,4 +1,5 @@
 import AppError from '../middlewares/AppError.js';
+import { emitToUser } from '../realtime/socket.js';
 
 
 
@@ -18,6 +19,12 @@ export function makeEnrollmentController({ enrollmentService }) {
           try {
             const result = await enrollmentService.enrollUserToTraining(userId, trainingId);
             results.push({ userId, status: "success", message: result.message });
+            try {
+              const tid = result?.training?._id?.toString?.() || trainingId;
+              emitToUser(userId, 'user:data:refresh', { reason: 'training:assigned', trainingId: tid });
+            } catch (socketError) {
+              console.debug('Socket emit failed (training assigned to student):', socketError?.message || socketError);
+            }
           } catch (err) {
             results.push({ userId, status: "error", message: err.message });
           }
@@ -43,6 +50,12 @@ export function makeEnrollmentController({ enrollmentService }) {
           try {
             const result = await enrollmentService.unenrollUserToTraining(userId, trainingId);
             results.push({ userId, status: "success", message: result.message });
+            try {
+              const tid = result?.training?._id?.toString?.() || trainingId;
+              emitToUser(userId, 'user:data:refresh', { reason: 'training:unassigned', trainingId: tid });
+            } catch (socketError) {
+              console.debug('Socket emit failed (training unassigned from student):', socketError?.message || socketError);
+            }
           } catch (err) {
             results.push({ userId, status: "error", message: err.message });
           }
@@ -56,8 +69,9 @@ export function makeEnrollmentController({ enrollmentService }) {
 
     async getUsersNotEnrolledInTraining(req, res, next) {
       try {
-        const { trainingId } = req.body;
-      
+        // support trainingId in query (GET) or body (POST)
+        const trainingId = req.query?.trainingId || req.body?.trainingId;
+        
         const users = await enrollmentService.getUsersNotEnrolledInTraining(trainingId);
         res.status(200).json(users);
       } catch (err) {
@@ -67,8 +81,9 @@ export function makeEnrollmentController({ enrollmentService }) {
 
     async getUsersEnrolledInTraining(req, res, next) {
       try {
-        const { trainingId } = req.body;
-  
+        
+        const trainingId = req.query?.trainingId || req.body?.trainingId;
+        console.log("Training ID---------->",trainingId)
         const users = await enrollmentService.getUsersEnrolledInTraining(trainingId);
         res.status(200).json(users);
       } catch (err) {
@@ -90,6 +105,12 @@ export function makeEnrollmentController({ enrollmentService }) {
         try {
           const result = await enrollmentService.enrollTrainerToTraining(userId, trainingId);
           results.push({ userId, status: "success", message: result.message });
+          try {
+            const tid = result?.training?._id?.toString?.() || trainingId;
+            emitToUser(userId, 'user:data:refresh', { reason: 'training:assigned', trainingId: tid });
+          } catch (socketError) {
+            console.debug('Socket emit failed (training assigned to trainer):', socketError?.message || socketError);
+          }
         } catch (err) {
           results.push({ userId, status: "error", message: err.message });
         }
@@ -101,10 +122,41 @@ export function makeEnrollmentController({ enrollmentService }) {
     }
   },
 
+  async unenrollTrainer(req, res, next) {
+    try {
+      const { userIds, trainingId } = req.body;
+      if (!Array.isArray(userIds) || userIds.length === 0) {
+        return res.status(400).json({ error: "Se necesita un arreglo de ids de usuarios" });
+      }
+
+      const results = [];
+
+      for (const userId of userIds) {
+        try {
+          const result = await enrollmentService.unenrollTrainerFromTraining(userId, trainingId);
+          results.push({ userId, status: "success", message: result.message });
+          try {
+            const tid = result?.training?._id?.toString?.() || trainingId;
+            emitToUser(userId, 'user:data:refresh', { reason: 'training:unassigned', trainingId: tid });
+          } catch (socketError) {
+            console.debug('Socket emit failed (training unassigned from trainer):', socketError?.message || socketError);
+          }
+        } catch (err) {
+          results.push({ userId, status: "error", message: err.message });
+        }
+      }
+
+      res.status(200).json({ trainingId, results });
+    } catch (err) {
+      next(err);
+    }
+  },
+
 
   async getTrainenrsNotEnrolledInTraining(req, res, next) {
     try {
-      const { trainingId } = req.body;
+      // support trainingId in query (GET) or body (POST)
+      const trainingId = req.query?.trainingId || req.body?.trainingId;
 
       const users = await enrollmentService.getTrainersNotEnrolledInTraining(trainingId);
       res.status(200).json(users);

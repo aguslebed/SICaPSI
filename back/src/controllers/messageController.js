@@ -2,6 +2,7 @@ import AppError from '../middlewares/AppError.js';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { buildUploadPath } from '../utils/uploadsHelper.js';
 
 export function makeMessageController({ messageService, messageFormatter }) {
   return {
@@ -13,7 +14,17 @@ export function makeMessageController({ messageService, messageFormatter }) {
         if (!subject || !body || (!to && !recipientId)) throw new AppError('Campos requeridos: to o recipientId, subject, body', 400);
         if (!trainingId) throw new AppError('trainingId requerido', 400);
         const created = await messageService.send({ senderId, recipientEmail: to, recipientId, subject, message: body, attachments, trainingId });
-        res.status(201).json(messageFormatter.format(created));
+        const formatted = messageFormatter.format(created);
+        // Emitir evento realtime a remitente y destinatario
+        try {
+          const io = req.app?.get('io');
+          const recipientUserId = formatted?.recipient?._id?.toString?.() || formatted?.recipient;
+          if (io) {
+            if (recipientUserId) io.to(`user:${recipientUserId}`).emit('user:data:refresh', { reason: 'message:received', trainingId });
+            if (senderId) io.to(`user:${senderId}`).emit('user:data:refresh', { reason: 'message:sent', trainingId });
+          }
+        } catch (e) { /* no romper respuesta por errores de socket */ }
+        res.status(201).json(formatted);
       } catch (err) { next(err); }
     },
 
@@ -24,7 +35,12 @@ export function makeMessageController({ messageService, messageFormatter }) {
         const { id } = req.params;
         const { isRead } = req.body || {};
         const updated = await messageService.setRead({ messageId: id, userId, isRead: !!isRead });
-        res.json(messageFormatter.format(updated));
+        const formatted = messageFormatter.format(updated);
+        try {
+          const io = req.app?.get('io');
+          if (io) io.to(`user:${userId}`).emit('user:data:refresh', { reason: 'message:read', messageId: id });
+        } catch {}
+        res.json(formatted);
       } catch (err) { next(err); }
     },
 
@@ -34,7 +50,12 @@ export function makeMessageController({ messageService, messageFormatter }) {
         if (!userId) throw new AppError('No autorizado', 401);
         const { id } = req.params;
         const updated = await messageService.moveToTrash({ messageId: id, userId });
-        res.json(messageFormatter.format(updated));
+        const formatted = messageFormatter.format(updated);
+        try {
+          const io = req.app?.get('io');
+          if (io) io.to(`user:${userId}`).emit('user:data:refresh', { reason: 'message:trash', messageId: id });
+        } catch {}
+        res.json(formatted);
       } catch (err) { next(err); }
     },
 
@@ -44,7 +65,12 @@ export function makeMessageController({ messageService, messageFormatter }) {
         if (!userId) throw new AppError('No autorizado', 401);
         const { id } = req.params;
         const updated = await messageService.restore({ messageId: id, userId });
-        res.json(messageFormatter.format(updated));
+        const formatted = messageFormatter.format(updated);
+        try {
+          const io = req.app?.get('io');
+          if (io) io.to(`user:${userId}`).emit('user:data:refresh', { reason: 'message:restore', messageId: id });
+        } catch {}
+        res.json(formatted);
       } catch (err) { next(err); }
     },
 
@@ -54,6 +80,10 @@ export function makeMessageController({ messageService, messageFormatter }) {
         if (!userId) throw new AppError('No autorizado', 401);
         const { id } = req.params;
         const result = await messageService.deletePermanent({ messageId: id, userId });
+        try {
+          const io = req.app?.get('io');
+          if (io) io.to(`user:${userId}`).emit('user:data:refresh', { reason: 'message:delete', messageId: id });
+        } catch {}
         res.json(result);
       } catch (err) { next(err); }
     },
@@ -66,7 +96,7 @@ export function makeMessageController({ messageService, messageFormatter }) {
         const payload = files.map(f => ({
           filename: f.filename,
           originalName: f.originalname,
-          url: `/uploads/${f.filename}`,
+          url: buildUploadPath(f.filename),
           size: f.size
         }));
         res.status(201).json({ attachments: payload });
@@ -81,9 +111,15 @@ export function makeMessageController({ messageService, messageFormatter }) {
         const { id, index } = req.params;
         const msg = await messageService.getMessageById(id);
         if (!msg) throw new AppError('Mensaje no encontrado', 404);
-        // Autorización: remitente o destinatario pueden descargar
-        const isOwner = [msg.sender?.toString(), msg.recipient?.toString()].includes(userId.toString());
-        if (!isOwner) throw new AppError('No autorizado', 403);
+        
+        // Autorización: el usuario debe ser el remitente O el destinatario del mensaje
+        const senderId = msg.sender?._id?.toString() || msg.sender?.toString();
+        const recipientId = msg.recipient?._id?.toString() || msg.recipient?.toString();
+        const userIdStr = userId.toString();
+        const isAuthorized = (senderId === userIdStr) || (recipientId === userIdStr);
+        
+        if (!isAuthorized) throw new AppError('No autorizado para descargar este adjunto', 403);
+        
         const i = parseInt(index, 10);
         if (Number.isNaN(i) || i < 0 || i >= (msg.attachments?.length || 0)) throw new AppError('Adjunto no encontrado', 404);
   const att = msg.attachments[i];
@@ -101,7 +137,22 @@ export function makeMessageController({ messageService, messageFormatter }) {
   const downloadName = (att && att.originalName) || (att && att.filename) || safeName;
         res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(downloadName)}"`);
         // Simple content-type guess by extension
-        res.setHeader('Content-Type', 'application/octet-stream');
+        const ext = path.extname(safeName).toLowerCase();
+        const mimeTypes = {
+          '.pdf': 'application/pdf',
+          '.jpg': 'image/jpeg',
+          '.jpeg': 'image/jpeg',
+          '.png': 'image/png',
+          '.gif': 'image/gif',
+          '.webp': 'image/webp',
+          '.doc': 'application/msword',
+          '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          '.xls': 'application/vnd.ms-excel',
+          '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          '.txt': 'text/plain',
+          '.zip': 'application/zip'
+        };
+        res.setHeader('Content-Type', mimeTypes[ext] || 'application/octet-stream');
         const stream = fs.createReadStream(filePath);
         stream.on('error', (e) => next(e));
         stream.pipe(res);

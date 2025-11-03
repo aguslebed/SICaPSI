@@ -1,0 +1,251 @@
+
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { BsFileBarGraphFill } from 'react-icons/bs';
+import { FaComments } from 'react-icons/fa';
+import { useParams, useNavigate } from 'react-router-dom';
+import { getUsersEnrolledInTraining } from '../../../API/Request';
+import StudentProgressModal from '../../../Components/Modals/StudentProgressModal';
+import '../../AdminPanel/AdminPanel.css';
+
+export default function Students() {
+  const { idTraining } = useParams();
+  const navigate = useNavigate();
+  const [students, setStudents] = useState([]);
+  const [search, setSearch] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [showProgressModal, setShowProgressModal] = useState(false);
+
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const fetchStudents = useCallback(async ({ silent = false } = {}) => {
+    if (!idTraining) {
+      if (!silent && isMountedRef.current) {
+        setLoading(false);
+      }
+      return;
+    }
+
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+    }
+
+    try {
+      const data = await getUsersEnrolledInTraining(idTraining);
+      if (!isMountedRef.current) return;
+      const normalized = Array.isArray(data) ? data : (data?.items || []);
+      setStudents(normalized);
+      setError(null);
+    } catch (e) {
+      if (!isMountedRef.current) return;
+      setError(e.message || 'Error cargando alumnos');
+    } finally {
+      if (!silent && isMountedRef.current) {
+        setLoading(false);
+      }
+    }
+  }, [idTraining]);
+
+  useEffect(() => {
+    fetchStudents();
+  }, [fetchStudents]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const relevantReasons = new Set(['training:assigned', 'training:unassigned', 'training:deleted']);
+    const relevantMetaTypes = new Set(['training:status-changed', 'training:deleted']);
+
+    const handleUserDataEvent = (event) => {
+      const detail = event?.detail || {};
+      const payload = detail?.payload ?? detail;
+      const meta = detail?.meta;
+      const reason = payload?.reason;
+      const metaType = meta?.type;
+      const trainingIdFromPayload = payload?.trainingId ?? meta?.trainingId;
+
+      const reasonMatches = reason ? relevantReasons.has(reason) : false;
+      const metaMatches = metaType ? relevantMetaTypes.has(metaType) : false;
+
+      if (!reasonMatches && !metaMatches) return;
+      if (trainingIdFromPayload && String(trainingIdFromPayload) !== String(idTraining)) return;
+
+      fetchStudents({ silent: true });
+    };
+
+    const handleTrainingEvent = (event) => {
+      const detail = event?.detail || {};
+      const trainingIdFromEvent = detail?.trainingId;
+      if (trainingIdFromEvent && String(trainingIdFromEvent) !== String(idTraining)) return;
+
+      fetchStudents({ silent: true });
+    };
+
+    window.addEventListener('realtime:user-data-refresh', handleUserDataEvent);
+    window.addEventListener('realtime:user-data-refreshed', handleUserDataEvent);
+    window.addEventListener('realtime:training-status-changed', handleTrainingEvent);
+    window.addEventListener('realtime:training-deleted', handleTrainingEvent);
+
+    return () => {
+      window.removeEventListener('realtime:user-data-refresh', handleUserDataEvent);
+      window.removeEventListener('realtime:user-data-refreshed', handleUserDataEvent);
+      window.removeEventListener('realtime:training-status-changed', handleTrainingEvent);
+      window.removeEventListener('realtime:training-deleted', handleTrainingEvent);
+    };
+  }, [fetchStudents, idTraining]);
+
+  const filteredStudents = useMemo(() => {
+    if (!appliedSearch || !appliedSearch.trim()) return students;
+    const q = appliedSearch.toLowerCase();
+    return students.filter(s => {
+      const hay = [s.firstName || s.first_name || '', s.lastName || s.last_name || '', s.email || '', s.documentNumber || s.dni || '']
+        .join(' ').toLowerCase();
+      return hay.includes(q);
+    });
+  }, [students, appliedSearch]);
+
+  const handleShowProgress = (student) => {
+    setSelectedStudent(student);
+    setShowProgressModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowProgressModal(false);
+    setSelectedStudent(null);
+  };
+
+  const handleSendMessage = (student) => {
+    // Navegar a mensajería con state que incluye el alumno seleccionado
+    navigate(`/trainer/${idTraining}/messages`, {
+      state: {
+        composeOpen: true,
+        recipientStudent: student
+      }
+    });
+  };
+
+  // Formatear fecha de último acceso
+  const formatLastLogin = (lastLogin) => {
+    if (!lastLogin) return '-';
+    try {
+      const date = new Date(lastLogin);
+      return date.toLocaleString('es-AR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return '-';
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-100">
+      <div className="max-w-screen-xl w-full mx-auto  flex px-4 sm:px-6 md:px-8">
+        <main className="flex-1 min-w-0 py-6 md:py-8">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6">Alumnos</h1>
+
+          {loading ? (
+            <div className="py-8 text-center text-gray-600">Cargando alumnos...</div>
+          ) : error ? (
+            <div className="py-8 text-center text-red-600">{error}</div>
+          ) : (
+            <>
+              <div>
+                <div className="mb-4">
+                  <div className="admin-search-container">
+                    <input
+                      type="text"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') setAppliedSearch(search); }}
+                      placeholder="Buscar alumno"
+                      className="admin-search-input"
+                    />
+                    <button onClick={() => setAppliedSearch(search)} className="admin-search-btn" title="Buscar">🔎</button>
+                    <button
+                      onClick={() => { setSearch(''); setAppliedSearch(''); }}
+                      className="admin-search-btn"
+                      title="Limpiar"
+                      style={{ width: 'auto', padding: '0 0.6rem', fontSize: '0.875rem' }}
+                    >
+                      Limpiar
+                    </button>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto rounded-2xl">
+                  <table className="min-w-full border border-gray-200">
+                    <thead>
+                      <tr className="bg-[#0077b6] text-white">
+                        <th className="py-3 px-4 text-left">Apellido</th>
+                        <th className="py-3 px-4 text-left">Nombre</th>
+                        <th className="py-3 px-4 text-left">DNI</th>
+                        <th className="py-3 px-4 text-left">Email</th>
+                        <th className="py-3 px-4 text-left">Último acceso</th>
+                        <th className="py-3 px-4 text-left">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredStudents.length === 0 ? (
+                        <tr><td colSpan={6} className="py-4 text-center text-gray-500">No hay alumnos para mostrar.</td></tr>
+                      ) : (
+                        filteredStudents.map((s, i) => (
+                          <tr key={s._id || s.id || i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-100'}>
+                            <td className="py-2 px-2 text-left">{s.lastName || s.last_name || ''}</td>
+                            <td className="py-2 px-2 text-left">{s.firstName || s.first_name || ''}</td>
+                            <td className="py-2 px-2 text-left">{s.documentNumber || s.dni || s.document_number || ''}</td>
+                            <td className="py-2 px-2 text-left">{s.email || ''}</td>
+                            <td className="py-2 px-2 text-left">{formatLastLogin(s.lastLogin || s.last_login)}</td>
+                            <td className="py-2 px-2 text-left">
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => handleShowProgress(s)}
+                                  className="inline-flex items-center gap-2 px-3 py-1 bg-[#0077b6] text-white rounded-md hover:bg-blue-700 transition"
+                                >
+                                  <BsFileBarGraphFill className="text-sm" />
+                                  <span>Seguimiento</span>
+                                </button>
+                                <button
+                                  onClick={() => handleSendMessage(s)}
+                                  className="inline-flex items-center gap-2 px-3 py-1 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 transition"
+                                >
+                                  <FaComments className="text-sm" />
+                                  <span>Mensaje</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+        </main>
+      </div>
+
+      {/* Modal de seguimiento */}
+      <StudentProgressModal
+        isOpen={showProgressModal}
+        onClose={handleCloseModal}
+        student={selectedStudent}
+        trainingId={idTraining}
+      />
+    </div>
+  );
+}

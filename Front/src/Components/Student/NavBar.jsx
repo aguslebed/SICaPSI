@@ -11,6 +11,8 @@ const NavBar = () => {
   const location = useLocation();
   const { logoutUser } = useUser();
   const { userData, setUserData } = useUser();
+  const role = (userData?.user?.role || '').toLowerCase();
+  const showNotifications = role !== 'administrador' && role !== 'directivo';
   const [openProfile, setOpenProfile] = useState(false); 
   const items = useMemo(() => userData?.messages?.items || [], [userData]);
   const trainings = useMemo(() => userData?.training || userData?.assignedTraining || [], [userData]);
@@ -48,17 +50,36 @@ const NavBar = () => {
   );
   const unreadCount = unreadItems.length;
   
-  // Rutas donde se debe mostrar el botón "Volver"
-  const allowedRoutes = [
-    '/adminPanel/gestionUsuario/crearUsuario',
-    '/adminPanel/gestionUsuario/modificarUsuario',
-    '/adminPanel/admisionUsuario',
-    '/adminPanel/gestionUsuario',
-    '/adminPanel/gestionCursos',
-    '/adminPanel/gestionProfesores'
-  ];
+  // Mapeo de rutas con sus respectivas rutas de retorno
+  const routeBackMap = {
+    '/adminPanel/gestionUsuario/crearUsuario': '/adminPanel/gestionUsuario',
+    '/adminPanel/gestionUsuario/modificarUsuario': '/adminPanel/gestionUsuario',
+    '/adminPanel/gestionUsuario': '/adminPanel',
+    '/adminPanel/admisionUsuario': '/adminPanel',
+    '/adminPanel/gestionCursos': '/adminPanel',
+    '/adminPanel/gestionProfesores': '/adminPanel',
+    '/adminPanel/gestionCapacitacion': '/adminPanel',
+    '/directivoPanel/validarContenido': '/directivoPanel',
+    '/directivoPanel/registros': '/directivoPanel',
+    '/directivoPanel/estadisticas': '/directivoPanel',
+    '/directivoPanel/gestionDirectivo': '/directivoPanel',
+    '/directivoPanel/feedback': '/directivoPanel',
+  };
   
-  const shouldShowBackButton = allowedRoutes.some(route => location.pathname.includes(route));
+  // Encontrar la ruta de retorno correspondiente
+  const getBackRoute = () => {
+    const currentPath = location.pathname;
+    // Buscar coincidencia exacta o por inclusión
+    for (const [route, backRoute] of Object.entries(routeBackMap)) {
+      if (currentPath.includes(route)) {
+        return backRoute;
+      }
+    }
+    return null;
+  };
+  
+  const backRoute = getBackRoute();
+  const shouldShowBackButton = backRoute !== null;
   
   const handleLogout = async () => {
     try {
@@ -74,9 +95,9 @@ const NavBar = () => {
     <header className="w-full">
       {/* Barra superior con logo */}
       <div className="w-full bg-blue-900">
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 md:px-8 h-12 md:h-14 flex items-center justify-center">
+        <div className="w-full mx-auto h-10 md:h-12 flex items-center justify-center" style={{ padding: '0 2.5rem' }}>
           <div className="black-ops-one-regular">
-            <h3 className="text-2xl sm:text-3xl text-white">
+            <h3 className="text-xl sm:text-2xl text-white">
               SIC<span className="text-orange-400">A</span>PSI
             </h3>
           </div>
@@ -84,19 +105,19 @@ const NavBar = () => {
       </div>
 
       {/* Barra inferior con acciones (notificaciones / usuario) */}
-      <div className="w-full bg-[#0888c2] overflow-x-clip">
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 md:px-8 h-14 md:h-16 flex items-center">
+      <div className="w-full bg-[#0888c2]">
+        <div className="w-full h-12 md:h-14 flex items-center px-4 sm:px-6 lg:px-10">
           {/* Botón Volver para rutas específicas del admin panel */}
           {shouldShowBackButton && (
             <button
-              onClick={() => {
-                // Navegar hacia atrás en el historial del navegador
-                window.history.back();
-              }}
-              className="flex items-center text-white bg-sky-400 hover:bg-sky-500 px-4 py-2 rounded-lg transition-colors cursor-pointer"
+              onClick={() => navigate(backRoute)}
+              className="flex items-center justify-center gap-2 text-white bg-[#4dc3ff] hover:bg-[#3bb3ef] px-5 py-2.5 rounded-full transition-all cursor-pointer shadow-md hover:shadow-lg font-semibold text-base"
+              style={{ minWidth: '120px' }}
             >
-              <span className="mr-2 cursor-pointer">←</span>
-              Volver
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0">
+                <path d="M15 18L9 12L15 6" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <span>Volver</span>
             </button>
           )}
           
@@ -105,21 +126,22 @@ const NavBar = () => {
           
           <div className="flex items-center gap-3 sm:gap-5">
             {/* Notificaciones (campana) */}
+            {showNotifications && (
             <Menu as="div" className="relative">
               <Menu.Button
                 type="button"
                 aria-label="Ver notificaciones"
-                className="relative p-2 rounded-full text-white/90 hover:text-white hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                className="relative p-1.5 rounded-full text-white/90 hover:text-white hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
               >
-                <Bell className="cursor-pointer w-6 h-6" />
+                <Bell className="cursor-pointer w-5 h-5" />
                 {unreadCount > 0 && (
-                  <span className="cursor-pointer absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 text-[11px] font-semibold bg-red-500 text-white rounded-full flex items-center justify-center ring-2 ring-[#0888c2]">
+                  <span className="cursor-pointer absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 text-[10px] font-semibold bg-red-500 text-white rounded-full flex items-center justify-center ring-2 ring-[#0888c2]">
                     {unreadCount}
                   </span>
                 )}
                 <span className="sr-only">Notificaciones</span>
               </Menu.Button>
-              <Menu.Items className="fixed sm:absolute top-[104px] sm:top-auto left-0 right-0 sm:left-auto sm:right-2 mx-auto sm:mx-0 w-full sm:w-80 max-w-[92vw] sm:max-w-none rounded-lg bg-white text-gray-800 shadow-lg ring-1 ring-black/10 overflow-hidden z-50">
+              <Menu.Items className="fixed sm:absolute top-[88px] sm:top-auto left-0 right-0 sm:left-auto sm:right-2 mx-auto sm:mx-0 w-full sm:w-80 max-w-[92vw] sm:max-w-none rounded-lg bg-white text-gray-800 shadow-lg ring-1 ring-black/10 overflow-hidden z-50">
                 <div className="py-2 max-h-[60vh] overflow-auto overflow-x-hidden">
                   {unreadItems.length === 0 ? (
                     <div className="px-4 py-6 text-center text-sm text-gray-500">No hay mensajes nuevos</div>
@@ -156,7 +178,7 @@ const NavBar = () => {
                               }}
                               title="Ir a bandeja de entrada"
                             >
-                              <span className="inline-block text-xs text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">{trainingTitle}</span>
+                              <span className="inline-block text-xs text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded" dangerouslySetInnerHTML={{ __html: trainingTitle || 'General' }} />
                               <div className="font-semibold">{m.subject || '(Sin asunto)'}</div>
                               <div className="text-xs text-gray-600">De: {senderName || 'Desconocido'} · {date}</div>
                               <div className="mt-1 flex items-center gap-2">
@@ -176,11 +198,12 @@ const NavBar = () => {
                 )} 
               </Menu.Items>
             </Menu>
+            )}
 
             {/* Usuario / Dropdown */}
             <Menu as="div" className="relative">
               <Menu.Button className="flex items-center gap-2 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 rounded-full">
-                <span className="hidden sm:inline text-white font-medium max-w-[140px] truncate">
+                <span className="hidden sm:inline text-white font-medium max-w-[140px] truncate text-sm">
                   {userData?.user?.firstName || 'Usuario'}
                 </span>
                 <div className="w-12 h-12 rounded-full border-2 border-white overflow-hidden shrink-0">

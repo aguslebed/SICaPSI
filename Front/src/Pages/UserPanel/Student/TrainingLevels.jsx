@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ChevronDown, CheckCircle, Lock, BookOpen, PlayCircle } from "lucide-react";
 import { useUser } from "../../../context/UserContext";
 import LoadingOverlay from "../../../Components/Shared/LoadingOverlay";
+import { normalizeRichTextValue, getPlainTextFromRichText } from "../../../Components/Modals/CreateTrainingModal/RichTextInput";
+import StudentFeedbackButton from "./StudentFeedbackButton";
 
 const TrainingLevels = () => {
   const [openLevel, setOpenLevel] = useState(null);
@@ -21,6 +23,10 @@ const TrainingLevels = () => {
   }
   const curso = userData.training.find(c => c._id === idTraining);
   const niveles = curso?.levels || [];
+  
+  // Determinar el prefijo de ruta según el rol del usuario
+  const userRole = userData?.user?.role;
+  const baseRoute = userRole === 'Capacitador' ? '/trainer' : '/userPanel';
 
   const toggleNivel = (nivelId) => {
     if (openLevel === nivelId) {
@@ -31,13 +37,13 @@ const TrainingLevels = () => {
   };
 
   const Linkbibliografia = (nivelId) => {
-    navigate(`/userPanel/${idTraining}/${nivelId}/bibliogrhapy`); 
+    navigate(`${baseRoute}/${idTraining}/${nivelId}/bibliogrhapy`); 
   };
   const LinkCapacitacion = (nivelId) => {
-    navigate(`/userPanel/${idTraining}/${nivelId}/training`);
+    navigate(`${baseRoute}/${idTraining}/${nivelId}/training`);
   };
   const LinkEvaluacion = (nivelId) => {
-    navigate(`/userPanel/${idTraining}/${nivelId}/levelTest`);
+    navigate(`${baseRoute}/${idTraining}/${nivelId}/levelTest`);
   };
 
   return (
@@ -56,7 +62,7 @@ const TrainingLevels = () => {
                   className={`flex justify-between items-center px-6 py-3 cursor-pointer transition ${levelActive ? "bg-blue-100" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}
                   onClick={() => levelActive && toggleNivel(nivel._id)}
                 >
-                  <span className="font-semibold">{nivel.title}</span>
+                  <span className="font-semibold break-words" dangerouslySetInnerHTML={{ __html: normalizeRichTextValue(nivel.title) || `Nivel ${nivel.levelNumber}` }} />
                   <div className="flex items-center gap-2">
                     {/* Aquí podrías mostrar si el nivel está completado usando progreso */}
                     <ChevronDown
@@ -89,6 +95,7 @@ const TrainingLevels = () => {
           </main>
         </div>
       </div>
+      <StudentFeedbackButton trainingId={idTraining} training={curso} />
     </>
   );
 };
