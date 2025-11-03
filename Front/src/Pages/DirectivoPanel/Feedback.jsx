@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getAllFeedback } from '../../API/Request';
+import { getAllFeedback, getAllTrainings } from '../../API/Request';
 import NavBar from '../../Components/Student/NavBar';
 import LoadingOverlay from '../../Components/Shared/LoadingOverlay';
 import FeedbackMessageModal from '../../Components/Modals/FeedbackMessageModal';
@@ -10,9 +10,12 @@ export default function Feedback() {
   const [loading, setLoading] = useState(true);
   const [selectedFeedback, setSelectedFeedback] = useState(null);
   const [showMessageModal, setShowMessageModal] = useState(false);
+  const [trainings, setTrainings] = useState([]);
+  const [selectedCourse, setSelectedCourse] = useState('all');
 
   useEffect(() => {
     loadFeedbacks();
+    loadTrainings();
   }, []);
 
   const loadFeedbacks = async () => {
@@ -25,6 +28,20 @@ export default function Feedback() {
       alert('Error al cargar la retroalimentación');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadTrainings = async () => {
+    try {
+      const response = await getAllTrainings();
+      const trainingsList = Array.isArray(response) ? response : (response?.items || []);
+      // Filtrar solo cursos activos (no eliminados, activos y no pendientes de aprobación)
+      const activeTrainings = trainingsList.filter(training => 
+        training.isActive && !training.isDeleted && !training.pendingApproval
+      );
+      setTrainings(activeTrainings);
+    } catch (error) {
+      console.error('Error cargando capacitaciones:', error);
     }
   };
 
@@ -45,6 +62,18 @@ export default function Feedback() {
     });
   };
 
+  const stripHtml = (value) =>
+    typeof value === 'string' ? value.replace(/<[^>]+>/g, '').trim() : value ?? '';
+
+  // Filtrar feedbacks por curso seleccionado
+  const filteredFeedbacks = feedbacks.filter(feedback => {
+    if (selectedCourse === 'all') return true;
+    const trainingTitle = feedback.training?.title 
+      ? stripHtml(feedback.training.title)
+      : '';
+    return trainingTitle === selectedCourse;
+  });
+
   if (loading) {
     return <LoadingOverlay label="Cargando retroalimentación..." />;
   }
@@ -61,7 +90,27 @@ export default function Feedback() {
             </p>
           </div>
 
-          {feedbacks.length === 0 ? (
+          {/* Filtro por curso */}
+          <div className="mb-4 bg-white rounded-lg shadow p-4">
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              <label className="text-sm font-medium text-gray-700">Filtrar por curso:</label>
+              <select 
+                value={selectedCourse} 
+                onChange={e => setSelectedCourse(e.target.value)}
+                className="admin-filter-input"
+                style={{ minWidth: '250px' }}
+              >
+                <option value="all">Todos los cursos</option>
+                {trainings.map(training => (
+                  <option key={training._id} value={stripHtml(training.title)}>
+                    {stripHtml(training.title)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {filteredFeedbacks.length === 0 ? (
             <div className="bg-white rounded-lg shadow p-8 text-center">
               <p className="text-gray-500 text-lg">No hay retroalimentación disponible</p>
             </div>
@@ -89,7 +138,7 @@ export default function Feedback() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {feedbacks.map((feedback) => {
+                    {filteredFeedbacks.map((feedback) => {
                       const trainingTitle = feedback.training?.title 
                         ? getPlainTextFromRichText(feedback.training.title)
                         : 'Sin título';
