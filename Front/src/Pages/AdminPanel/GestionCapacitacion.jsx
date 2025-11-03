@@ -473,16 +473,16 @@ export default function GestionCapacitacion() {
     
     setLoading(true);
     try {
-      // Solo deshabilitar la capacitación (isActive = false)
-      await updateTraining(trainingId, { isActive: false });
+      // Marcar como eliminada (soft delete)
+      await updateTraining(trainingId, { isDeleted: true });
       await refreshTrainings();
-      setSuccessMessage('Capacitación deshabilitada exitosamente');
+      setSuccessMessage('Capacitación eliminada exitosamente');
       setShowSuccessModal(true);
     } catch (error) {
-      console.error('Error deshabilitando capacitación:', error);
-      setErrorMessages([`Error al deshabilitar capacitación: ${error.message}`]);
-      setErrorModalTitle('No se puede deshabilitar la capacitación');
-      setErrorModalMessageText('Ocurrió un error al intentar deshabilitar. Revise los siguientes detalles:');
+      console.error('Error eliminando capacitación:', error);
+      setErrorMessages([`Error al eliminar capacitación: ${error.message}`]);
+      setErrorModalTitle('No se puede eliminar la capacitación');
+      setErrorModalMessageText('Ocurrió un error al intentar eliminar. Revise los siguientes detalles:');
       setShowErrorModal(true);
     } finally {
       setLoading(false);
@@ -1064,9 +1064,9 @@ export default function GestionCapacitacion() {
       {deleteConfirmData && (
         <ConfirmActionModal
           open={true}
-          title="Confirmar desactivación"
-          message={`¿Estás seguro de que deseas deshabilitar la capacitación "${deleteConfirmData.trainingTitle}"? La capacitación se ocultará pero todos sus datos y archivos se conservarán.`}
-          confirmLabel="Deshabilitar"
+          title="Confirmar eliminación"
+          message={`¿Estás seguro de que deseas eliminar la capacitación "${deleteConfirmData.trainingTitle}"? La capacitación no será visible para los usuarios pero se mantendrá en la base de datos.`}
+          confirmLabel="Eliminar"
           cancelLabel="Cancelar"
           onConfirm={confirmDeleteTraining}
           onClose={() => setDeleteConfirmData(null)}

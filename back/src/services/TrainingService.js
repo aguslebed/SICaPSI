@@ -42,7 +42,7 @@ export class TrainingService extends ITrainingService {
     // Configurar opciones de populate
     const populateOptions = {
       path: 'assignedTraining',
-      select: 'title subtitle description image isActive totalLevels levels createdBy rejectedBy rejectionReason pendingApproval report progressPercentage startDate endDate',
+      select: 'title subtitle description image isActive isDeleted totalLevels levels createdBy rejectedBy rejectionReason pendingApproval report progressPercentage startDate endDate',
       populate: [
         { path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level },
         { path: 'createdBy', select: 'firstName lastName email', model: this.User },
@@ -53,6 +53,12 @@ export class TrainingService extends ITrainingService {
 
     // Usar repositorio para obtener usuario con trainings poblados
     const user = await this.userRepo.findByIdWithTrainings(userId, populateOptions);
+    
+    // Filtrar capacitaciones eliminadas (isDeleted !== true)
+    if (user && user.assignedTraining) {
+      user.assignedTraining = user.assignedTraining.filter(training => training.isDeleted !== true);
+    }
+    
     return user ? user.assignedTraining : [];
   }
 
@@ -98,15 +104,16 @@ export class TrainingService extends ITrainingService {
      { path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level }
    ];
 
-   // Usar repositorio para buscar con filtro y populate
+   // Usar repositorio para buscar con filtro y populate (excluir eliminadas)
+   // $ne: true excluye documentos donde isDeleted sea true (incluyendo documentos donde no existe el campo)
    const trainings = await this.trainingRepo.findWithPopulate(
-     { isActive: true },
+     { isActive: true, isDeleted: { $ne: true } },
      populateOptions
    );
    return trainings;
  }
 
- //Devuelve TODAS las capacitaciones (activas e inactivas)
+ //Devuelve TODAS las capacitaciones (activas e inactivas, pero NO eliminadas)
  async getAllTrainings() {
    // Configurar opciones de populate
    const populateOptions = [
@@ -115,16 +122,17 @@ export class TrainingService extends ITrainingService {
      { path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level }
    ];
 
-   // Usar repositorio para buscar con populate y ordenar
+   // Usar repositorio para buscar con populate y ordenar (excluir eliminadas)
+   // $ne: true excluye documentos donde isDeleted sea true (incluyendo documentos donde no existe el campo)
    const trainings = await this.trainingRepo.findWithPopulate(
-     {},
+     { isDeleted: { $ne: true } },
      populateOptions,
      { createdAt: -1 } // Más recientes primero
    );
    return trainings;
  }
 
- // Devuelve capacitaciones pendientes de aprobación
+ // Devuelve capacitaciones pendientes de aprobación (NO eliminadas)
  async getPendingContent() {
    // Configurar opciones de populate
    const populateOptions = [
@@ -133,9 +141,10 @@ export class TrainingService extends ITrainingService {
      { path: 'levels', select: 'levelNumber title description bibliography training test isActive', model: this.Level }
    ];
 
-   // Usar repositorio para buscar con filtro, populate y ordenar
+   // Usar repositorio para buscar con filtro, populate y ordenar (excluir eliminadas)
+   // $ne: true excluye documentos donde isDeleted sea true (incluyendo documentos donde no existe el campo)
    const trainings = await this.trainingRepo.findWithPopulate(
-     { pendingApproval: true },
+     { pendingApproval: true, isDeleted: { $ne: true } },
      populateOptions,
      { createdAt: -1 } // Más recientes primero
    );
@@ -273,55 +282,14 @@ async getTrainerByTrainingId(trainingId) {
      throw new Error(createTrainingNotFoundError());
    }
 
-   // Capturar usuarios que tienen asignada la capacitación antes de eliminarla
-   let assignedUsers = [];
-   if (this.User) {
-     assignedUsers = await this.User.find({ assignedTraining: trainingId })
-       .select('_id role')
-       .lean();
-   }
-
-   // Remover la capacitación de los usuarios afectados para mantener consistencia
-   if (this.User && assignedUsers.length > 0) {
-     await this.User.updateMany(
-       { assignedTraining: trainingId },
-       { $pull: { assignedTraining: trainingId } }
-     );
-   }
-
-   // Eliminar todos los niveles asociados usando modelo directo (deleteMany)
-   await this.Level.deleteMany({ trainingId: trainingId });
-
-   // Eliminar la capacitación usando repositorio
-   await this.trainingRepo.deleteById(trainingId);
-
-   // Eliminar carpeta de archivos multimedia
-   const fs = await import('fs');
-   const path = await import('path');
-   const { fileURLToPath } = await import('url');
-   
-   const __filename = fileURLToPath(import.meta.url);
-   const __dirname = path.dirname(__filename);
-   const trainingFolder = path.resolve(__dirname, "..", "..", "uploads", "trainings", trainingId);
-   
-   if (fs.existsSync(trainingFolder)) {
-     try {
-       fs.rmSync(trainingFolder, { recursive: true, force: true });
-       console.log(`✅ Carpeta eliminada: ${trainingFolder}`);
-     } catch (error) {
-       console.error(`⚠️ Error eliminando carpeta ${trainingFolder}:`, error);
-     }
-   }
+   // Soft delete: solo marcar como eliminada
+   const updatedTraining = await this.trainingRepo.update(trainingId, { isDeleted: true });
 
    return {
-     message: "Capacitación, niveles y archivos asociados eliminados exitosamente",
+     message: "Capacitación marcada como eliminada (soft delete)",
      trainingId,
      trainingTitle: training?.title || null,
-     affectedUserIds: Array.isArray(assignedUsers)
-       ? assignedUsers
-           .map((u) => (typeof u._id?.toString === 'function' ? u._id.toString() : u._id))
-           .filter(Boolean)
-       : []
+     affectedUserIds: []
    };
  }
 

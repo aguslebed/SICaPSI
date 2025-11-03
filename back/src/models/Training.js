@@ -7,6 +7,7 @@ const TrainingSchema = new mongoose.Schema({
   description: {type: String, required: true, maxlength: 5000},
   image: {type: String, required: false, default: '__PENDING_UPLOAD__'},
   isActive: {type: Boolean, default: false},
+  isDeleted: {type: Boolean, default: false},
   pendingApproval: {type: Boolean, default: false},
   rejectedBy: {type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null},
   rejectionReason: {type: String, default: '', maxlength: 1000},
@@ -53,6 +54,7 @@ TrainingSchema.virtual('status').get(function() {
 // Índices para mejor performance
 TrainingSchema.index({ createdBy: 1 });
 TrainingSchema.index({ isActive: 1 });
+TrainingSchema.index({ isDeleted: 1 });
 // Índice único en title - no puede haber dos capacitaciones con el mismo título
 TrainingSchema.index({ title: 1 }, { unique: true });
 
