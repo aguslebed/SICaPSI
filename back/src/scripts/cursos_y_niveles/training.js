@@ -2,7 +2,7 @@ export const sampleCourses = [
   {
     title: "Capacitación 1",
     subtitle: "Edificio de departamentos",
-    description: "Introducción a la seguridad privada: funciones del guardia, patrullaje y control de accesos en edificios de departamentos",
+    description: "Introducción a la seguridad: funciones del guardia, patrullaje y control de accesos en edificios de departamentos",
   image: "/api/uploads/1.jpeg",
     isActive: true,
     createdBy: "64f1a3c5e2b8f7c9a12d3456", // ID ficticio de usuario
