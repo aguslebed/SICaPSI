@@ -228,7 +228,7 @@ function Home() {
               className="mt-4 text-base md:text-xl max-w-2xl leading-relaxed mx-auto md:mx-0"
               style={{ fontFamily: "'Inter', sans-serif", textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}
             >
-              Asociación de Profesionales de Seguridad Privada
+              Asociación de Profesionales de Seguridad
               <br />
               de la Provincia de Buenos Aires.
             </p>
